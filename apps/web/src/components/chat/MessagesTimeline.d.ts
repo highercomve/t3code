@@ -1,0 +1,30 @@
+import { type MessageId, type TurnId } from "@t3tools/contracts";
+import { deriveTimelineEntries } from "../../session-logic";
+import { type TurnDiffSummary } from "../../types";
+import { ExpandedImagePreview } from "./ExpandedImagePreview";
+import { type TimestampFormat } from "@t3tools/contracts/settings";
+interface MessagesTimelineProps {
+  hasMessages: boolean;
+  isWorking: boolean;
+  activeTurnInProgress: boolean;
+  activeTurnStartedAt: string | null;
+  scrollContainer: HTMLDivElement | null;
+  timelineEntries: ReturnType<typeof deriveTimelineEntries>;
+  completionDividerBeforeEntryId: string | null;
+  completionSummary: string | null;
+  turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
+  nowIso: string;
+  expandedWorkGroups: Record<string, boolean>;
+  onToggleWorkGroup: (groupId: string) => void;
+  onOpenTurnDiff: (turnId: TurnId, filePath?: string) => void;
+  revertTurnCountByUserMessageId: Map<MessageId, number>;
+  onRevertUserMessage: (messageId: MessageId) => void;
+  isRevertingCheckpoint: boolean;
+  onImageExpand: (preview: ExpandedImagePreview) => void;
+  markdownCwd: string | undefined;
+  resolvedTheme: "light" | "dark";
+  timestampFormat: TimestampFormat;
+  workspaceRoot: string | undefined;
+}
+export declare const MessagesTimeline: import("react").NamedExoticComponent<MessagesTimelineProps>;
+export {};

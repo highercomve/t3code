@@ -11,6 +11,7 @@ import {
   RuntimeMode,
   type ServerProvider,
   ThreadId,
+  isProviderKind,
 } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 import * as Equal from "effect/Equal";
@@ -18,7 +19,7 @@ import { DeepMutable } from "effect/Types";
 import { normalizeModelSlug } from "@t3tools/shared/model";
 import { useMemo } from "react";
 import { getLocalStorageItem } from "./hooks/useLocalStorage";
-import { resolveAppModelSelection } from "./modelSelection";
+import { buildModelSelection, resolveAppModelSelection } from "./modelSelection";
 import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE, type ChatImageAttachment } from "./types";
 import {
   type TerminalContextDraft,
@@ -33,6 +34,7 @@ import { UnifiedSettings } from "@t3tools/contracts/settings";
 
 export const COMPOSER_DRAFT_STORAGE_KEY = "t3code:composer-drafts:v1";
 const COMPOSER_DRAFT_STORAGE_VERSION = 3;
+const PROVIDER_KINDS = ["codex", "gemini", "claudeAgent", "opencode"] as const;
 const DraftThreadEnvModeSchema = Schema.Literals(["local", "worktree"]);
 export type DraftThreadEnvMode = typeof DraftThreadEnvModeSchema.Type;
 
@@ -407,7 +409,7 @@ function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
 }
 
 function normalizeProviderKind(value: unknown): ProviderKind | null {
-  return value === "codex" || value === "claudeAgent" ? value : null;
+  return typeof value === "string" && isProviderKind(value) ? value : null;
 }
 
 function normalizeProviderModelOptions(
@@ -423,6 +425,14 @@ function normalizeProviderModelOptions(
   const claudeCandidate =
     candidate?.claudeAgent && typeof candidate.claudeAgent === "object"
       ? (candidate.claudeAgent as Record<string, unknown>)
+      : null;
+  const geminiCandidate =
+    candidate?.gemini && typeof candidate.gemini === "object"
+      ? (candidate.gemini as Record<string, unknown>)
+      : null;
+  const opencodeCandidate =
+    candidate?.opencode && typeof candidate.opencode === "object"
+      ? (candidate.opencode as Record<string, unknown>)
       : null;
 
   const codexReasoningEffort: CodexReasoningEffort | undefined =
@@ -492,12 +502,34 @@ function normalizeProviderModelOptions(
         }
       : undefined;
 
-  if (!codex && !claude) {
+  const geminiThinkingBudget =
+    typeof geminiCandidate?.thinkingBudget === "number" &&
+    Number.isInteger(geminiCandidate.thinkingBudget)
+      ? geminiCandidate.thinkingBudget
+      : undefined;
+  const gemini =
+    geminiThinkingBudget !== undefined ? { thinkingBudget: geminiThinkingBudget } : undefined;
+
+  const opencodeReasoningEffort: CodexReasoningEffort | undefined =
+    opencodeCandidate?.reasoningEffort === "low" ||
+    opencodeCandidate?.reasoningEffort === "medium" ||
+    opencodeCandidate?.reasoningEffort === "high" ||
+    opencodeCandidate?.reasoningEffort === "xhigh"
+      ? opencodeCandidate.reasoningEffort
+      : undefined;
+  const opencode =
+    opencodeReasoningEffort !== undefined
+      ? { reasoningEffort: opencodeReasoningEffort }
+      : undefined;
+
+  if (!codex && !gemini && !claude && !opencode) {
     return null;
   }
   return {
     ...(codex ? { codex } : {}),
+    ...(gemini ? { gemini } : {}),
     ...(claude ? { claudeAgent: claude } : {}),
+    ...(opencode ? { opencode } : {}),
   };
 }
 
@@ -528,12 +560,8 @@ function normalizeModelSelection(
     provider,
     provider === "codex" ? legacy?.legacyCodex : undefined,
   );
-  const options = provider === "codex" ? modelOptions?.codex : modelOptions?.claudeAgent;
-  return {
-    provider,
-    model,
-    ...(options ? { options } : {}),
-  };
+  const options = modelOptions?.[provider];
+  return buildModelSelection(provider, model, options);
 }
 
 // ── Legacy sync helpers (used only during migration from v2 storage) ──
@@ -546,11 +574,7 @@ function legacySyncModelSelectionOptions(
     return null;
   }
   const options = modelOptions?.[modelSelection.provider];
-  return {
-    provider: modelSelection.provider,
-    model: modelSelection.model,
-    ...(options ? { options } : {}),
-  };
+  return buildModelSelection(modelSelection.provider, modelSelection.model, options);
 }
 
 function legacyMergeModelSelectionIntoProviderModelOptions(
@@ -594,17 +618,16 @@ function legacyToModelSelectionByProvider(
   const result: Partial<Record<ProviderKind, ModelSelection>> = {};
   // Add entries from the options bag (for non-active providers)
   if (modelOptions) {
-    for (const provider of ["codex", "claudeAgent"] as const) {
+    for (const provider of PROVIDER_KINDS) {
       const options = modelOptions[provider];
       if (options && Object.keys(options).length > 0) {
-        result[provider] = {
+        result[provider] = buildModelSelection(
           provider,
-          model:
-            modelSelection?.provider === provider
-              ? modelSelection.model
-              : DEFAULT_MODEL_BY_PROVIDER[provider],
+          modelSelection?.provider === provider
+            ? modelSelection.model
+            : DEFAULT_MODEL_BY_PROVIDER[provider],
           options,
-        };
+        );
       }
     }
   }
@@ -1636,11 +1659,11 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
               nextMap[normalized.provider] = normalized;
             } else {
               // No options in selection → preserve existing options, update provider+model
-              nextMap[normalized.provider] = {
-                provider: normalized.provider,
-                model: normalized.model,
-                ...(current?.options ? { options: current.options } : {}),
-              };
+              nextMap[normalized.provider] = buildModelSelection(
+                normalized.provider,
+                normalized.model,
+                current?.options,
+              );
             }
           }
           const nextActiveProvider = normalized?.provider ?? base.activeProvider;
@@ -1676,17 +1699,17 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           }
           const base = existing ?? createEmptyThreadDraft();
           const nextMap = { ...base.modelSelectionByProvider };
-          for (const provider of ["codex", "claudeAgent"] as const) {
+          for (const provider of PROVIDER_KINDS) {
             // Only touch providers explicitly present in the input
             if (!normalizedOpts || !(provider in normalizedOpts)) continue;
             const opts = normalizedOpts[provider];
             const current = nextMap[provider];
             if (opts) {
-              nextMap[provider] = {
+              nextMap[provider] = buildModelSelection(
                 provider,
-                model: current?.model ?? DEFAULT_MODEL_BY_PROVIDER[provider],
-                options: opts,
-              };
+                current?.model ?? DEFAULT_MODEL_BY_PROVIDER[provider],
+                opts,
+              );
             } else if (current?.options) {
               // Remove options but keep the selection
               const { options: _, ...rest } = current;
@@ -1732,11 +1755,11 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           const nextMap = { ...base.modelSelectionByProvider };
           const currentForProvider = nextMap[normalizedProvider];
           if (providerOpts) {
-            nextMap[normalizedProvider] = {
-              provider: normalizedProvider,
-              model: currentForProvider?.model ?? DEFAULT_MODEL_BY_PROVIDER[normalizedProvider],
-              options: providerOpts,
-            };
+            nextMap[normalizedProvider] = buildModelSelection(
+              normalizedProvider,
+              currentForProvider?.model ?? DEFAULT_MODEL_BY_PROVIDER[normalizedProvider],
+              providerOpts,
+            );
           } else if (currentForProvider?.options) {
             const { options: _, ...rest } = currentForProvider;
             nextMap[normalizedProvider] = rest as ModelSelection;
@@ -1750,16 +1773,16 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
             const stickyBase =
               nextStickyMap[normalizedProvider] ??
               base.modelSelectionByProvider[normalizedProvider] ??
-              ({
-                provider: normalizedProvider,
-                model: DEFAULT_MODEL_BY_PROVIDER[normalizedProvider],
-              } as ModelSelection);
+              buildModelSelection(
+                normalizedProvider,
+                DEFAULT_MODEL_BY_PROVIDER[normalizedProvider],
+              );
             if (providerOpts) {
-              nextStickyMap[normalizedProvider] = {
-                ...stickyBase,
-                provider: normalizedProvider,
-                options: providerOpts,
-              };
+              nextStickyMap[normalizedProvider] = buildModelSelection(
+                normalizedProvider,
+                stickyBase.model,
+                providerOpts,
+              );
             } else if (stickyBase.options) {
               const { options: _, ...rest } = stickyBase;
               nextStickyMap[normalizedProvider] = rest as ModelSelection;

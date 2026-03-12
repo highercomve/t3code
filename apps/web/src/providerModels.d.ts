@@ -1,0 +1,51 @@
+import {
+  type ClaudeModelOptions,
+  type CodexModelOptions,
+  type GeminiModelOptions,
+  type ModelCapabilities,
+  type OpencodeModelOptions,
+  type ProviderKind,
+  type ServerProvider,
+  type ServerProviderModel,
+} from "@t3tools/contracts";
+export declare function getProviderModels(
+  providers: ReadonlyArray<ServerProvider>,
+  provider: ProviderKind,
+): ReadonlyArray<ServerProviderModel>;
+export declare function getProviderSnapshot(
+  providers: ReadonlyArray<ServerProvider>,
+  provider: ProviderKind,
+): ServerProvider | undefined;
+export declare function isProviderEnabled(
+  providers: ReadonlyArray<ServerProvider>,
+  provider: ProviderKind,
+): boolean;
+export declare function resolveSelectableProvider(
+  providers: ReadonlyArray<ServerProvider>,
+  provider: ProviderKind | null | undefined,
+): ProviderKind;
+export declare function getProviderModelCapabilities(
+  models: ReadonlyArray<ServerProviderModel>,
+  model: string | null | undefined,
+  provider: ProviderKind,
+): ModelCapabilities;
+export declare function getDefaultServerModel(
+  providers: ReadonlyArray<ServerProvider>,
+  provider: ProviderKind,
+): string;
+export declare function normalizeCodexModelOptionsWithCapabilities(
+  caps: ModelCapabilities,
+  modelOptions: CodexModelOptions | null | undefined,
+): CodexModelOptions | undefined;
+export declare function normalizeClaudeModelOptionsWithCapabilities(
+  caps: ModelCapabilities,
+  modelOptions: ClaudeModelOptions | null | undefined,
+): ClaudeModelOptions | undefined;
+export declare function normalizeGeminiModelOptionsWithCapabilities(
+  _caps: ModelCapabilities,
+  modelOptions: GeminiModelOptions | null | undefined,
+): GeminiModelOptions | undefined;
+export declare function normalizeOpencodeModelOptionsWithCapabilities(
+  caps: ModelCapabilities,
+  modelOptions: OpencodeModelOptions | null | undefined,
+): OpencodeModelOptions | undefined;

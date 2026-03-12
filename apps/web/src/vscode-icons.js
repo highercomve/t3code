@@ -1,0 +1,129 @@
+import vscodeIconsManifest from "./vscode-icons-manifest.json";
+import languageAssociationsData from "./vscode-icons-language-associations.json";
+const VSCODE_ICONS_VERSION = "v12.17.0";
+const VSCODE_ICONS_BASE_URL = `https://cdn.jsdelivr.net/gh/vscode-icons/vscode-icons@${VSCODE_ICONS_VERSION}/icons`;
+const manifest = vscodeIconsManifest;
+const languageAssociations = languageAssociationsData;
+const iconDefinitions = manifest.iconDefinitions;
+const darkFileNames = toLowercaseLookup(manifest.fileNames);
+const lightFileNames = toLowercaseLookup(manifest.light.fileNames);
+const darkFileExtensions = toLowercaseLookup(manifest.fileExtensions);
+const lightFileExtensions = toLowercaseLookup(manifest.light.fileExtensions);
+const darkFolderNames = toLowercaseLookup(manifest.folderNames);
+const lightFolderNames = toLowercaseLookup(manifest.light.folderNames);
+const darkLanguageIds = toLowercaseLookup(manifest.languageIds ?? {});
+const lightLanguageIds = toLowercaseLookup(manifest.light.languageIds ?? {});
+const languageIdByExtension = toLowercaseLookup(languageAssociations.extensionToLanguageId);
+const languageIdByFileName = toLowercaseLookup(languageAssociations.fileNameToLanguageId);
+const localLanguageIdByExtensionOverrides = {
+  // Cursor rules files (*.mdc) are commonly treated as markdown in VSCode/Cursor.
+  mdc: "markdown",
+  // Upstream languages.ts currently maps .html to django-html before html.
+  // Prefer the base HTML icon for standalone HTML files.
+  html: "html",
+  // Upstream languages.ts maps yml/yaml to specialized language ids that can produce
+  // non-generic YAML icons (for example cloudfoundry/esphome). Prefer the base YAML icon
+  // unless a more specific basename/extension match (e.g. azure-pipelines.yml) is found.
+  yml: "yaml",
+  yaml: "yaml",
+};
+const defaultDarkFileIconDefinition = manifest.file ?? "_file";
+const defaultLightFileIconDefinition = manifest.light.file ?? defaultDarkFileIconDefinition;
+const defaultDarkFolderIconDefinition = manifest.folder ?? "_folder";
+const defaultLightFolderIconDefinition = manifest.light.folder ?? defaultDarkFolderIconDefinition;
+function toLowercaseLookup(source) {
+  const entries = Object.entries(source);
+  const lookup = {};
+  for (const [key, value] of entries) {
+    lookup[key.toLowerCase()] = value;
+  }
+  return lookup;
+}
+export function basenameOfPath(pathValue) {
+  const slashIndex = pathValue.lastIndexOf("/");
+  if (slashIndex === -1) return pathValue;
+  return pathValue.slice(slashIndex + 1);
+}
+export function inferEntryKindFromPath(pathValue) {
+  const base = basenameOfPath(pathValue);
+  if (base.startsWith(".") && !base.slice(1).includes(".")) {
+    return "directory";
+  }
+  if (base.includes(".")) {
+    return "file";
+  }
+  return "directory";
+}
+function extensionCandidates(fileName) {
+  const candidates = new Set();
+  if (fileName.includes(".")) {
+    candidates.add(fileName);
+  }
+  let dotIndex = fileName.indexOf(".");
+  while (dotIndex !== -1 && dotIndex < fileName.length - 1) {
+    const candidate = fileName.slice(dotIndex + 1);
+    if (candidate.length > 0) {
+      candidates.add(candidate);
+    }
+    dotIndex = fileName.indexOf(".", dotIndex + 1);
+  }
+  return [...candidates];
+}
+function resolveLanguageFallbackDefinition(pathValue, theme) {
+  const basename = basenameOfPath(pathValue).toLowerCase();
+  const languageIds = theme === "light" ? lightLanguageIds : darkLanguageIds;
+  const fromBasenameLanguage = languageIdByFileName[basename];
+  if (fromBasenameLanguage) {
+    return languageIds[fromBasenameLanguage] ?? darkLanguageIds[fromBasenameLanguage] ?? null;
+  }
+  for (const candidate of extensionCandidates(basename)) {
+    const languageId =
+      localLanguageIdByExtensionOverrides[candidate] ?? languageIdByExtension[candidate];
+    if (!languageId) continue;
+    return languageIds[languageId] ?? darkLanguageIds[languageId] ?? null;
+  }
+  return null;
+}
+function iconFilenameForDefinitionKey(definitionKey) {
+  if (!definitionKey) return null;
+  const iconPath = iconDefinitions[definitionKey]?.iconPath;
+  if (!iconPath) return null;
+  const slashIndex = iconPath.lastIndexOf("/");
+  if (slashIndex === -1) {
+    return iconPath;
+  }
+  return iconPath.slice(slashIndex + 1);
+}
+function resolveFileDefinition(pathValue, theme) {
+  const basename = basenameOfPath(pathValue).toLowerCase();
+  const fileNames = theme === "light" ? lightFileNames : darkFileNames;
+  const fileExtensions = theme === "light" ? lightFileExtensions : darkFileExtensions;
+  const fromFileName = fileNames[basename] ?? darkFileNames[basename];
+  if (fromFileName) return fromFileName;
+  for (const candidate of extensionCandidates(basename)) {
+    const fromExtension = fileExtensions[candidate] ?? darkFileExtensions[candidate];
+    if (fromExtension) return fromExtension;
+  }
+  const fromLanguage = resolveLanguageFallbackDefinition(pathValue, theme);
+  if (fromLanguage) return fromLanguage;
+  return theme === "light" ? defaultLightFileIconDefinition : defaultDarkFileIconDefinition;
+}
+function resolveFolderDefinition(pathValue, theme) {
+  const basename = basenameOfPath(pathValue).toLowerCase();
+  const folderNames = theme === "light" ? lightFolderNames : darkFolderNames;
+  return (
+    folderNames[basename] ??
+    darkFolderNames[basename] ??
+    (theme === "light" ? defaultLightFolderIconDefinition : defaultDarkFolderIconDefinition)
+  );
+}
+export function getVscodeIconUrlForEntry(pathValue, kind, theme) {
+  const definitionKey =
+    kind === "directory"
+      ? resolveFolderDefinition(pathValue, theme)
+      : resolveFileDefinition(pathValue, theme);
+  const iconFilename =
+    iconFilenameForDefinitionKey(definitionKey) ??
+    (kind === "directory" ? "default_folder.svg" : "default_file.svg");
+  return `${VSCODE_ICONS_BASE_URL}/${iconFilename}`;
+}

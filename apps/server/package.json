@@ -19,7 +19,7 @@
     "build": "node scripts/cli.ts build",
     "start": "node dist/index.mjs",
     "prepare": "effect-language-service patch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc",
     "test": "vitest run"
   },
   "dependencies": {
@@ -27,6 +27,7 @@
     "@effect/platform-node": "catalog:",
     "@effect/sql-sqlite-bun": "catalog:",
     "@pierre/diffs": "^1.1.0-beta.16",
+    "@zed-industries/claude-agent-acp": "^0.20.2",
     "effect": "catalog:",
     "node-pty": "^1.1.0",
     "open": "^10.1.0",

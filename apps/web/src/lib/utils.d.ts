@@ -1,0 +1,11 @@
+import { CommandId, MessageId, ProjectId, ThreadId } from "@t3tools/contracts";
+import { type CxOptions } from "class-variance-authority";
+export declare function cn(...inputs: CxOptions): string;
+export declare function isMacPlatform(platform: string): boolean;
+export declare function isWindowsPlatform(platform: string): boolean;
+export declare function isLinuxPlatform(platform: string): boolean;
+export declare function randomUUID(): string;
+export declare const newCommandId: () => CommandId;
+export declare const newProjectId: () => ProjectId;
+export declare const newThreadId: () => ThreadId;
+export declare const newMessageId: () => MessageId;

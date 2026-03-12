@@ -1,8 +1,11 @@
 import {
   DEFAULT_MODEL_BY_PROVIDER,
+  MODEL_OPTIONS_BY_PROVIDER,
   type ClaudeModelOptions,
   type CodexModelOptions,
+  type GeminiModelOptions,
   type ModelCapabilities,
+  type OpencodeModelOptions,
   type ProviderKind,
   type ServerProvider,
   type ServerProviderModel,
@@ -21,7 +24,15 @@ export function getProviderModels(
   providers: ReadonlyArray<ServerProvider>,
   provider: ProviderKind,
 ): ReadonlyArray<ServerProviderModel> {
-  return providers.find((candidate) => candidate.provider === provider)?.models ?? [];
+  const liveModels = providers.find((candidate) => candidate.provider === provider)?.models;
+  if (liveModels && liveModels.length > 0) {
+    return liveModels;
+  }
+  return MODEL_OPTIONS_BY_PROVIDER[provider].map((model) => ({
+    ...model,
+    capabilities: null,
+    isCustom: false,
+  }));
 }
 
 export function getProviderSnapshot(
@@ -101,4 +112,26 @@ export function normalizeClaudeModelOptionsWithCapabilities(
     ...(contextWindow ? { contextWindow } : {}),
   };
   return Object.keys(nextOptions).length > 0 ? nextOptions : undefined;
+}
+
+export function normalizeGeminiModelOptionsWithCapabilities(
+  _caps: ModelCapabilities,
+  modelOptions: GeminiModelOptions | null | undefined,
+): GeminiModelOptions | undefined {
+  const thinkingBudget =
+    typeof modelOptions?.thinkingBudget === "number" &&
+    Number.isInteger(modelOptions.thinkingBudget)
+      ? modelOptions.thinkingBudget
+      : undefined;
+  return thinkingBudget !== undefined ? { thinkingBudget } : undefined;
+}
+
+export function normalizeOpencodeModelOptionsWithCapabilities(
+  caps: ModelCapabilities,
+  modelOptions: OpencodeModelOptions | null | undefined,
+): OpencodeModelOptions | undefined {
+  const reasoningEffort = resolveEffort(caps, modelOptions?.reasoningEffort);
+  return reasoningEffort
+    ? { reasoningEffort: reasoningEffort as OpencodeModelOptions["reasoningEffort"] }
+    : undefined;
 }

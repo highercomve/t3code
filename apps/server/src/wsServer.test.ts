@@ -531,6 +531,7 @@ describe("WebSocket Server", () => {
       devUrl,
       noBrowser: true,
       authToken: options.authToken,
+      geminiApiKey: undefined,
       autoBootstrapProjectFromCwd: options.autoBootstrapProjectFromCwd ?? false,
       logWebSocketEvents: options.logWebSocketEvents ?? Boolean(options.devUrl),
     } satisfies ServerConfigShape);

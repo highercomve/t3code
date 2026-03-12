@@ -5,6 +5,8 @@ import { TrimmedNonEmptyString, TrimmedString } from "./baseSchemas";
 import {
   ClaudeModelOptions,
   CodexModelOptions,
+  GeminiModelOptions,
+  OpencodeModelOptions,
   DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER,
 } from "./model";
 import { ModelSelection } from "./orchestration";
@@ -70,6 +72,22 @@ export const ClaudeSettings = Schema.Struct({
 });
 export type ClaudeSettings = typeof ClaudeSettings.Type;
 
+export const GeminiSettings = Schema.Struct({
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  binaryPath: makeBinaryPathSetting("gemini"),
+  homePath: TrimmedString.pipe(Schema.withDecodingDefault(() => "")),
+  customModels: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(() => [])),
+});
+export type GeminiSettings = typeof GeminiSettings.Type;
+
+export const OpencodeSettings = Schema.Struct({
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  binaryPath: makeBinaryPathSetting("opencode"),
+  apiKey: TrimmedString.pipe(Schema.withDecodingDefault(() => "")),
+  customModels: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(() => [])),
+});
+export type OpencodeSettings = typeof OpencodeSettings.Type;
+
 export const ServerSettings = Schema.Struct({
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   defaultThreadEnvMode: ThreadEnvMode.pipe(
@@ -77,15 +95,17 @@ export const ServerSettings = Schema.Struct({
   ),
   textGenerationModelSelection: ModelSelection.pipe(
     Schema.withDecodingDefault(() => ({
-      provider: "codex" as const,
-      model: DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER.codex,
+      provider: "gemini" as const,
+      model: DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER.gemini,
     })),
   ),
 
   // Provider specific settings
   providers: Schema.Struct({
     codex: CodexSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    gemini: GeminiSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claudeAgent: ClaudeSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    opencode: OpencodeSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
 });
 export type ServerSettings = typeof ServerSettings.Type;
@@ -111,6 +131,15 @@ const ClaudeModelOptionsPatch = Schema.Struct({
   thinking: Schema.optionalKey(ClaudeModelOptions.fields.thinking),
   effort: Schema.optionalKey(ClaudeModelOptions.fields.effort),
   fastMode: Schema.optionalKey(ClaudeModelOptions.fields.fastMode),
+  contextWindow: Schema.optionalKey(ClaudeModelOptions.fields.contextWindow),
+});
+
+const GeminiModelOptionsPatch = Schema.Struct({
+  thinkingBudget: Schema.optionalKey(GeminiModelOptions.fields.thinkingBudget),
+});
+
+const OpencodeModelOptionsPatch = Schema.Struct({
+  reasoningEffort: Schema.optionalKey(OpencodeModelOptions.fields.reasoningEffort),
 });
 
 const ModelSelectionPatch = Schema.Union([
@@ -120,9 +149,19 @@ const ModelSelectionPatch = Schema.Union([
     options: Schema.optionalKey(CodexModelOptionsPatch),
   }),
   Schema.Struct({
+    provider: Schema.optionalKey(Schema.Literal("gemini")),
+    model: Schema.optionalKey(TrimmedNonEmptyString),
+    options: Schema.optionalKey(GeminiModelOptionsPatch),
+  }),
+  Schema.Struct({
     provider: Schema.optionalKey(Schema.Literal("claudeAgent")),
     model: Schema.optionalKey(TrimmedNonEmptyString),
     options: Schema.optionalKey(ClaudeModelOptionsPatch),
+  }),
+  Schema.Struct({
+    provider: Schema.optionalKey(Schema.Literal("opencode")),
+    model: Schema.optionalKey(TrimmedNonEmptyString),
+    options: Schema.optionalKey(OpencodeModelOptionsPatch),
   }),
 ]);
 
@@ -139,6 +178,20 @@ const ClaudeSettingsPatch = Schema.Struct({
   customModels: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
+const GeminiSettingsPatch = Schema.Struct({
+  enabled: Schema.optionalKey(Schema.Boolean),
+  binaryPath: Schema.optionalKey(Schema.String),
+  homePath: Schema.optionalKey(Schema.String),
+  customModels: Schema.optionalKey(Schema.Array(Schema.String)),
+});
+
+const OpencodeSettingsPatch = Schema.Struct({
+  enabled: Schema.optionalKey(Schema.Boolean),
+  binaryPath: Schema.optionalKey(Schema.String),
+  apiKey: Schema.optionalKey(Schema.String),
+  customModels: Schema.optionalKey(Schema.Array(Schema.String)),
+});
+
 export const ServerSettingsPatch = Schema.Struct({
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   defaultThreadEnvMode: Schema.optionalKey(ThreadEnvMode),
@@ -146,7 +199,9 @@ export const ServerSettingsPatch = Schema.Struct({
   providers: Schema.optionalKey(
     Schema.Struct({
       codex: Schema.optionalKey(CodexSettingsPatch),
+      gemini: Schema.optionalKey(GeminiSettingsPatch),
       claudeAgent: Schema.optionalKey(ClaudeSettingsPatch),
+      opencode: Schema.optionalKey(OpencodeSettingsPatch),
     }),
   ),
 });

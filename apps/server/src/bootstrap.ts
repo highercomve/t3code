@@ -18,10 +18,10 @@ export const readBootstrapEnvelope = Effect.fn("readBootstrapEnvelope")(function
     timeoutMs?: number;
   },
 ): Effect.fn.Return<Option.Option<A>, BootstrapError> {
-  const fdReady = yield* isFdReady(fd);
-  if (!fdReady) return Option.none();
+  const fdStats = yield* getBootstrapFdStats(fd);
+  if (Option.isNone(fdStats)) return Option.none();
 
-  const stream = yield* makeBootstrapInputStream(fd);
+  const stream = yield* makeBootstrapInputStream(fd, fdStats.value);
 
   const timeoutMs = options?.timeoutMs ?? 1000;
 
@@ -87,7 +87,7 @@ const isUnavailableBootstrapFdError = Predicate.compose(
   (_) => _.code === "EBADF" || _.code === "ENOENT",
 );
 
-const isFdReady = (fd: number) =>
+const getBootstrapFdStats = (fd: number) =>
   Effect.try({
     try: () => NFS.fstatSync(fd),
     catch: (error) =>
@@ -96,18 +96,27 @@ const isFdReady = (fd: number) =>
         cause: error,
       }),
   }).pipe(
-    Effect.as(true),
+    Effect.map(Option.some),
     Effect.catchIf(
       (error) => isUnavailableBootstrapFdError(error.cause),
-      () => Effect.succeed(false),
+      () => Effect.succeed(Option.none()),
     ),
   );
 
-const makeBootstrapInputStream = (fd: number) =>
+const makeBootstrapInputStream = (fd: number, fdStats: NFS.Stats) =>
   Effect.try<Readable, BootstrapError>({
     try: () => {
       const fdPath = resolveFdPath(fd);
-      if (fdPath === undefined) {
+      if (fdPath !== undefined && fdStats.isFile()) {
+        const streamFd = NFS.openSync(fdPath, "r");
+        return NFS.createReadStream("", {
+          fd: streamFd,
+          encoding: "utf8",
+          autoClose: true,
+        });
+      }
+
+      if (fdStats.isFIFO() || fdStats.isSocket()) {
         const stream = new Net.Socket({
           fd,
           readable: true,
@@ -117,11 +126,10 @@ const makeBootstrapInputStream = (fd: number) =>
         return stream;
       }
 
-      const streamFd = NFS.openSync(fdPath, "r");
       return NFS.createReadStream("", {
-        fd: streamFd,
+        fd,
         encoding: "utf8",
-        autoClose: true,
+        autoClose: false,
       });
     },
     catch: (error) =>

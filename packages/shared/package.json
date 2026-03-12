@@ -39,7 +39,7 @@
   },
   "scripts": {
     "prepare": "effect-language-service patch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc",
     "test": "vitest run"
   },
   "dependencies": {

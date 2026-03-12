@@ -135,6 +135,10 @@ const CliEnvConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
+  geminiApiKey: Config.string("GEMINI_API_KEY").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
 });
 
 const resolveBooleanFlag = (flag: Option.Option<boolean>, envValue: boolean) =>
@@ -282,6 +286,7 @@ const ServerConfigLive = (input: CliInput) =>
         devUrl,
         noBrowser,
         authToken: Option.getOrUndefined(authToken),
+        geminiApiKey: env.geminiApiKey,
         autoBootstrapProjectFromCwd,
         logWebSocketEvents,
       } satisfies ServerConfigShape;

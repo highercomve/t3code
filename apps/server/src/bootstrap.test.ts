@@ -93,4 +93,40 @@ it.layer(NodeServices.layer)("readBootstrapEnvelope", (it) => {
       assertNone(payload);
     }).pipe(Effect.provide(TestClock.layer())),
   );
+
+  it.effect("reads a bootstrap envelope from a named pipe", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-bootstrap-" });
+      const fifoPath = path.join(tempDir, "bootstrap.pipe");
+
+      yield* Effect.sync(() => execFileSync("mkfifo", [fifoPath]));
+
+      const writer = yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          spawn("sh", ["-c", 'printf \'{"mode":"desktop"}\\n\' >"$1"', "sh", fifoPath], {
+            stdio: ["ignore", "ignore", "ignore"],
+          }),
+        ),
+        (writer) =>
+          Effect.sync(() => {
+            writer.kill("SIGKILL");
+          }),
+      );
+
+      const fd = yield* Effect.acquireRelease(
+        Effect.sync(() => NFS.openSync(fifoPath, "r")),
+        (fd) => Effect.sync(() => NFS.closeSync(fd)),
+      );
+
+      const payload = yield* readBootstrapEnvelope(TestEnvelopeSchema, fd, { timeoutMs: 500 });
+      assertSome(payload, {
+        mode: "desktop",
+      });
+
+      yield* Effect.promise(
+        () => new Promise<void>((resolve) => writer.once("exit", () => resolve())),
+      );
+    }),
+  );
 });

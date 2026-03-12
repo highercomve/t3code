@@ -1,4 +1,8 @@
 import {
+  type ClaudeModelOptions,
+  type CodexModelOptions,
+  type GeminiModelOptions,
+  type OpencodeModelOptions,
   type ProviderKind,
   type ProviderModelOptions,
   type ServerProviderModel,
@@ -10,6 +14,8 @@ import {
   getProviderModelCapabilities,
   normalizeClaudeModelOptionsWithCapabilities,
   normalizeCodexModelOptionsWithCapabilities,
+  normalizeGeminiModelOptionsWithCapabilities,
+  normalizeOpencodeModelOptionsWithCapabilities,
 } from "../../providerModels";
 import { TraitsMenuContent, TraitsPicker } from "./TraitsPicker";
 
@@ -69,10 +75,33 @@ function getProviderStateFromCapabilities(
   const promptEffort = resolveEffort(caps, rawEffort) ?? null;
 
   // Normalize options for dispatch
-  const normalizedOptions =
-    provider === "codex"
-      ? normalizeCodexModelOptionsWithCapabilities(caps, providerOptions)
-      : normalizeClaudeModelOptionsWithCapabilities(caps, providerOptions);
+  let normalizedOptions: ProviderModelOptions[ProviderKind] | undefined;
+  switch (provider) {
+    case "codex":
+      normalizedOptions = normalizeCodexModelOptionsWithCapabilities(
+        caps,
+        providerOptions as CodexModelOptions | undefined,
+      );
+      break;
+    case "gemini":
+      normalizedOptions = normalizeGeminiModelOptionsWithCapabilities(
+        caps,
+        providerOptions as GeminiModelOptions | undefined,
+      );
+      break;
+    case "claudeAgent":
+      normalizedOptions = normalizeClaudeModelOptionsWithCapabilities(
+        caps,
+        providerOptions as ClaudeModelOptions | undefined,
+      );
+      break;
+    case "opencode":
+      normalizedOptions = normalizeOpencodeModelOptionsWithCapabilities(
+        caps,
+        providerOptions as OpencodeModelOptions | undefined,
+      );
+      break;
+  }
 
   // Ultrathink styling (driven by capabilities data, not provider identity)
   const ultrathinkActive =
@@ -90,71 +119,46 @@ function getProviderStateFromCapabilities(
   };
 }
 
+function makeCapabilitiesRegistryEntry(provider: ProviderKind): ProviderRegistryEntry {
+  return {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: ({
+      threadId,
+      model,
+      models,
+      modelOptions,
+      prompt,
+      onPromptChange,
+    }) => (
+      <TraitsMenuContent
+        provider={provider}
+        models={models}
+        threadId={threadId}
+        model={model}
+        modelOptions={modelOptions}
+        prompt={prompt}
+        onPromptChange={onPromptChange}
+      />
+    ),
+    renderTraitsPicker: ({ threadId, model, models, modelOptions, prompt, onPromptChange }) => (
+      <TraitsPicker
+        provider={provider}
+        models={models}
+        threadId={threadId}
+        model={model}
+        modelOptions={modelOptions}
+        prompt={prompt}
+        onPromptChange={onPromptChange}
+      />
+    ),
+  };
+}
+
 const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
-  codex: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: ({
-      threadId,
-      model,
-      models,
-      modelOptions,
-      prompt,
-      onPromptChange,
-    }) => (
-      <TraitsMenuContent
-        provider="codex"
-        models={models}
-        threadId={threadId}
-        model={model}
-        modelOptions={modelOptions}
-        prompt={prompt}
-        onPromptChange={onPromptChange}
-      />
-    ),
-    renderTraitsPicker: ({ threadId, model, models, modelOptions, prompt, onPromptChange }) => (
-      <TraitsPicker
-        provider="codex"
-        models={models}
-        threadId={threadId}
-        model={model}
-        modelOptions={modelOptions}
-        prompt={prompt}
-        onPromptChange={onPromptChange}
-      />
-    ),
-  },
-  claudeAgent: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: ({
-      threadId,
-      model,
-      models,
-      modelOptions,
-      prompt,
-      onPromptChange,
-    }) => (
-      <TraitsMenuContent
-        provider="claudeAgent"
-        models={models}
-        threadId={threadId}
-        model={model}
-        modelOptions={modelOptions}
-        prompt={prompt}
-        onPromptChange={onPromptChange}
-      />
-    ),
-    renderTraitsPicker: ({ threadId, model, models, modelOptions, prompt, onPromptChange }) => (
-      <TraitsPicker
-        provider="claudeAgent"
-        models={models}
-        threadId={threadId}
-        model={model}
-        modelOptions={modelOptions}
-        prompt={prompt}
-        onPromptChange={onPromptChange}
-      />
-    ),
-  },
+  codex: makeCapabilitiesRegistryEntry("codex"),
+  gemini: makeCapabilitiesRegistryEntry("gemini"),
+  claudeAgent: makeCapabilitiesRegistryEntry("claudeAgent"),
+  opencode: makeCapabilitiesRegistryEntry("opencode"),
 };
 
 export function getComposerProviderState(input: ComposerProviderStateInput): ComposerProviderState {

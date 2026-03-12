@@ -1,5 +1,10 @@
 import { Option, Schema, SchemaIssue, Struct } from "effect";
-import { ClaudeModelOptions, CodexModelOptions } from "./model";
+import {
+  ClaudeModelOptions,
+  CodexModelOptions,
+  GeminiModelOptions,
+  OpencodeModelOptions,
+} from "./model";
 import {
   ApprovalRequestId,
   CheckpointRef,
@@ -27,8 +32,27 @@ export const ORCHESTRATION_WS_CHANNELS = {
   domainEvent: "orchestration.domainEvent",
 } as const;
 
-export const ProviderKind = Schema.Literals(["codex", "claudeAgent"]);
+export const PROVIDER_CODEX = "codex" as const;
+export const PROVIDER_GEMINI = "gemini" as const;
+export const PROVIDER_CLAUDE_AGENT = "claudeAgent" as const;
+export const PROVIDER_OPENCODE = "opencode" as const;
+
+const PROVIDER_KIND_VALUES = [
+  PROVIDER_CODEX,
+  PROVIDER_GEMINI,
+  PROVIDER_CLAUDE_AGENT,
+  PROVIDER_OPENCODE,
+] as const;
+export const ProviderKind = Schema.Literals(PROVIDER_KIND_VALUES);
 export type ProviderKind = typeof ProviderKind.Type;
+
+export const PROVIDER_KIND_SET: ReadonlySet<string> = new Set<string>(PROVIDER_KIND_VALUES);
+
+export function isProviderKind(value: string): value is ProviderKind {
+  return PROVIDER_KIND_SET.has(value);
+}
+
+export const DEFAULT_PROVIDER: ProviderKind = PROVIDER_GEMINI;
 export const ProviderApprovalPolicy = Schema.Literals([
   "untrusted",
   "on-failure",
@@ -44,12 +68,48 @@ export const ProviderSandboxMode = Schema.Literals([
 export type ProviderSandboxMode = typeof ProviderSandboxMode.Type;
 export const DEFAULT_PROVIDER_KIND: ProviderKind = "codex";
 
+export const CodexProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  homePath: Schema.optional(TrimmedNonEmptyString),
+});
+
+export const ClaudeProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  permissionMode: Schema.optional(TrimmedNonEmptyString),
+  maxThinkingTokens: Schema.optional(NonNegativeInt),
+});
+
+export const GeminiProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  homePath: Schema.optional(TrimmedNonEmptyString),
+});
+
+export const ProviderStartOptions = Schema.Struct({
+  codex: Schema.optional(CodexProviderStartOptions),
+  gemini: Schema.optional(GeminiProviderStartOptions),
+  claudeAgent: Schema.optional(ClaudeProviderStartOptions),
+  opencode: Schema.optional(
+    Schema.Struct({
+      binaryPath: Schema.optional(TrimmedNonEmptyString),
+      apiKey: Schema.optional(TrimmedNonEmptyString),
+    }),
+  ),
+});
+export type ProviderStartOptions = typeof ProviderStartOptions.Type;
+
 export const CodexModelSelection = Schema.Struct({
   provider: Schema.Literal("codex"),
   model: TrimmedNonEmptyString,
   options: Schema.optionalKey(CodexModelOptions),
 });
 export type CodexModelSelection = typeof CodexModelSelection.Type;
+
+export const GeminiModelSelection = Schema.Struct({
+  provider: Schema.Literal("gemini"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optionalKey(GeminiModelOptions),
+});
+export type GeminiModelSelection = typeof GeminiModelSelection.Type;
 
 export const ClaudeModelSelection = Schema.Struct({
   provider: Schema.Literal("claudeAgent"),
@@ -58,7 +118,19 @@ export const ClaudeModelSelection = Schema.Struct({
 });
 export type ClaudeModelSelection = typeof ClaudeModelSelection.Type;
 
-export const ModelSelection = Schema.Union([CodexModelSelection, ClaudeModelSelection]);
+export const OpencodeModelSelection = Schema.Struct({
+  provider: Schema.Literal("opencode"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optionalKey(OpencodeModelOptions),
+});
+export type OpencodeModelSelection = typeof OpencodeModelSelection.Type;
+
+export const ModelSelection = Schema.Union([
+  CodexModelSelection,
+  GeminiModelSelection,
+  ClaudeModelSelection,
+  OpencodeModelSelection,
+]);
 export type ModelSelection = typeof ModelSelection.Type;
 
 export const RuntimeMode = Schema.Literals(["approval-required", "full-access"]);
@@ -86,7 +158,6 @@ export const PROVIDER_SEND_TURN_MAX_ATTACHMENTS = 8;
 export const PROVIDER_SEND_TURN_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const PROVIDER_SEND_TURN_MAX_IMAGE_DATA_URL_CHARS = 14_000_000;
 const CHAT_ATTACHMENT_ID_MAX_CHARS = 128;
-// Correlation id is command id by design in this model.
 export const CorrelationId = CommandId;
 export type CorrelationId = typeof CorrelationId.Type;
 
@@ -385,6 +456,8 @@ export const ThreadTurnStartCommand = Schema.Struct({
     attachments: Schema.Array(ChatAttachment),
   }),
   modelSelection: Schema.optional(ModelSelection),
+  providerOptions: Schema.optional(ProviderStartOptions),
+  assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
@@ -404,6 +477,8 @@ const ClientThreadTurnStartCommand = Schema.Struct({
     attachments: Schema.Array(UploadChatAttachment),
   }),
   modelSelection: Schema.optional(ModelSelection),
+  providerOptions: Schema.optional(ProviderStartOptions),
+  assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
@@ -681,6 +756,7 @@ export const ThreadTurnStartRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   messageId: MessageId,
   modelSelection: Schema.optional(ModelSelection),
+  providerOptions: Schema.optional(ProviderStartOptions),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
   interactionMode: ProviderInteractionMode.pipe(

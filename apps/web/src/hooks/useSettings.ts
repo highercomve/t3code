@@ -184,6 +184,18 @@ export function buildLegacyServerSettingsMigrationPatch(legacySettings: Record<s
     patch.providers.claudeAgent.binaryPath = legacySettings.claudeBinaryPath;
   }
 
+  if (Predicate.isString(legacySettings.geminiBinaryPath)) {
+    patch.providers ??= {};
+    patch.providers.gemini ??= {};
+    patch.providers.gemini.binaryPath = legacySettings.geminiBinaryPath;
+  }
+
+  if (Predicate.isString(legacySettings.geminiHomePath)) {
+    patch.providers ??= {};
+    patch.providers.gemini ??= {};
+    patch.providers.gemini.homePath = legacySettings.geminiHomePath;
+  }
+
   if (Array.isArray(legacySettings.customClaudeModels)) {
     patch.providers ??= {};
     patch.providers.claudeAgent ??= {};
@@ -191,6 +203,16 @@ export function buildLegacyServerSettingsMigrationPatch(legacySettings: Record<s
       legacySettings.customClaudeModels,
       new Set<string>(),
       "claudeAgent",
+    );
+  }
+
+  if (Array.isArray(legacySettings.customGeminiModels)) {
+    patch.providers ??= {};
+    patch.providers.gemini ??= {};
+    patch.providers.gemini.customModels = normalizeCustomModelSlugs(
+      legacySettings.customGeminiModels,
+      new Set<string>(),
+      "gemini",
     );
   }
 

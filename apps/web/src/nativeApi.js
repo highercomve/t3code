@@ -1,0 +1,19 @@
+import { createWsNativeApi } from "./wsNativeApi";
+let cachedApi;
+export function readNativeApi() {
+  if (typeof window === "undefined") return undefined;
+  if (cachedApi) return cachedApi;
+  if (window.nativeApi) {
+    cachedApi = window.nativeApi;
+    return cachedApi;
+  }
+  cachedApi = createWsNativeApi();
+  return cachedApi;
+}
+export function ensureNativeApi() {
+  const api = readNativeApi();
+  if (!api) {
+    throw new Error("Native API not found");
+  }
+  return api;
+}

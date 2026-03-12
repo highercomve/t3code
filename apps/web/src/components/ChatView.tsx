@@ -121,7 +121,7 @@ import {
   resolveSelectableProvider,
 } from "../providerModels";
 import { useSettings } from "../hooks/useSettings";
-import { resolveAppModelSelection } from "../modelSelection";
+import { buildModelSelection, resolveAppModelSelection } from "../modelSelection";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import {
   type ComposerImageAttachment,
@@ -655,11 +655,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
   const selectedPromptEffort = composerProviderState.promptEffort;
   const selectedModelOptionsForDispatch = composerProviderState.modelOptionsForDispatch;
   const selectedModelSelection = useMemo<ModelSelection>(
-    () => ({
-      provider: selectedProvider,
-      model: selectedModel,
-      ...(selectedModelOptionsForDispatch ? { options: selectedModelOptionsForDispatch } : {}),
-    }),
+    () => buildModelSelection(selectedProvider, selectedModel, selectedModelOptionsForDispatch),
     [selectedModel, selectedModelOptionsForDispatch, selectedProvider],
   );
   const selectedModelForPicker = selectedModel;
@@ -1029,9 +1025,10 @@ export default function ChatView({ threadId }: ChatViewProps) {
   const availableEditors = serverConfigQuery.data?.availableEditors ?? EMPTY_AVAILABLE_EDITORS;
   const modelOptionsByProvider = useMemo(
     () => ({
-      codex: providerStatuses.find((provider) => provider.provider === "codex")?.models ?? [],
-      claudeAgent:
-        providerStatuses.find((provider) => provider.provider === "claudeAgent")?.models ?? [],
+      codex: getProviderModels(providerStatuses, "codex"),
+      gemini: getProviderModels(providerStatuses, "gemini"),
+      claudeAgent: getProviderModels(providerStatuses, "claudeAgent"),
+      opencode: getProviderModels(providerStatuses, "opencode"),
     }),
     [providerStatuses],
   );
@@ -2626,14 +2623,13 @@ export default function ChatView({ threadId }: ChatViewProps) {
         }
       }
       const title = truncateTitle(titleSeed);
-      const threadCreateModelSelection: ModelSelection = {
-        provider: selectedProvider,
-        model:
-          selectedModel ||
+      const threadCreateModelSelection: ModelSelection = buildModelSelection(
+        selectedProvider,
+        selectedModel ||
           activeProject.defaultModelSelection?.model ||
           DEFAULT_MODEL_BY_PROVIDER.codex,
-        ...(selectedModelSelection.options ? { options: selectedModelSelection.options } : {}),
-      };
+        selectedModelSelection.options,
+      );
 
       if (isLocalDraftThread) {
         await api.orchestration.dispatchCommand({
@@ -3176,10 +3172,10 @@ export default function ChatView({ threadId }: ChatViewProps) {
         providerStatuses,
         model,
       );
-      const nextModelSelection: ModelSelection = {
-        provider: resolvedProvider,
-        model: resolvedModel,
-      };
+      const nextModelSelection: ModelSelection = buildModelSelection(
+        resolvedProvider,
+        resolvedModel,
+      );
       setComposerDraftModelSelection(activeThread.id, nextModelSelection);
       setStickyComposerModelSelection(nextModelSelection);
       scheduleComposerFocus();

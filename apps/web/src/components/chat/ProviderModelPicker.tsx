@@ -32,16 +32,20 @@ function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): o
 
 const PROVIDER_ICON_BY_PROVIDER: Record<ProviderPickerKind, Icon> = {
   codex: OpenAI,
+  gemini: Gemini,
   claudeAgent: ClaudeAI,
+  opencode: OpenCodeIcon,
   cursor: CursorIcon,
 };
 
 export const AVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter(isAvailableProviderOption);
 const UNAVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter((option) => !option.available);
-const COMING_SOON_PROVIDER_OPTIONS = [
-  { id: "opencode", label: "OpenCode", icon: OpenCodeIcon },
-  { id: "gemini", label: "Gemini", icon: Gemini },
-] as const;
+type ComingSoonProviderOption = {
+  id: string;
+  label: string;
+  icon: Icon;
+};
+const COMING_SOON_PROVIDER_OPTIONS: readonly ComingSoonProviderOption[] = [];
 
 function providerIconClassName(
   provider: ProviderKind | ProviderPickerKind,

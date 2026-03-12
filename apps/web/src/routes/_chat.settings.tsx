@@ -20,6 +20,7 @@ import {
 import { normalizeModelSlug } from "@t3tools/shared/model";
 import { useSettings, useUpdateSettings } from "../hooks/useSettings";
 import {
+  buildModelSelection,
   getCustomModelOptionsByProvider,
   MAX_CUSTOM_MODEL_LENGTH,
   resolveAppModelSelectionState,
@@ -98,10 +99,22 @@ const PROVIDER_SETTINGS: readonly InstallProviderSettings[] = [
     homeDescription: "Optional custom Codex home and config directory.",
   },
   {
+    provider: "gemini",
+    title: "Gemini",
+    binaryPlaceholder: "Gemini binary path",
+    binaryDescription: "Path to the Gemini binary",
+  },
+  {
     provider: "claudeAgent",
     title: "Claude",
     binaryPlaceholder: "Claude binary path",
     binaryDescription: "Path to the Claude binary",
+  },
+  {
+    provider: "opencode",
+    title: "OpenCode",
+    binaryPlaceholder: "OpenCode binary path",
+    binaryDescription: "Path to the OpenCode binary",
   },
 ];
 
@@ -296,17 +309,31 @@ function SettingsRouteView() {
       settings.providers.codex.homePath !== DEFAULT_UNIFIED_SETTINGS.providers.codex.homePath ||
       settings.providers.codex.customModels.length > 0,
     ),
+    gemini: Boolean(
+      settings.providers.gemini.binaryPath !==
+        DEFAULT_UNIFIED_SETTINGS.providers.gemini.binaryPath ||
+      settings.providers.gemini.homePath !== DEFAULT_UNIFIED_SETTINGS.providers.gemini.homePath ||
+      settings.providers.gemini.customModels.length > 0,
+    ),
     claudeAgent: Boolean(
       settings.providers.claudeAgent.binaryPath !==
         DEFAULT_UNIFIED_SETTINGS.providers.claudeAgent.binaryPath ||
       settings.providers.claudeAgent.customModels.length > 0,
+    ),
+    opencode: Boolean(
+      settings.providers.opencode.binaryPath !==
+        DEFAULT_UNIFIED_SETTINGS.providers.opencode.binaryPath ||
+      settings.providers.opencode.apiKey !== DEFAULT_UNIFIED_SETTINGS.providers.opencode.apiKey ||
+      settings.providers.opencode.customModels.length > 0,
     ),
   });
   const [customModelInputByProvider, setCustomModelInputByProvider] = useState<
     Record<ProviderKind, string>
   >({
     codex: "",
+    gemini: "",
     claudeAgent: "",
+    opencode: "",
   });
   const [customModelErrorByProvider, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, string | null>>
@@ -552,11 +579,15 @@ function SettingsRouteView() {
     resetSettings();
     setOpenProviderDetails({
       codex: false,
+      gemini: false,
       claudeAgent: false,
+      opencode: false,
     });
     setCustomModelInputByProvider({
       codex: "",
+      gemini: "",
       claudeAgent: "",
+      opencode: "",
     });
     setCustomModelErrorByProvider({});
   }
@@ -843,7 +874,7 @@ function SettingsRouteView() {
                           textGenerationModelSelection: resolveAppModelSelectionState(
                             {
                               ...settings,
-                              textGenerationModelSelection: { provider, model },
+                              textGenerationModelSelection: buildModelSelection(provider, model),
                             },
                             serverProviders,
                           ),
@@ -868,11 +899,11 @@ function SettingsRouteView() {
                           textGenerationModelSelection: resolveAppModelSelectionState(
                             {
                               ...settings,
-                              textGenerationModelSelection: {
-                                provider: textGenProvider,
-                                model: textGenModel,
-                                ...(nextOptions ? { options: nextOptions } : {}),
-                              },
+                              textGenerationModelSelection: buildModelSelection(
+                                textGenProvider,
+                                textGenModel,
+                                nextOptions,
+                              ),
                             },
                             serverProviders,
                           ),

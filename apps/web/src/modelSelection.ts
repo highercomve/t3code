@@ -1,8 +1,12 @@
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER,
+  type GeminiModelSelection,
   type ModelSelection,
+  type OpencodeModelSelection,
   type ProviderKind,
   type ServerProvider,
+  type ClaudeModelSelection,
+  type CodexModelSelection,
 } from "@t3tools/contracts";
 import { normalizeModelSlug, resolveSelectableModel } from "@t3tools/shared/model";
 import { getComposerProviderState } from "./components/chat/composerProviderRegistry";
@@ -30,6 +34,46 @@ export interface AppModelOption {
   isCustom: boolean;
 }
 
+type ModelSelectionByProvider = {
+  codex: CodexModelSelection;
+  gemini: GeminiModelSelection;
+  claudeAgent: ClaudeModelSelection;
+  opencode: OpencodeModelSelection;
+};
+
+export function buildModelSelection<P extends ProviderKind>(
+  provider: P,
+  model: string,
+  options?: ModelSelectionByProvider[P]["options"],
+): ModelSelectionByProvider[P] {
+  switch (provider) {
+    case "codex":
+      return {
+        provider,
+        model,
+        ...(options ? { options } : {}),
+      } as ModelSelectionByProvider[P];
+    case "gemini":
+      return {
+        provider,
+        model,
+        ...(options ? { options } : {}),
+      } as ModelSelectionByProvider[P];
+    case "claudeAgent":
+      return {
+        provider,
+        model,
+        ...(options ? { options } : {}),
+      } as ModelSelectionByProvider[P];
+    case "opencode":
+      return {
+        provider,
+        model,
+        ...(options ? { options } : {}),
+      } as ModelSelectionByProvider[P];
+  }
+}
+
 const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConfig> = {
   codex: {
     provider: "codex",
@@ -44,6 +88,20 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     description: "Save additional Claude model slugs for the picker and `/model` command.",
     placeholder: "your-claude-model-slug",
     example: "claude-sonnet-5-0",
+  },
+  gemini: {
+    provider: "gemini",
+    title: "Gemini",
+    description: "Save additional Gemini model slugs for the picker and `/model` command.",
+    placeholder: "your-gemini-model-slug",
+    example: "gemini-3.1-pro-preview",
+  },
+  opencode: {
+    provider: "opencode",
+    title: "OpenCode",
+    description: "Save additional OpenCode model slugs for the picker and `/model` command.",
+    placeholder: "your-opencode-model-slug",
+    example: "opencode/big-pickle",
   },
 };
 
@@ -159,11 +217,23 @@ export function getCustomModelOptionsByProvider(
       "codex",
       selectedProvider === "codex" ? selectedModel : undefined,
     ),
+    gemini: getAppModelOptions(
+      settings,
+      providers,
+      "gemini",
+      selectedProvider === "gemini" ? selectedModel : undefined,
+    ),
     claudeAgent: getAppModelOptions(
       settings,
       providers,
       "claudeAgent",
       selectedProvider === "claudeAgent" ? selectedModel : undefined,
+    ),
+    opencode: getAppModelOptions(
+      settings,
+      providers,
+      "opencode",
+      selectedProvider === "opencode" ? selectedModel : undefined,
     ),
   };
 }
@@ -192,9 +262,5 @@ export function resolveAppModelSelectionState(
     },
   });
 
-  return {
-    provider,
-    model,
-    ...(modelOptionsForDispatch ? { options: modelOptionsForDispatch } : {}),
-  };
+  return buildModelSelection(provider, model, modelOptionsForDispatch);
 }

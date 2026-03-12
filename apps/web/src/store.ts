@@ -1,6 +1,8 @@
 import { Fragment, type ReactNode, createElement, useEffect } from "react";
 import {
+  DEFAULT_PROVIDER,
   type ProviderKind,
+  isProviderKind,
   ThreadId,
   type OrchestrationReadModel,
   type OrchestrationSessionStatus,
@@ -193,12 +195,11 @@ function toLegacySessionStatus(
 }
 
 function toLegacyProvider(providerName: string | null): ProviderKind {
-  if (providerName === "codex" || providerName === "claudeAgent") {
+  if (providerName !== null && isProviderKind(providerName)) {
     return providerName;
   }
-  return "codex";
+  return DEFAULT_PROVIDER;
 }
-
 function resolveWsHttpOrigin(): string {
   if (typeof window === "undefined") return "";
   const bridgeWsUrl = window.desktopBridge?.getWsUrl?.();

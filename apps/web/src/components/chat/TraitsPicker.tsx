@@ -1,6 +1,8 @@
 import {
   type ClaudeModelOptions,
   type CodexModelOptions,
+  type GeminiModelOptions,
+  type OpencodeModelOptions,
   type ProviderKind,
   type ProviderModelOptions,
   type ServerProviderModel,
@@ -49,10 +51,15 @@ function getRawEffort(
   provider: ProviderKind,
   modelOptions: ProviderOptions | null | undefined,
 ): string | null {
-  if (provider === "codex") {
-    return trimOrNull((modelOptions as CodexModelOptions | undefined)?.reasoningEffort);
+  if (provider === "codex" || provider === "opencode") {
+    return trimOrNull(
+      (modelOptions as CodexModelOptions | OpencodeModelOptions | undefined)?.reasoningEffort,
+    );
   }
-  return trimOrNull((modelOptions as ClaudeModelOptions | undefined)?.effort);
+  if (provider === "claudeAgent") {
+    return trimOrNull((modelOptions as ClaudeModelOptions | undefined)?.effort);
+  }
+  return null;
 }
 
 function getRawContextWindow(
@@ -70,8 +77,11 @@ function buildNextOptions(
   modelOptions: ProviderOptions | null | undefined,
   patch: Record<string, unknown>,
 ): ProviderOptions {
-  if (provider === "codex") {
+  if (provider === "codex" || provider === "opencode") {
     return { ...(modelOptions as CodexModelOptions | undefined), ...patch } as CodexModelOptions;
+  }
+  if (provider === "gemini") {
+    return { ...(modelOptions as GeminiModelOptions | undefined), ...patch } as GeminiModelOptions;
   }
   return { ...(modelOptions as ClaudeModelOptions | undefined), ...patch } as ClaudeModelOptions;
 }
@@ -193,7 +203,8 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         onPromptChange(nextPrompt);
         return;
       }
-      const effortKey = provider === "codex" ? "reasoningEffort" : "effort";
+      const effortKey =
+        provider === "codex" || provider === "opencode" ? "reasoningEffort" : "effort";
       updateModelOptions(
         buildNextOptions(provider, modelOptions, { [effortKey]: nextOption.value }),
       );
@@ -351,7 +362,7 @@ export const TraitsPicker = memo(function TraitsPicker({
     .filter(Boolean)
     .join(" · ");
 
-  const isCodexStyle = provider === "codex";
+  const isCodexStyle = provider === "codex" || provider === "gemini" || provider === "opencode";
 
   return (
     <Menu

@@ -1,0 +1,11 @@
+import { type SVGProps } from "react";
+export type Icon = React.FC<SVGProps<SVGSVGElement>>;
+export declare const GitHubIcon: Icon;
+export declare const CursorIcon: Icon;
+export declare const VisualStudioCode: Icon;
+export declare const Zed: Icon;
+export declare const OpenAI: Icon;
+export declare const ClaudeAI: Icon;
+export declare const Gemini: Icon;
+export declare const AntigravityIcon: Icon;
+export declare const OpenCodeIcon: Icon;
