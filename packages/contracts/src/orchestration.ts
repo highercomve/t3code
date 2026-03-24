@@ -84,16 +84,16 @@ export const GeminiProviderStartOptions = Schema.Struct({
   homePath: Schema.optional(TrimmedNonEmptyString),
 });
 
+export const OpencodeProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  apiKey: Schema.optional(TrimmedNonEmptyString),
+});
+
 export const ProviderStartOptions = Schema.Struct({
   codex: Schema.optional(CodexProviderStartOptions),
   gemini: Schema.optional(GeminiProviderStartOptions),
   claudeAgent: Schema.optional(ClaudeProviderStartOptions),
-  opencode: Schema.optional(
-    Schema.Struct({
-      binaryPath: Schema.optional(TrimmedNonEmptyString),
-      apiKey: Schema.optional(TrimmedNonEmptyString),
-    }),
-  ),
+  opencode: Schema.optional(OpencodeProviderStartOptions),
 });
 export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 

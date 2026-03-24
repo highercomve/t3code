@@ -1,5 +1,6 @@
 import { type ChildProcessWithoutNullStreams, spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { EventEmitter } from "node:events";
 import readline from "node:readline";
 
@@ -18,9 +19,12 @@ import {
   type ProviderTurnStartResult,
   RuntimeMode,
   ProviderInteractionMode,
+  PROVIDER_OPENCODE,
 } from "@t3tools/contracts";
 import { normalizeModelSlug } from "@t3tools/shared/model";
 import { Effect, ServiceMap } from "effect";
+
+// ── Types ────────────────────────────────────────────────────────────
 
 type PendingRequestKey = string;
 
@@ -55,7 +59,7 @@ interface PendingUserInputRequest {
   itemId?: ProviderItemId;
 }
 
-interface GeminiSessionContext {
+interface OpencodeSessionContext {
   session: ProviderSession;
   acpSessionId: string | undefined;
   child: ChildProcessWithoutNullStreams;
@@ -89,7 +93,9 @@ interface JsonRpcNotification {
   params?: unknown;
 }
 
-export interface GeminiAppServerSendTurnInput {
+// ── Public types ─────────────────────────────────────────────────────
+
+export interface OpencodeAppServerSendTurnInput {
   readonly threadId: ThreadId;
   readonly input?: string;
   readonly attachments?: ReadonlyArray<{ type: "image"; url: string }>;
@@ -99,9 +105,9 @@ export interface GeminiAppServerSendTurnInput {
   readonly interactionMode?: ProviderInteractionMode;
 }
 
-export interface GeminiAppServerStartSessionInput {
+export interface OpencodeAppServerStartSessionInput {
   readonly threadId: ThreadId;
-  readonly provider?: "gemini";
+  readonly provider?: "opencode";
   readonly cwd?: string;
   readonly model?: string;
   readonly serviceTier?: string;
@@ -110,28 +116,25 @@ export interface GeminiAppServerStartSessionInput {
   readonly runtimeMode: RuntimeMode;
 }
 
-export interface GeminiThreadTurnSnapshot {
+export interface OpencodeThreadTurnSnapshot {
   id: TurnId;
   items: unknown[];
 }
 
-export interface GeminiThreadSnapshot {
+export interface OpencodeThreadSnapshot {
   threadId: string;
-  turns: GeminiThreadTurnSnapshot[];
+  turns: OpencodeThreadTurnSnapshot[];
 }
 
-const ANSI_ESCAPE_CHAR = String.fromCharCode(27);
-const ANSI_ESCAPE_REGEX = new RegExp(`${ANSI_ESCAPE_CHAR}\\[[0-9;]*m`, "g");
-const GEMINI_STDERR_LOG_REGEX =
-  /^\d{4}-\d{2}-\d{2}T\S+\s+(TRACE|DEBUG|INFO|WARN|ERROR)\s+\S+:\s+(.*)$/;
-const BENIGN_ERROR_LOG_SNIPPETS = [
-  "state db missing rollout path for thread",
-  "state db record_discrepancy: find_thread_path_by_id_str_in_subdir, falling_back",
-];
-const GEMINI_DEFAULT_MODEL = "gemini-3.1-pro-preview";
+// ── Constants ────────────────────────────────────────────────────────
+
+const PROVIDER = PROVIDER_OPENCODE;
+const OPENCODE_DEFAULT_MODEL = "claude-sonnet-4";
 
 /** Timeout for the long-running `prompt` request (10 minutes). */
 const PROMPT_TIMEOUT_MS = 600_000;
+
+// ── Helpers ──────────────────────────────────────────────────────────
 
 function asObject(value: unknown): Record<string, unknown> | undefined {
   if (!value || typeof value !== "object") {
@@ -148,11 +151,6 @@ function asArray(value: unknown): unknown[] | undefined {
   return Array.isArray(value) ? value : undefined;
 }
 
-/**
- * On Windows with `shell: true`, `child.kill()` only terminates the `cmd.exe`
- * wrapper, leaving the actual command running. Use `taskkill /T` to kill the
- * entire process tree instead.
- */
 function killChildTree(child: ChildProcessWithoutNullStreams): void {
   if (process.platform === "win32" && child.pid !== undefined) {
     try {
@@ -165,48 +163,6 @@ function killChildTree(child: ChildProcessWithoutNullStreams): void {
   child.kill();
 }
 
-export function normalizeGeminiModelSlug(
-  model: string | undefined | null,
-  preferredId?: string,
-): string | undefined {
-  const normalized = normalizeModelSlug(model);
-  if (!normalized) {
-    return undefined;
-  }
-
-  if (preferredId?.endsWith("-gemini") && preferredId !== normalized) {
-    return preferredId;
-  }
-
-  return normalized;
-}
-
-export function classifyGeminiStderrLine(rawLine: string): { message: string } | null {
-  const line = rawLine.replaceAll(ANSI_ESCAPE_REGEX, "").trim();
-  if (!line) {
-    return null;
-  }
-
-  const match = line.match(GEMINI_STDERR_LOG_REGEX);
-  if (match) {
-    const level = match[1];
-    if (level && level !== "ERROR") {
-      return null;
-    }
-
-    const isBenignError = BENIGN_ERROR_LOG_SNIPPETS.some((snippet) => line.includes(snippet));
-    if (isBenignError) {
-      return null;
-    }
-  }
-
-  return { message: line };
-}
-
-/**
- * Map T3 Code runtime mode to the ACP session mode id.
- * Gemini CLI supports: "default", "autoEdit", "yolo"
- */
 function runtimeModeToAcpMode(runtimeMode: RuntimeMode): string {
   switch (runtimeMode) {
     case "full-access":
@@ -217,9 +173,6 @@ function runtimeModeToAcpMode(runtimeMode: RuntimeMode): string {
   }
 }
 
-/**
- * Map ACP tool kind to the provider request kind used by the adapter layer.
- */
 function acpToolKindToRequestKind(kind: string | undefined): ProviderRequestKind | undefined {
   switch (kind) {
     case "execute":
@@ -236,10 +189,6 @@ function acpToolKindToRequestKind(kind: string | undefined): ProviderRequestKind
   }
 }
 
-/**
- * Map ACP tool kind to the Codex-style approval method name expected by the
- * adapter layer's event mapping.
- */
 function acpToolKindToApprovalMethod(kind: string | undefined): string {
   switch (kind) {
     case "read":
@@ -254,26 +203,36 @@ function acpToolKindToApprovalMethod(kind: string | undefined): string {
   }
 }
 
-export interface GeminiAppServerManagerEvents {
+export function classifyOpencodeStderrLine(rawLine: string): { message: string } | null {
+  const line = rawLine.trim();
+  if (!line) {
+    return null;
+  }
+  return { message: line };
+}
+
+// ── Manager ──────────────────────────────────────────────────────────
+
+export interface OpencodeAppServerManagerEvents {
   event: [event: ProviderEvent];
 }
 
 /**
- * GeminiAppServerManager — manages Gemini CLI sessions using the ACP
- * (Agent Client Protocol) over JSON-RPC/ndjson stdio.
+ * OpencodeAppServerManager — manages Opencode sessions using the ACP
+ * (Agent Client Protocol) over JSON-RPC/ndjson stdio via the `opencode` CLI.
  *
  * Protocol flow per session:
- *   1. Spawn `gemini --experimental-acp [--model <model>]`
+ *   1. Spawn `node <opencode acp>`
  *   2. initialize({ protocolVersion: 1 }) → { authMethods, agentCapabilities }
  *   3. authenticate({ methodId }) → void
- *   4. session/new({ cwd, mcpServers: [] }) → { sessionId, modes }
+ *   4. session/new({ cwd, mcpServers: [] }) → { sessionId, modes, models }
  *   5. session/prompt({ sessionId, prompt: [...] }) → { stopReason } (long-running)
  *      During prompt, server pushes `session/update` notifications and
  *      `session/request_permission` requests.
  *   6. session/cancel({ sessionId }) to interrupt a running prompt.
  */
-export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerEvents> {
-  private readonly sessions = new Map<ThreadId, GeminiSessionContext>();
+export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerManagerEvents> {
+  private readonly sessions = new Map<ThreadId, OpencodeSessionContext>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
   constructor(services?: ServiceMap.ServiceMap<never>) {
@@ -281,39 +240,41 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
   }
 
-  async startSession(input: GeminiAppServerStartSessionInput): Promise<ProviderSession> {
+  async startSession(input: OpencodeAppServerStartSessionInput): Promise<ProviderSession> {
     const threadId = input.threadId;
     const now = new Date().toISOString();
-    let context: GeminiSessionContext | undefined;
+    let context: OpencodeSessionContext | undefined;
 
     try {
       const resolvedCwd = input.cwd ?? process.cwd();
+      const resolvedModel =
+        normalizeModelSlug(input.model, PROVIDER) ?? OPENCODE_DEFAULT_MODEL;
 
       const session: ProviderSession = {
-        provider: "gemini",
+        provider: PROVIDER,
         status: "connecting",
         runtimeMode: input.runtimeMode,
-        model: normalizeGeminiModelSlug(input.model),
+        model: resolvedModel,
         cwd: resolvedCwd,
         threadId,
         createdAt: now,
         updatedAt: now,
       };
 
-      const geminiOptions = readGeminiProviderOptions(input);
-      const geminiBinaryPath = geminiOptions.binaryPath ?? "gemini";
-      const geminiHomePath = geminiOptions.homePath;
+      const opencodeOptions = readOpencodeProviderOptions(input);
+      const binaryPath =
+        opencodeOptions.binaryPath ?? "opencode";
 
-      const spawnArgs = ["--experimental-acp"];
-      const resolvedModel = normalizeGeminiModelSlug(input.model) ?? GEMINI_DEFAULT_MODEL;
-      spawnArgs.push("--model", resolvedModel);
+      const env: Record<string, string | undefined> = {
+        ...process.env,
+      };
+      if (opencodeOptions.apiKey) {
+        env.OPENCODE_API_KEY = opencodeOptions.apiKey;
+      }
 
-      const child = spawn(geminiBinaryPath, spawnArgs, {
+      const child = spawn(binaryPath, ["acp"], {
         cwd: resolvedCwd,
-        env: {
-          ...process.env,
-          ...(geminiHomePath ? { GEMINI_HOME: geminiHomePath } : {}),
-        },
+        env,
         stdio: ["pipe", "pipe", "pipe"],
         shell: process.platform === "win32",
       });
@@ -334,7 +295,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       this.sessions.set(threadId, context);
       this.attachProcessListeners(context);
 
-      this.emitLifecycleEvent(context, "session/connecting", "Starting gemini --experimental-acp");
+      this.emitLifecycleEvent(context, "session/connecting", "Starting opencode acp");
 
       // Step 1: ACP initialize
       const initResponse = await this.sendRequest<{
@@ -344,7 +305,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         agentCapabilities?: unknown;
       }>(context, "initialize", { protocolVersion: 1 });
 
-      await Effect.logInfo("gemini ACP initialize response", {
+      await Effect.logInfo("opencode ACP initialize response", {
         threadId,
         protocolVersion: initResponse?.protocolVersion,
         agentInfo: initResponse?.agentInfo,
@@ -356,7 +317,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       if (authMethods.length > 0) {
         const methodId = authMethods[0].id;
         await this.sendRequest(context, "authenticate", { methodId });
-        await Effect.logInfo("gemini ACP authenticated", {
+        await Effect.logInfo("opencode ACP authenticated", {
           threadId,
           methodId,
         }).pipe(this.runPromise);
@@ -381,7 +342,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
             mcpServers: [],
           });
           acpSessionId = resumeSessionId;
-          await Effect.logInfo("gemini ACP loadSession succeeded", {
+          await Effect.logInfo("opencode ACP loadSession succeeded", {
             threadId,
             sessionId: acpSessionId,
             currentMode: loadResponse?.modes?.currentModeId,
@@ -392,12 +353,11 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
             "session/threadResumeFallback",
             `Could not resume session ${resumeSessionId}; starting a new session.`,
           );
-          await Effect.logWarning("gemini ACP loadSession fell back to newSession", {
+          await Effect.logWarning("opencode ACP loadSession fell back to newSession", {
             threadId,
             resumeSessionId,
             cause: error instanceof Error ? error.message : String(error),
           }).pipe(this.runPromise);
-          // Fall through to newSession below
         }
       }
 
@@ -405,11 +365,15 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         this.emitLifecycleEvent(
           context,
           "session/threadOpenRequested",
-          "Starting a new Gemini ACP session.",
+          "Starting a new Opencode ACP session.",
         );
         const newSessionResponse = await this.sendRequest<{
           sessionId?: string;
           modes?: { availableModes?: unknown[]; currentModeId?: string };
+          models?: {
+            availableModels?: Array<{ modelId: string; name: string; description?: string }>;
+            currentModelId?: string;
+          };
         }>(context, "session/new", {
           cwd: resolvedCwd,
           mcpServers: [],
@@ -420,7 +384,17 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
           throw new Error("newSession response did not include a sessionId.");
         }
 
-        await Effect.logInfo("gemini ACP newSession succeeded", {
+        // Log available models from the ACP response
+        const availableModels = newSessionResponse?.models?.availableModels;
+        if (availableModels && availableModels.length > 0) {
+          await Effect.logInfo("opencode ACP available models", {
+            threadId,
+            models: availableModels.map((m) => m.modelId),
+            currentModel: newSessionResponse?.models?.currentModelId,
+          }).pipe(this.runPromise);
+        }
+
+        await Effect.logInfo("opencode ACP newSession succeeded", {
           threadId,
           sessionId: acpSessionId,
           currentMode: newSessionResponse?.modes?.currentModeId,
@@ -436,18 +410,17 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
           sessionId: acpSessionId,
           modeId: acpMode,
         });
-        await Effect.logInfo("gemini ACP session mode set", {
+        await Effect.logInfo("opencode ACP session mode set", {
           threadId,
           acpMode,
           runtimeMode: input.runtimeMode,
         }).pipe(this.runPromise);
       } catch (error) {
-        await Effect.logWarning("gemini ACP set_mode failed during startup", {
+        await Effect.logWarning("opencode ACP set_mode failed during startup", {
           threadId,
           acpMode,
           cause: error instanceof Error ? error.message : String(error),
         }).pipe(this.runPromise);
-        // Non-fatal — the fallback auto-approve in handleRequestPermission covers this
       }
 
       this.updateSession(context, {
@@ -457,12 +430,12 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       this.emitLifecycleEvent(
         context,
         "session/threadOpenResolved",
-        `Gemini ACP session established.`,
+        `Opencode ACP session established.`,
       );
       this.emitLifecycleEvent(context, "session/ready", `Connected to ACP session ${acpSessionId}`);
       return { ...context.session };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to start Gemini session.";
+      const message = error instanceof Error ? error.message : "Failed to start Opencode session.";
       if (context) {
         this.updateSession(context, {
           status: "error",
@@ -474,7 +447,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         this.emitEvent({
           id: EventId.makeUnsafe(randomUUID()),
           kind: "error",
-          provider: "gemini",
+          provider: PROVIDER,
           threadId,
           createdAt: new Date().toISOString(),
           method: "session/startFailed",
@@ -485,14 +458,13 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     }
   }
 
-  async sendTurn(input: GeminiAppServerSendTurnInput): Promise<ProviderTurnStartResult> {
+  async sendTurn(input: OpencodeAppServerSendTurnInput): Promise<ProviderTurnStartResult> {
     const context = this.requireSession(input.threadId);
 
     if (!context.acpSessionId) {
       throw new Error("Session is missing ACP session id.");
     }
 
-    // Build ACP prompt content blocks
     const promptContent: Array<
       { type: "text"; text: string } | { type: "image"; mimeType: string; data: string }
     > = [];
@@ -501,7 +473,6 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     }
     for (const attachment of input.attachments ?? []) {
       if (attachment.type === "image" && attachment.url) {
-        // data: URLs → extract mime and base64
         const dataUrlMatch = attachment.url.match(/^data:([^;]+);base64,(.+)$/);
         if (dataUrlMatch) {
           promptContent.push({
@@ -518,11 +489,10 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
 
     const turnId = TurnId.makeUnsafe(randomUUID());
 
-    // Emit synthetic turn/started notification so the adapter sees the turn begin
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "gemini",
+      provider: PROVIDER,
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       method: "turn/started",
@@ -530,8 +500,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       payload: {
         turn: {
           id: turnId,
-          model:
-            normalizeGeminiModelSlug(input.model ?? context.session.model) ?? GEMINI_DEFAULT_MODEL,
+          model: normalizeModelSlug(input.model ?? context.session.model, PROVIDER) ?? OPENCODE_DEFAULT_MODEL,
         },
       },
     });
@@ -541,7 +510,6 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       activeTurnId: turnId,
     });
 
-    // Fire prompt asynchronously — don't block the sendTurn return.
     this.executePrompt(context, turnId, promptContent, input);
 
     return {
@@ -553,18 +521,13 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     };
   }
 
-  /**
-   * Executes the ACP `prompt` request and emits turn/completed when done.
-   * Runs asynchronously — errors are emitted as events, not thrown.
-   */
   private async executePrompt(
-    context: GeminiSessionContext,
+    context: OpencodeSessionContext,
     turnId: TurnId,
     promptContent: Array<{ type: string; text?: string; mimeType?: string; data?: string }>,
-    input: GeminiAppServerSendTurnInput,
+    input: OpencodeAppServerSendTurnInput,
   ): Promise<void> {
     try {
-      // Optionally change session mode before prompting
       if (input.interactionMode && context.acpSessionId) {
         try {
           await this.sendRequest(context, "session/set_mode", {
@@ -572,12 +535,11 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
             modeId: input.interactionMode,
           });
         } catch (error) {
-          await Effect.logWarning("gemini ACP setSessionMode failed", {
+          await Effect.logWarning("opencode ACP setSessionMode failed", {
             threadId: context.session.threadId,
             mode: input.interactionMode,
             cause: error instanceof Error ? error.message : String(error),
           }).pipe(this.runPromise);
-          // Non-fatal — proceed with prompt
         }
       }
 
@@ -601,7 +563,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       this.emitEvent({
         id: EventId.makeUnsafe(randomUUID()),
         kind: "notification",
-        provider: "gemini",
+        provider: PROVIDER,
         threadId: context.session.threadId,
         createdAt: new Date().toISOString(),
         method: "turn/completed",
@@ -628,7 +590,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       this.emitEvent({
         id: EventId.makeUnsafe(randomUUID()),
         kind: "notification",
-        provider: "gemini",
+        provider: PROVIDER,
         threadId: context.session.threadId,
         createdAt: new Date().toISOString(),
         method: "turn/completed",
@@ -656,23 +618,20 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       return;
     }
 
-    // ACP cancel is a notification (fire-and-forget, no response expected)
     this.writeMessage(context, {
       method: "session/cancel",
       params: { sessionId: context.acpSessionId },
     });
   }
 
-  async readThread(threadId: ThreadId): Promise<GeminiThreadSnapshot> {
+  async readThread(threadId: ThreadId): Promise<OpencodeThreadSnapshot> {
     this.requireSession(threadId);
-    // ACP does not have a thread/read equivalent. History is streamed on
-    // loadSession, not returned via a dedicated read method.
-    throw new Error("readThread is not supported by the Gemini ACP provider.");
+    throw new Error("readThread is not supported by the Opencode ACP provider.");
   }
 
-  async rollbackThread(threadId: ThreadId, _numTurns: number): Promise<GeminiThreadSnapshot> {
+  async rollbackThread(threadId: ThreadId, _numTurns: number): Promise<OpencodeThreadSnapshot> {
     this.requireSession(threadId);
-    throw new Error("rollbackThread is not supported by the Gemini ACP provider.");
+    throw new Error("rollbackThread is not supported by the Opencode ACP provider.");
   }
 
   async respondToRequest(
@@ -688,7 +647,6 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
 
     context.pendingApprovals.delete(requestId);
 
-    // Map decision to ACP outcome
     let outcome: { outcome: string; optionId: string };
     if (decision === "deny") {
       outcome = { outcome: "cancelled", optionId: "" };
@@ -699,7 +657,6 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         optionId: alwaysOption?.optionId ?? "ProceedAlways",
       };
     } else {
-      // "approve"
       const onceOption = pendingRequest.options.find((o) => o.kind === "allow_once");
       outcome = {
         outcome: "proceed",
@@ -715,7 +672,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "gemini",
+      provider: PROVIDER,
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       method: "item/requestApproval/decision",
@@ -751,7 +708,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "gemini",
+      provider: PROVIDER,
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       method: "item/tool/requestUserInput/answered",
@@ -811,7 +768,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     }
   }
 
-  private requireSession(threadId: ThreadId): GeminiSessionContext {
+  private requireSession(threadId: ThreadId): OpencodeSessionContext {
     const context = this.sessions.get(threadId);
     if (!context) {
       throw new Error(`Unknown session for thread: ${threadId}`);
@@ -824,7 +781,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     return context;
   }
 
-  private attachProcessListeners(context: GeminiSessionContext): void {
+  private attachProcessListeners(context: OpencodeSessionContext): void {
     context.output.on("line", (line) => {
       this.handleStdoutLine(context, line);
     });
@@ -833,7 +790,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       const raw = chunk.toString();
       const lines = raw.split(/\r?\n/g);
       for (const rawLine of lines) {
-        const classified = classifyGeminiStderrLine(rawLine);
+        const classified = classifyOpencodeStderrLine(rawLine);
         if (!classified) {
           continue;
         }
@@ -843,7 +800,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     });
 
     context.child.on("error", (error) => {
-      const message = error.message || "gemini ACP process errored.";
+      const message = error.message || "opencode acp process errored.";
       this.updateSession(context, {
         status: "error",
         lastError: message,
@@ -856,7 +813,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         return;
       }
 
-      const message = `gemini ACP exited (code=${code ?? "null"}, signal=${signal ?? "null"}).`;
+      const message = `opencode acp exited (code=${code ?? "null"}, signal=${signal ?? "null"}).`;
       this.updateSession(context, {
         status: "closed",
         activeTurnId: undefined,
@@ -867,10 +824,8 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     });
   }
 
-  private handleStdoutLine(context: GeminiSessionContext, line: string): void {
+  private handleStdoutLine(context: OpencodeSessionContext, line: string): void {
     const trimmed = line.trim();
-    // Skip empty lines and non-JSON log output from the Gemini CLI
-    // (e.g. "Ignore file not found", "Hook registry initialized", etc.)
     if (!trimmed || !trimmed.startsWith("{")) {
       return;
     }
@@ -879,7 +834,6 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     try {
       parsed = JSON.parse(trimmed);
     } catch {
-      // Silently skip non-JSON lines — the Gemini CLI may emit log lines to stdout
       return;
     }
 
@@ -914,20 +868,15 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     );
   }
 
-  /**
-   * Handle ACP `sessionUpdate` notifications and translate them to
-   * ProviderEvent method names the adapter layer understands.
-   */
   private handleServerNotification(
-    context: GeminiSessionContext,
+    context: OpencodeSessionContext,
     notification: JsonRpcNotification,
   ): void {
     if (notification.method !== "session/update") {
-      // Forward unknown notifications as-is
       this.emitEvent({
         id: EventId.makeUnsafe(randomUUID()),
         kind: "notification",
-        provider: "gemini",
+        provider: PROVIDER,
         threadId: context.session.threadId,
         createdAt: new Date().toISOString(),
         method: notification.method,
@@ -953,7 +902,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
           this.emitEvent({
             id: EventId.makeUnsafe(randomUUID()),
             kind: "notification",
-            provider: "gemini",
+            provider: PROVIDER,
             threadId: context.session.threadId,
             createdAt: new Date().toISOString(),
             method: "item/agentMessage/delta",
@@ -972,7 +921,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
           this.emitEvent({
             id: EventId.makeUnsafe(randomUUID()),
             kind: "notification",
-            provider: "gemini",
+            provider: PROVIDER,
             threadId: context.session.threadId,
             createdAt: new Date().toISOString(),
             method: "item/reasoning/textDelta",
@@ -991,7 +940,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
           this.emitEvent({
             id: EventId.makeUnsafe(randomUUID()),
             kind: "notification",
-            provider: "gemini",
+            provider: PROVIDER,
             threadId: context.session.threadId,
             createdAt: new Date().toISOString(),
             method: "item/userMessage/delta",
@@ -1009,9 +958,10 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         const title = asString(update.title);
         const kind = asString(update.kind);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId
+          ? ProviderItemId.makeUnsafe(toolCallId)
+          : undefined;
 
-        // Determine the item type for the adapter
         const canonicalItemKind =
           kind === "read" || kind === "search"
             ? "fileRead"
@@ -1023,7 +973,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
           this.emitEvent({
             id: EventId.makeUnsafe(randomUUID()),
             kind: "notification",
-            provider: "gemini",
+            provider: PROVIDER,
             threadId: context.session.threadId,
             createdAt: new Date().toISOString(),
             method: "item/started",
@@ -1041,11 +991,10 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
             },
           });
         } else {
-          // completed or failed
           this.emitEvent({
             id: EventId.makeUnsafe(randomUUID()),
             kind: "notification",
-            provider: "gemini",
+            provider: PROVIDER,
             threadId: context.session.threadId,
             createdAt: new Date().toISOString(),
             method: "item/completed",
@@ -1070,12 +1019,14 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         const toolCallId = asString(update.toolCallId);
         const status = asString(update.status);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId
+          ? ProviderItemId.makeUnsafe(toolCallId)
+          : undefined;
 
         this.emitEvent({
           id: EventId.makeUnsafe(randomUUID()),
           kind: "notification",
-          provider: "gemini",
+          provider: PROVIDER,
           threadId: context.session.threadId,
           createdAt: new Date().toISOString(),
           method: status === "completed" || status === "failed" ? "item/completed" : "item/started",
@@ -1093,11 +1044,10 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       }
 
       default: {
-        // Pass through unrecognized session updates
         this.emitEvent({
           id: EventId.makeUnsafe(randomUUID()),
           kind: "notification",
-          provider: "gemini",
+          provider: PROVIDER,
           threadId: context.session.threadId,
           createdAt: new Date().toISOString(),
           method: `acp/sessionUpdate/${updateType ?? "unknown"}`,
@@ -1109,16 +1059,12 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     }
   }
 
-  /**
-   * Handle ACP server→client requests. The main one is `requestPermission`.
-   */
-  private handleServerRequest(context: GeminiSessionContext, request: JsonRpcRequest): void {
+  private handleServerRequest(context: OpencodeSessionContext, request: JsonRpcRequest): void {
     if (request.method === "session/request_permission") {
       this.handleRequestPermission(context, request);
       return;
     }
 
-    // Unknown server request — reject it
     this.writeMessage(context, {
       id: request.id,
       error: {
@@ -1128,7 +1074,10 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     });
   }
 
-  private handleRequestPermission(context: GeminiSessionContext, request: JsonRpcRequest): void {
+  private handleRequestPermission(
+    context: OpencodeSessionContext,
+    request: JsonRpcRequest,
+  ): void {
     const params = asObject(request.params);
     const toolCall = asObject(params?.toolCall);
     const toolKind = asString(toolCall?.kind);
@@ -1172,7 +1121,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       this.emitEvent({
         id: EventId.makeUnsafe(randomUUID()),
         kind: "notification",
-        provider: "gemini",
+        provider: PROVIDER,
         threadId: context.session.threadId,
         createdAt: new Date().toISOString(),
         method: "item/requestApproval/decision",
@@ -1200,18 +1149,17 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     };
     context.pendingApprovals.set(requestId, pendingRequest);
 
-    // Extract detail from tool call content for the approval request event
     const contentBlocks = asArray(toolCall?.content) ?? [];
     const firstContent = asObject(contentBlocks[0]);
     const detail =
-      title ?? asString(firstContent?.path) ?? asString(asObject(firstContent?.content)?.text);
+      title ??
+      asString(firstContent?.path) ??
+      asString(asObject(firstContent?.content)?.text);
 
-    // Build payload that matches what the adapter expects
     const payload: Record<string, unknown> = {
       ...params,
       ...(detail ? { command: detail, reason: detail } : {}),
     };
-    // If there are diff content blocks, extract file info
     for (const block of contentBlocks) {
       const b = asObject(block);
       if (b && asString(b.type) === "diff") {
@@ -1225,7 +1173,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "request",
-      provider: "gemini",
+      provider: PROVIDER,
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       method: approvalMethod,
@@ -1237,7 +1185,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     });
   }
 
-  private handleResponse(context: GeminiSessionContext, response: JsonRpcResponse): void {
+  private handleResponse(context: OpencodeSessionContext, response: JsonRpcResponse): void {
     const key = String(response.id);
     const pending = context.pending.get(key);
     if (!pending) {
@@ -1256,7 +1204,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
   }
 
   private async sendRequest<TResponse>(
-    context: GeminiSessionContext,
+    context: OpencodeSessionContext,
     method: string,
     params: unknown,
     timeoutMs = 20_000,
@@ -1286,20 +1234,20 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     return result as TResponse;
   }
 
-  private writeMessage(context: GeminiSessionContext, message: Record<string, unknown>): void {
+  private writeMessage(context: OpencodeSessionContext, message: Record<string, unknown>): void {
     const encoded = JSON.stringify({ jsonrpc: "2.0", ...message });
     if (!context.child.stdin.writable) {
-      throw new Error("Cannot write to gemini ACP stdin.");
+      throw new Error("Cannot write to opencode acp stdin.");
     }
 
     context.child.stdin.write(`${encoded}\n`);
   }
 
-  private emitLifecycleEvent(context: GeminiSessionContext, method: string, message: string): void {
+  private emitLifecycleEvent(context: OpencodeSessionContext, method: string, message: string): void {
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "session",
-      provider: "gemini",
+      provider: PROVIDER,
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       method,
@@ -1307,11 +1255,11 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     });
   }
 
-  private emitErrorEvent(context: GeminiSessionContext, method: string, message: string): void {
+  private emitErrorEvent(context: OpencodeSessionContext, method: string, message: string): void {
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "error",
-      provider: "gemini",
+      provider: PROVIDER,
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       method,
@@ -1323,7 +1271,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     this.emit("event", event);
   }
 
-  private updateSession(context: GeminiSessionContext, updates: Partial<ProviderSession>): void {
+  private updateSession(context: OpencodeSessionContext, updates: Partial<ProviderSession>): void {
     context.session = {
       ...context.session,
       ...updates,
@@ -1364,26 +1312,27 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
   }
 }
 
-function readGeminiProviderOptions(input: GeminiAppServerStartSessionInput): {
+// ── Helpers ──────────────────────────────────────────────────────────
+
+function readOpencodeProviderOptions(input: OpencodeAppServerStartSessionInput): {
   readonly binaryPath?: string;
-  readonly homePath?: string;
+  readonly apiKey?: string;
 } {
-  const options = input.providerOptions?.gemini;
+  const options = input.providerOptions?.opencode;
   if (!options) {
     return {};
   }
   return {
     ...(options.binaryPath ? { binaryPath: options.binaryPath } : {}),
-    ...(options.homePath ? { homePath: options.homePath } : {}),
+    ...(options.apiKey ? { apiKey: options.apiKey } : {}),
   };
 }
 
-function readResumeSessionId(input: GeminiAppServerStartSessionInput): string | undefined {
+function readResumeSessionId(input: OpencodeAppServerStartSessionInput): string | undefined {
   const cursor = input.resumeCursor;
   if (!cursor || typeof cursor !== "object" || Array.isArray(cursor)) {
     return undefined;
   }
-  // Support both new format { sessionId } and legacy format { threadId }
   const sessionId = (cursor as Record<string, unknown>).sessionId;
   if (typeof sessionId === "string" && sessionId.trim().length > 0) {
     return sessionId.trim();

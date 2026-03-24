@@ -1129,7 +1129,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
         payload: {
           requestId,
           requestKind,
-          decision: "approve",
+          decision: "accept",
         },
       });
       return;
