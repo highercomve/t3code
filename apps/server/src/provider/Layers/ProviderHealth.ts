@@ -779,7 +779,12 @@ export const ProviderHealthLive = Layer.effect(
   ProviderHealth,
   Effect.gen(function* () {
     const statusesFiber = yield* Effect.all(
-      [checkCodexProviderStatus, checkClaudeProviderStatus, checkGeminiProviderStatus, checkOpencodeProviderStatus],
+      [
+        checkCodexProviderStatus,
+        checkClaudeProviderStatus,
+        checkGeminiProviderStatus,
+        checkOpencodeProviderStatus,
+      ],
       { concurrency: "unbounded" },
     ).pipe(Effect.forkScoped);
 

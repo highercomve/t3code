@@ -1174,9 +1174,7 @@ const makeOpencodeAdapter = (options?: OpencodeAdapterLiveOptions) =>
             detail: toMessage(cause, "Failed to start Opencode adapter session."),
             cause,
           }),
-      }).pipe(
-        Effect.map((session) => session),
-      );
+      }).pipe(Effect.map((session) => session));
     };
 
     const sendTurn: OpencodeAdapterShape["sendTurn"] = (input) =>

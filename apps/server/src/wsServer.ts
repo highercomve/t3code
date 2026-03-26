@@ -26,6 +26,7 @@ import {
   type WsResponse as WsResponseMessage,
   WsResponse,
   type WsPushEnvelopeBase,
+  type ServerProviderStatus,
 } from "@t3tools/contracts";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import {
@@ -35,6 +36,7 @@ import {
   FileSystem,
   Layer,
   Path,
+  Queue,
   Ref,
   Result,
   Schema,
@@ -59,6 +61,7 @@ import { ProviderRegistry } from "./provider/Services/ProviderRegistry";
 import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
 import { clamp } from "effect/Number";
 import { Open, resolveAvailableEditors } from "./open";
+import { getProviderDynamicModels, onDynamicModelsChanged } from "./provider/providerDynamicModels";
 import { ServerConfig } from "./config";
 import { GitCore } from "./git/Services/GitCore.ts";
 import { tryHandleProjectFaviconRequest } from "./projectFaviconRoute";
@@ -79,6 +82,16 @@ import { expandHomePath } from "./os-jank.ts";
 import { makeServerPushBus } from "./wsServer/pushBus.ts";
 import { makeServerReadiness } from "./wsServer/readiness.ts";
 import { decodeJsonResult, formatSchemaError } from "@t3tools/shared/schemaJson";
+
+function enrichProviderStatusesWithDynamicModels(
+  statuses: ReadonlyArray<ServerProviderStatus>,
+): ReadonlyArray<ServerProviderStatus> {
+  return statuses.map((status) => {
+    const dynamicModels = getProviderDynamicModels(status.provider);
+    if (!dynamicModels || dynamicModels.length === 0) return status;
+    return { ...status, dynamicModels };
+  });
+}
 
 /**
  * ServerShape - Service API for server lifecycle control.
@@ -646,6 +659,20 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
     }),
   ).pipe(Effect.forkIn(subscriptionsScope));
 
+  // Bridge callback-based dynamic model changes into Effect stream
+  const dynamicModelQueue = yield* Queue.unbounded<void>();
+  const unsubDynamicModels = onDynamicModelsChanged(() => {
+    Queue.offerUnsafe(dynamicModelQueue, undefined);
+  });
+  yield* Effect.addFinalizer(() => Effect.sync(unsubDynamicModels));
+
+  yield* Stream.runForEach(Stream.fromQueue(dynamicModelQueue), () =>
+    pushBus.publishAll(WS_CHANNELS.serverConfigUpdated, {
+      issues: [],
+      providers: enrichProviderStatusesWithDynamicModels(providerStatuses),
+    }),
+  ).pipe(Effect.forkIn(subscriptionsScope));
+
   yield* Scope.provide(orchestrationReactor.start, subscriptionsScope);
   yield* readiness.markOrchestrationSubscriptionsReady;
 
@@ -910,7 +937,7 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
           keybindingsConfigPath,
           keybindings: keybindingsConfig.keybindings,
           issues: keybindingsConfig.issues,
-          providers,
+          providers: enrichProviderStatusesWithDynamicModels(providerStatuses),
           availableEditors,
           settings,
         };
@@ -971,9 +998,20 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
 
     const result = yield* Effect.exit(routeRequest(ws, request.success));
     if (Exit.isFailure(result)) {
+      // Extract a concise error message instead of the full Cause.pretty()
+      // output, which includes stack traces and nested cause objects that
+      // the client cannot display meaningfully (e.g. a trailing "}").
+      const squashed = Cause.squash(result.cause);
+      const errorMessage =
+        squashed instanceof Error
+          ? squashed.message
+          : typeof squashed === "object" && squashed !== null && "message" in squashed
+            ? String((squashed as { message: unknown }).message)
+            : Cause.pretty(result.cause);
+
       return yield* sendWsResponse({
         id: request.success.id,
-        error: { message: Cause.pretty(result.cause) },
+        error: { message: errorMessage },
       });
     }
 

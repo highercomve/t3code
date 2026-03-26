@@ -21,7 +21,11 @@ export const MAX_CUSTOM_MODEL_LENGTH = 256;
 export const TimestampFormat = Schema.Literals(["locale", "12-hour", "24-hour"]);
 export type TimestampFormat = typeof TimestampFormat.Type;
 export const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = "locale";
-type CustomModelSettingsKey = "customCodexModels" | "customClaudeModels" | "customGeminiModels" | "customOpencodeModels";
+type CustomModelSettingsKey =
+  | "customCodexModels"
+  | "customClaudeModels"
+  | "customGeminiModels"
+  | "customOpencodeModels";
 export type ProviderCustomModelConfig = {
   provider: ProviderKind;
   settingsKey: CustomModelSettingsKey;
@@ -193,12 +197,23 @@ export function getAppModelOptions(
   provider: ProviderKind,
   customModels: readonly string[],
   selectedModel?: string | null,
+  dynamicModels?: ReadonlyArray<{ id: string; name: string }>,
 ): AppModelOption[] {
-  const options: AppModelOption[] = getModelOptions(provider).map(({ slug, name }) => ({
-    slug,
-    name,
-    isCustom: false,
-  }));
+  // If dynamic models are available, use them as the base instead of hardcoded ones
+  let options: AppModelOption[];
+  if (dynamicModels && dynamicModels.length > 0) {
+    options = dynamicModels.map(({ id, name }) => ({
+      slug: id,
+      name,
+      isCustom: false,
+    }));
+  } else {
+    options = getModelOptions(provider).map(({ slug, name }) => ({
+      slug,
+      name,
+      isCustom: false,
+    }));
+  }
   const seen = new Set(options.map((option) => option.slug));
   const trimmedSelectedModel = selectedModel?.trim().toLowerCase();
 
@@ -246,13 +261,36 @@ export function resolveAppModelSelection(
 
 export function getCustomModelOptionsByProvider(
   settings: Pick<AppSettings, CustomModelSettingsKey>,
+  dynamicModelsByProvider?: Partial<
+    Record<ProviderKind, ReadonlyArray<{ id: string; name: string }>>
+  >,
 ): Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>> {
   const customModelsByProvider = getCustomModelsByProvider(settings);
   return {
-    codex: getAppModelOptions("codex", customModelsByProvider.codex),
-    gemini: getAppModelOptions("gemini", customModelsByProvider.gemini),
-    claudeAgent: getAppModelOptions("claudeAgent", customModelsByProvider.claudeAgent),
-    opencode: getAppModelOptions("opencode", customModelsByProvider.opencode),
+    codex: getAppModelOptions(
+      "codex",
+      customModelsByProvider.codex,
+      undefined,
+      dynamicModelsByProvider?.codex,
+    ),
+    gemini: getAppModelOptions(
+      "gemini",
+      customModelsByProvider.gemini,
+      undefined,
+      dynamicModelsByProvider?.gemini,
+    ),
+    claudeAgent: getAppModelOptions(
+      "claudeAgent",
+      customModelsByProvider.claudeAgent,
+      undefined,
+      dynamicModelsByProvider?.claudeAgent,
+    ),
+    opencode: getAppModelOptions(
+      "opencode",
+      customModelsByProvider.opencode,
+      undefined,
+      dynamicModelsByProvider?.opencode,
+    ),
   };
 }
 

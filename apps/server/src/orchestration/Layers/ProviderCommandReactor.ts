@@ -15,6 +15,16 @@ import { Cache, Cause, Duration, Effect, Equal, Layer, Option, Schema, Stream } 
 import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
 
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
+
+/** Extract a concise, UI-safe error message from a Cause (no stack traces). */
+function causeMessage(cause: Cause.Cause<unknown>): string {
+  const squashed = Cause.squash(cause);
+  if (squashed instanceof Error) return squashed.message;
+  if (typeof squashed === "object" && squashed !== null && "message" in squashed) {
+    return String((squashed as { message: unknown }).message);
+  }
+  return String(squashed);
+}
 import { GitCore } from "../../git/Services/GitCore.ts";
 import { ProviderAdapterRequestError, ProviderServiceError } from "../../provider/Errors.ts";
 import { TextGeneration } from "../../git/Services/TextGeneration.ts";
@@ -504,16 +514,16 @@ const make = Effect.gen(function* () {
       interactionMode: event.payload.interactionMode,
       createdAt: event.payload.createdAt,
     }).pipe(
-      Effect.catchCause((cause) =>
-        appendProviderFailureActivity({
+      Effect.catchCause((cause) => {
+        return appendProviderFailureActivity({
           threadId: event.payload.threadId,
           kind: "provider.turn.start.failed",
           summary: "Provider turn start failed",
-          detail: Cause.pretty(cause),
+          detail: causeMessage(cause),
           turnId: null,
           createdAt: event.payload.createdAt,
-        }),
-      ),
+        });
+      }),
     );
   });
 
@@ -575,7 +585,7 @@ const make = Effect.gen(function* () {
               summary: "Provider approval response failed",
               detail: isUnknownPendingApprovalRequestError(cause)
                 ? stalePendingRequestDetail("approval", event.payload.requestId)
-                : Cause.pretty(cause),
+                : causeMessage(cause),
               turnId: null,
               createdAt: event.payload.createdAt,
               requestId: event.payload.requestId,
@@ -621,7 +631,7 @@ const make = Effect.gen(function* () {
             summary: "Provider user input response failed",
             detail: isUnknownPendingUserInputRequestError(cause)
               ? stalePendingRequestDetail("user-input", event.payload.requestId)
-              : Cause.pretty(cause),
+              : causeMessage(cause),
             turnId: null,
             createdAt: event.payload.createdAt,
             requestId: event.payload.requestId,

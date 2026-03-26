@@ -25,5 +25,5 @@ export function computeMessageDurationStart(
 }
 
 export function normalizeCompactToolLabel(value: string): string {
-  return value.replace(/\s+(?:complete|completed)\s*$/i, "").trim();
+  return value.replace(/\s+(?:start|started|complete|completed)\s*$/i, "").trim();
 }

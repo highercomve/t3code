@@ -659,6 +659,15 @@ export default function ChatView({ threadId }: ChatViewProps) {
     [selectedModel, selectedModelOptionsForDispatch, selectedProvider],
   );
   const selectedModelForPicker = selectedModel;
+  const dynamicModelsByProvider = useMemo(() => {
+    const result: Partial<Record<ProviderKind, ReadonlyArray<{ id: string; name: string }>>> = {};
+    for (const status of providerStatuses) {
+      if (status.dynamicModels && status.dynamicModels.length > 0) {
+        result[status.provider] = status.dynamicModels;
+      }
+    }
+    return result;
+  }, [providerStatuses]);
   const phase = derivePhase(activeThread?.session ?? null);
   const isSendBusy = sendPhase !== "idle";
   const isPreparingWorktree = sendPhase === "preparing-worktree";

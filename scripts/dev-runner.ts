@@ -30,7 +30,14 @@ const MODE_ARGS = {
   ],
   "dev:server": ["run", "dev", "--filter=t3"],
   "dev:web": ["run", "dev", "--filter=@t3tools/web"],
-   "dev:desktop": ["run", "dev", "--filter=@t3tools/desktop", "--filter=@t3tools/web", "--filter=t3", "--parallel"],
+  "dev:desktop": [
+    "run",
+    "dev",
+    "--filter=@t3tools/desktop",
+    "--filter=@t3tools/web",
+    "--filter=t3",
+    "--parallel",
+  ],
 } as const satisfies Record<string, ReadonlyArray<string>>;
 
 type DevMode = keyof typeof MODE_ARGS;
@@ -197,22 +204,22 @@ export function createDevRunnerEnv({
       delete output.T3CODE_LOG_WS_EVENTS;
     }
 
-     if (mode === "dev") {
-       output.T3CODE_MODE = "web";
-       delete output.T3CODE_DESKTOP_WS_URL;
-     }
+    if (mode === "dev") {
+      output.T3CODE_MODE = "web";
+      delete output.T3CODE_DESKTOP_WS_URL;
+    }
 
-     if (mode === "dev:server" || mode === "dev:web") {
-       output.T3CODE_MODE = "web";
-       delete output.T3CODE_DESKTOP_WS_URL;
-     }
+    if (mode === "dev:server" || mode === "dev:web") {
+      output.T3CODE_MODE = "web";
+      delete output.T3CODE_DESKTOP_WS_URL;
+    }
 
-     if (mode === "dev:desktop") {
-       output.T3CODE_MODE = "desktop";
-       // For desktop dev mode, we still want to expose the dev server URL
-       // but also set the desktop WS URL for the backend to connect to
-       output.T3CODE_DESKTOP_WS_URL = `ws://localhost:${serverPort}/?token=${encodeURIComponent(authToken ?? "")}`;
-     }
+    if (mode === "dev:desktop") {
+      output.T3CODE_MODE = "desktop";
+      // For desktop dev mode, we still want to expose the dev server URL
+      // but also set the desktop WS URL for the backend to connect to
+      output.T3CODE_DESKTOP_WS_URL = `ws://localhost:${serverPort}/?token=${encodeURIComponent(authToken ?? "")}`;
+    }
 
     if (isDesktopMode) {
       delete output.T3CODE_DESKTOP_WS_URL;

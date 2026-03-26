@@ -1,6 +1,5 @@
 import { type ChildProcessWithoutNullStreams, spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 import { EventEmitter } from "node:events";
 import readline from "node:readline";
 
@@ -23,6 +22,7 @@ import {
 } from "@t3tools/contracts";
 import { normalizeModelSlug } from "@t3tools/shared/model";
 import { Effect, ServiceMap } from "effect";
+import { setProviderDynamicModels } from "./provider/providerDynamicModels";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -92,6 +92,15 @@ interface JsonRpcNotification {
   method: string;
   params?: unknown;
 }
+
+const ANSI_ESCAPE_CHAR = "\u001b";
+const ANSI_ESCAPE_REGEX = new RegExp(`${ANSI_ESCAPE_CHAR}\\[[0-9;]*m`, "g");
+const OPENCODE_STDERR_LOG_REGEX = /^(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\b/;
+const BENIGN_OPENCODE_STDERR_SNIPPETS = [
+  "service=models.dev",
+  "Failed to fetch models.dev",
+] as const;
+const NON_WORD_ONLY_STDERR_LINE_REGEX = /^[^A-Za-z0-9]+$/;
 
 // ── Public types ─────────────────────────────────────────────────────
 
@@ -163,16 +172,6 @@ function killChildTree(child: ChildProcessWithoutNullStreams): void {
   child.kill();
 }
 
-function runtimeModeToAcpMode(runtimeMode: RuntimeMode): string {
-  switch (runtimeMode) {
-    case "full-access":
-      return "yolo";
-    case "approval-required":
-    default:
-      return "default";
-  }
-}
-
 function acpToolKindToRequestKind(kind: string | undefined): ProviderRequestKind | undefined {
   switch (kind) {
     case "execute":
@@ -204,11 +203,44 @@ function acpToolKindToApprovalMethod(kind: string | undefined): string {
 }
 
 export function classifyOpencodeStderrLine(rawLine: string): { message: string } | null {
-  const line = rawLine.trim();
+  const line = rawLine.replaceAll(ANSI_ESCAPE_REGEX, "").trim();
   if (!line) {
     return null;
   }
+
+  if (NON_WORD_ONLY_STDERR_LINE_REGEX.test(line)) {
+    return null;
+  }
+
+  const match = line.match(OPENCODE_STDERR_LOG_REGEX);
+  if (match) {
+    const level = match[1];
+    if (level && level !== "ERROR" && level !== "FATAL") {
+      return null;
+    }
+  }
+
+  const isBenignModelsDevError = BENIGN_OPENCODE_STDERR_SNIPPETS.every((snippet) =>
+    line.includes(snippet),
+  );
+  if (isBenignModelsDevError) {
+    return null;
+  }
+
   return { message: line };
+}
+
+export function classifyOpencodeStderrChunk(rawChunk: string): { message: string } | null {
+  const classifiedLines = rawChunk
+    .split(/\r?\n/g)
+    .map((line) => classifyOpencodeStderrLine(line))
+    .filter((entry): entry is { message: string } => entry !== null);
+
+  if (classifiedLines.length === 0) {
+    return null;
+  }
+
+  return classifiedLines[0]!;
 }
 
 // ── Manager ──────────────────────────────────────────────────────────
@@ -224,12 +256,11 @@ export interface OpencodeAppServerManagerEvents {
  * Protocol flow per session:
  *   1. Spawn `node <opencode acp>`
  *   2. initialize({ protocolVersion: 1 }) → { authMethods, agentCapabilities }
- *   3. authenticate({ methodId }) → void
- *   4. session/new({ cwd, mcpServers: [] }) → { sessionId, modes, models }
- *   5. session/prompt({ sessionId, prompt: [...] }) → { stopReason } (long-running)
+ *   3. session/new({ cwd, mcpServers: [] }) → { sessionId, modes, models }
+ *   4. session/prompt({ sessionId, prompt: [...] }) → { stopReason } (long-running)
  *      During prompt, server pushes `session/update` notifications and
  *      `session/request_permission` requests.
- *   6. session/cancel({ sessionId }) to interrupt a running prompt.
+ *   5. session/cancel({ sessionId }) to interrupt a running prompt.
  */
 export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerManagerEvents> {
   private readonly sessions = new Map<ThreadId, OpencodeSessionContext>();
@@ -247,8 +278,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
 
     try {
       const resolvedCwd = input.cwd ?? process.cwd();
-      const resolvedModel =
-        normalizeModelSlug(input.model, PROVIDER) ?? OPENCODE_DEFAULT_MODEL;
+      const resolvedModel = normalizeModelSlug(input.model, PROVIDER) ?? OPENCODE_DEFAULT_MODEL;
 
       const session: ProviderSession = {
         provider: PROVIDER,
@@ -262,8 +292,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       };
 
       const opencodeOptions = readOpencodeProviderOptions(input);
-      const binaryPath =
-        opencodeOptions.binaryPath ?? "opencode";
+      const binaryPath = opencodeOptions.binaryPath ?? "opencode";
 
       const env: Record<string, string | undefined> = {
         ...process.env,
@@ -312,12 +341,12 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         authMethodCount: initResponse?.authMethods?.length ?? 0,
       }).pipe(this.runPromise);
 
-      // Step 2: ACP authenticate
+      // OpenCode may advertise authMethods, but authenticate is not
+      // implemented; authentication is managed externally via `opencode auth login`.
       const authMethods = initResponse?.authMethods ?? [];
       if (authMethods.length > 0) {
         const methodId = authMethods[0].id;
-        await this.sendRequest(context, "authenticate", { methodId });
-        await Effect.logInfo("opencode ACP authenticated", {
+        await Effect.logInfo("opencode ACP auth advertised but skipped", {
           threadId,
           methodId,
         }).pipe(this.runPromise);
@@ -392,6 +421,15 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
             models: availableModels.map((m) => m.modelId),
             currentModel: newSessionResponse?.models?.currentModelId,
           }).pipe(this.runPromise);
+
+          // Store dynamic models for the frontend picker
+          setProviderDynamicModels(
+            "opencode",
+            availableModels.map((m) => ({
+              id: m.modelId,
+              name: m.name ?? m.modelId,
+            })),
+          );
         }
 
         await Effect.logInfo("opencode ACP newSession succeeded", {
@@ -403,25 +441,10 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
 
       context.acpSessionId = acpSessionId;
 
-      // Set ACP mode based on runtime mode
-      const acpMode = runtimeModeToAcpMode(input.runtimeMode);
-      try {
-        await this.sendRequest(context, "session/set_mode", {
-          sessionId: acpSessionId,
-          modeId: acpMode,
-        });
-        await Effect.logInfo("opencode ACP session mode set", {
-          threadId,
-          acpMode,
-          runtimeMode: input.runtimeMode,
-        }).pipe(this.runPromise);
-      } catch (error) {
-        await Effect.logWarning("opencode ACP set_mode failed during startup", {
-          threadId,
-          acpMode,
-          cause: error instanceof Error ? error.message : String(error),
-        }).pipe(this.runPromise);
-      }
+      await Effect.logInfo("opencode ACP session mode negotiation skipped", {
+        threadId,
+        runtimeMode: input.runtimeMode,
+      }).pipe(this.runPromise);
 
       this.updateSession(context, {
         status: "ready",
@@ -500,7 +523,9 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       payload: {
         turn: {
           id: turnId,
-          model: normalizeModelSlug(input.model ?? context.session.model, PROVIDER) ?? OPENCODE_DEFAULT_MODEL,
+          model:
+            normalizeModelSlug(input.model ?? context.session.model, PROVIDER) ??
+            OPENCODE_DEFAULT_MODEL,
         },
       },
     });
@@ -529,18 +554,10 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
   ): Promise<void> {
     try {
       if (input.interactionMode && context.acpSessionId) {
-        try {
-          await this.sendRequest(context, "session/set_mode", {
-            sessionId: context.acpSessionId,
-            modeId: input.interactionMode,
-          });
-        } catch (error) {
-          await Effect.logWarning("opencode ACP setSessionMode failed", {
-            threadId: context.session.threadId,
-            mode: input.interactionMode,
-            cause: error instanceof Error ? error.message : String(error),
-          }).pipe(this.runPromise);
-        }
+        await Effect.logInfo("opencode ACP turn mode negotiation skipped", {
+          threadId: context.session.threadId,
+          mode: input.interactionMode,
+        }).pipe(this.runPromise);
       }
 
       const response = await this.sendRequest<{ stopReason?: string }>(
@@ -787,14 +804,8 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     });
 
     context.child.stderr.on("data", (chunk: Buffer) => {
-      const raw = chunk.toString();
-      const lines = raw.split(/\r?\n/g);
-      for (const rawLine of lines) {
-        const classified = classifyOpencodeStderrLine(rawLine);
-        if (!classified) {
-          continue;
-        }
-
+      const classified = classifyOpencodeStderrChunk(chunk.toString());
+      if (classified) {
         this.emitErrorEvent(context, "process/stderr", classified.message);
       }
     });
@@ -958,9 +969,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         const title = asString(update.title);
         const kind = asString(update.kind);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId
-          ? ProviderItemId.makeUnsafe(toolCallId)
-          : undefined;
+        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
 
         const canonicalItemKind =
           kind === "read" || kind === "search"
@@ -1019,9 +1028,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         const toolCallId = asString(update.toolCallId);
         const status = asString(update.status);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId
-          ? ProviderItemId.makeUnsafe(toolCallId)
-          : undefined;
+        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
 
         this.emitEvent({
           id: EventId.makeUnsafe(randomUUID()),
@@ -1065,6 +1072,31 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       return;
     }
 
+    if (request.method === "item/tool/requestUserInput") {
+      const requestId = ApprovalRequestId.makeUnsafe(randomUUID());
+      const turnId = context.session.activeTurnId;
+
+      context.pendingUserInputs.set(requestId, {
+        requestId,
+        jsonRpcId: request.id,
+        threadId: context.session.threadId,
+        ...(turnId ? { turnId } : {}),
+      });
+
+      this.emitEvent({
+        id: EventId.makeUnsafe(randomUUID()),
+        kind: "request",
+        provider: PROVIDER,
+        threadId: context.session.threadId,
+        createdAt: new Date().toISOString(),
+        method: request.method,
+        ...(turnId ? { turnId } : {}),
+        requestId,
+        payload: request.params,
+      });
+      return;
+    }
+
     this.writeMessage(context, {
       id: request.id,
       error: {
@@ -1074,10 +1106,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     });
   }
 
-  private handleRequestPermission(
-    context: OpencodeSessionContext,
-    request: JsonRpcRequest,
-  ): void {
+  private handleRequestPermission(context: OpencodeSessionContext, request: JsonRpcRequest): void {
     const params = asObject(request.params);
     const toolCall = asObject(params?.toolCall);
     const toolKind = asString(toolCall?.kind);
@@ -1152,9 +1181,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     const contentBlocks = asArray(toolCall?.content) ?? [];
     const firstContent = asObject(contentBlocks[0]);
     const detail =
-      title ??
-      asString(firstContent?.path) ??
-      asString(asObject(firstContent?.content)?.text);
+      title ?? asString(firstContent?.path) ?? asString(asObject(firstContent?.content)?.text);
 
     const payload: Record<string, unknown> = {
       ...params,
@@ -1243,7 +1270,11 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     context.child.stdin.write(`${encoded}\n`);
   }
 
-  private emitLifecycleEvent(context: OpencodeSessionContext, method: string, message: string): void {
+  private emitLifecycleEvent(
+    context: OpencodeSessionContext,
+    method: string,
+    message: string,
+  ): void {
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "session",

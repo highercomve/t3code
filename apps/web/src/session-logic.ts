@@ -463,7 +463,6 @@ export function deriveWorkLogEntries(
   const ordered = [...activities].toSorted(compareActivitiesByOrder);
   const entries = ordered
     .filter((activity) => (latestTurnId ? activity.turnId === latestTurnId : true))
-    .filter((activity) => activity.kind !== "tool.started")
     .filter((activity) => activity.kind !== "task.started" && activity.kind !== "task.completed")
     .filter((activity) => activity.kind !== "context-window.updated")
     .filter((activity) => activity.summary !== "Checkpoint captured")
@@ -550,16 +549,20 @@ function shouldCollapseToolLifecycleEntries(
   previous: DerivedWorkLogEntry,
   next: DerivedWorkLogEntry,
 ): boolean {
-  if (previous.activityKind !== "tool.updated" && previous.activityKind !== "tool.completed") {
+  if (!isCollapsibleToolLifecycleActivity(previous.activityKind)) {
     return false;
   }
-  if (next.activityKind !== "tool.updated" && next.activityKind !== "tool.completed") {
+  if (!isCollapsibleToolLifecycleActivity(next.activityKind)) {
     return false;
   }
   if (previous.activityKind === "tool.completed") {
     return false;
   }
   return previous.collapseKey !== undefined && previous.collapseKey === next.collapseKey;
+}
+
+function isCollapsibleToolLifecycleActivity(kind: OrchestrationThreadActivity["kind"]): boolean {
+  return kind === "tool.started" || kind === "tool.updated" || kind === "tool.completed";
 }
 
 function mergeDerivedWorkLogEntries(
@@ -598,7 +601,7 @@ function mergeChangedFiles(
 }
 
 function deriveToolLifecycleCollapseKey(entry: DerivedWorkLogEntry): string | undefined {
-  if (entry.activityKind !== "tool.updated" && entry.activityKind !== "tool.completed") {
+  if (!isCollapsibleToolLifecycleActivity(entry.activityKind)) {
     return undefined;
   }
   const normalizedLabel = normalizeCompactToolLabel(entry.toolTitle ?? entry.label);
@@ -611,7 +614,7 @@ function deriveToolLifecycleCollapseKey(entry: DerivedWorkLogEntry): string | un
 }
 
 function normalizeCompactToolLabel(value: string): string {
-  return value.replace(/\s+(?:complete|completed)\s*$/i, "").trim();
+  return value.replace(/\s+(?:start|started|complete|completed)\s*$/i, "").trim();
 }
 
 function toLatestProposedPlanState(proposedPlan: ProposedPlan): LatestProposedPlanState {

@@ -35,15 +35,13 @@ export const ServerProviderAuthStatus = Schema.Literals([
 ]);
 export type ServerProviderAuthStatus = typeof ServerProviderAuthStatus.Type;
 
-export const ServerProviderModel = Schema.Struct({
-  slug: TrimmedNonEmptyString,
-  name: TrimmedNonEmptyString,
-  isCustom: Schema.Boolean,
-  capabilities: Schema.NullOr(ModelCapabilities),
+export const ProviderDynamicModel = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
 });
-export type ServerProviderModel = typeof ServerProviderModel.Type;
+export type ProviderDynamicModel = typeof ProviderDynamicModel.Type;
 
-export const ServerProvider = Schema.Struct({
+export const ServerProviderStatus = Schema.Struct({
   provider: ProviderKind,
   enabled: Schema.Boolean,
   installed: Schema.Boolean,
@@ -52,7 +50,7 @@ export const ServerProvider = Schema.Struct({
   authStatus: ServerProviderAuthStatus,
   checkedAt: IsoDateTime,
   message: Schema.optional(TrimmedNonEmptyString),
-  models: Schema.Array(ServerProviderModel),
+  dynamicModels: Schema.optional(Schema.Array(ProviderDynamicModel)),
 });
 export type ServerProvider = typeof ServerProvider.Type;
 

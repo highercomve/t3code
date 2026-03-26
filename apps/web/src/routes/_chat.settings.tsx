@@ -373,7 +373,11 @@ function SettingsRouteView() {
   )!;
   const selectedCustomModelInput = customModelInputByProvider[selectedCustomModelProvider];
   const selectedCustomModelError = customModelErrorByProvider[selectedCustomModelProvider] ?? null;
-  const totalCustomModels = settings.customCodexModels.length + settings.customClaudeModels.length + settings.customGeminiModels.length + settings.customOpencodeModels.length;
+  const totalCustomModels =
+    settings.customCodexModels.length +
+    settings.customClaudeModels.length +
+    settings.customGeminiModels.length +
+    settings.customOpencodeModels.length;
   const savedCustomModelRows = MODEL_PROVIDER_SETTINGS.flatMap((providerSettings) =>
     getCustomModelsForProvider(settings, providerSettings.provider).map((slug) => ({
       key: `${providerSettings.provider}:${slug}`,
@@ -400,7 +404,10 @@ function SettingsRouteView() {
       ? ["Delete confirmation"]
       : []),
     ...(isGitTextGenerationModelDirty ? ["Git writing model"] : []),
-    ...(settings.customCodexModels.length > 0 || settings.customClaudeModels.length > 0 || settings.customGeminiModels.length > 0 || settings.customOpencodeModels.length > 0
+    ...(settings.customCodexModels.length > 0 ||
+    settings.customClaudeModels.length > 0 ||
+    settings.customGeminiModels.length > 0 ||
+    settings.customOpencodeModels.length > 0
       ? ["Custom models"]
       : []),
     ...(isInstallSettingsDirty ? ["Provider installs"] : []),

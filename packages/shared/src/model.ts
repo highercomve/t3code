@@ -8,6 +8,14 @@ import {
   type ProviderKind,
 } from "@t3tools/contracts";
 
+const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>> = {
+  claudeAgent: new Set(MODEL_OPTIONS_BY_PROVIDER.claudeAgent.map((option) => option.slug)),
+  codex: new Set(MODEL_OPTIONS_BY_PROVIDER.codex.map((option) => option.slug)),
+  gemini: new Set(MODEL_OPTIONS_BY_PROVIDER.gemini.map((option) => option.slug)),
+  opencode: new Set(MODEL_OPTIONS_BY_PROVIDER.opencode.map((option) => option.slug)),
+};
+
+
 export interface SelectableModelOption {
   slug: string;
   name: string;
@@ -142,6 +150,39 @@ export function trimOrNull<T extends string>(value: T | null | undefined): T | n
   if (typeof value !== "string") return null;
   const trimmed = value.trim() as T;
   return trimmed || null;
+}
+
+export function inferProviderForModel(
+  model: string | null | undefined,
+  fallback: ProviderKind = "codex",
+): ProviderKind {
+  const normalizedClaude = normalizeModelSlug(model, "claudeAgent");
+  if (normalizedClaude && MODEL_SLUG_SET_BY_PROVIDER.claudeAgent.has(normalizedClaude)) {
+    return "claudeAgent";
+  }
+
+  const normalizedCodex = normalizeModelSlug(model, "codex");
+  if (normalizedCodex && MODEL_SLUG_SET_BY_PROVIDER.codex.has(normalizedCodex)) {
+    return "codex";
+  }
+
+  const normalizedGemini = normalizeModelSlug(model, "gemini");
+  if (normalizedGemini && MODEL_SLUG_SET_BY_PROVIDER.gemini.has(normalizedGemini)) {
+    return "gemini";
+  }
+
+  const normalizedOpencode = normalizeModelSlug(model, "opencode");
+  if (normalizedOpencode && MODEL_SLUG_SET_BY_PROVIDER.opencode.has(normalizedOpencode)) {
+    return "opencode";
+  }
+
+  if (typeof model === "string") {
+    const trimmed = model.trim();
+    if (trimmed.startsWith("claude-")) return "claudeAgent";
+    if (trimmed.startsWith("gemini-")) return "gemini";
+    if (trimmed.startsWith("opencode/") || trimmed.startsWith("anthropic/")) return "opencode";
+  }
+  return fallback;
 }
 
 export function resolveApiModelId(modelSelection: ModelSelection): string {
