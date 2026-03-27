@@ -801,8 +801,15 @@ function workToneClass(tone: "thinking" | "tool" | "info" | "error"): string {
 }
 
 function workEntryPreview(
-  workEntry: Pick<TimelineWorkEntry, "detail" | "command" | "changedFiles">,
+  workEntry: Pick<TimelineWorkEntry, "detail" | "command" | "changedFiles" | "itemType">,
 ) {
+  if (
+    workEntry.detail &&
+    workEntry.itemType === "command_execution" &&
+    isGenericCommandLauncher(workEntry.command)
+  ) {
+    return workEntry.detail;
+  }
   if (workEntry.command) return workEntry.command;
   if (workEntry.detail) return workEntry.detail;
   if ((workEntry.changedFiles?.length ?? 0) === 0) return null;
@@ -811,6 +818,23 @@ function workEntryPreview(
   return workEntry.changedFiles!.length === 1
     ? firstPath
     : `${firstPath} +${workEntry.changedFiles!.length - 1} more`;
+}
+
+function isGenericCommandLauncher(command: string | undefined): boolean {
+  if (!command) {
+    return false;
+  }
+  const normalized = command.trim().toLowerCase();
+  return (
+    normalized === "bash" ||
+    normalized === "sh" ||
+    normalized === "zsh" ||
+    normalized === "fish" ||
+    normalized === "cmd" ||
+    normalized === "cmd.exe" ||
+    normalized === "powershell" ||
+    normalized === "pwsh"
+  );
 }
 
 function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
