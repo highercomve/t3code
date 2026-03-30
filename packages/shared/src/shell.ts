@@ -89,7 +89,12 @@ export const readEnvironmentFromLoginShell: ShellEnvironmentReader = (
     return {};
   }
 
-  const output = execFile(shell, ["-ilc", buildEnvironmentCaptureCommand(names)], {
+  // On bash, `-ilc` reads ~/.bash_profile but NOT ~/.bashrc. Many tools
+  // (nvm, pyenv, etc.) set up PATH in ~/.bashrc, so we explicitly source it.
+  // On zsh, `-ilc` already reads both .zprofile and .zshrc — no extra step needed.
+  const isBash = shell.endsWith("/bash") || shell === "bash";
+  const rcPrefix = isBash ? '[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc" 2>/dev/null; ' : "";
+  const output = execFile(shell, ["-ilc", rcPrefix + buildEnvironmentCaptureCommand(names)], {
     encoding: "utf8",
     timeout: 5000,
   });

@@ -20,8 +20,8 @@ export declare function useUpdateSettings(): {
 export declare function buildLegacyServerSettingsMigrationPatch(
   legacySettings: Record<string, unknown>,
 ): {
-  defaultThreadEnvMode?: "local" | "worktree";
   enableAssistantStreaming?: boolean;
+  defaultThreadEnvMode?: "local" | "worktree";
   textGenerationModelSelection?:
     | {
         provider?: "codex";

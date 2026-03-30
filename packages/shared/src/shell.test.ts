@@ -58,6 +58,46 @@ describe("readPathFromLoginShell", () => {
     expect(args?.[1]).toContain("__T3CODE_ENV_PATH_END__");
     expect(options).toEqual({ encoding: "utf8", timeout: 5000 });
   });
+
+  it("sources .bashrc for bash shells to pick up nvm/pyenv/etc. PATH entries", () => {
+    const execFile = vi.fn<
+      (
+        file: string,
+        args: ReadonlyArray<string>,
+        options: { encoding: "utf8"; timeout: number },
+      ) => string
+    >(() => "__T3CODE_ENV_PATH_START__\n/nvm/bin:/usr/bin\n__T3CODE_ENV_PATH_END__\n");
+
+    expect(readPathFromLoginShell("/bin/bash", execFile)).toBe("/nvm/bin:/usr/bin");
+
+    const firstCall = execFile.mock.calls[0] as
+      | [string, ReadonlyArray<string>, { encoding: "utf8"; timeout: number }]
+      | undefined;
+    expect(firstCall).toBeDefined();
+    const command = firstCall![1][1];
+    expect(command).toContain('[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc" 2>/dev/null');
+  });
+
+  it("does not source .bashrc for non-bash shells", () => {
+    for (const shell of ["/bin/zsh", "/opt/homebrew/bin/fish"]) {
+      const execFile = vi.fn<
+        (
+          file: string,
+          args: ReadonlyArray<string>,
+          options: { encoding: "utf8"; timeout: number },
+        ) => string
+      >(() => "__T3CODE_ENV_PATH_START__\n/usr/bin\n__T3CODE_ENV_PATH_END__\n");
+
+      readPathFromLoginShell(shell, execFile);
+
+      const firstCall = execFile.mock.calls[0] as
+        | [string, ReadonlyArray<string>, { encoding: "utf8"; timeout: number }]
+        | undefined;
+      expect(firstCall).toBeDefined();
+      const command = firstCall![1][1];
+      expect(command).not.toContain(".bashrc");
+    }
+  });
 });
 
 describe("readEnvironmentFromLoginShell", () => {

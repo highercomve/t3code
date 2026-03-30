@@ -1,0 +1,55 @@
+import { type DiffRouteSearch } from "../diffRouteSearch";
+export declare const Route: import("@tanstack/router-core").Route<
+  import("@tanstack/react-router").Register,
+  import("@tanstack/router-core").Route<
+    import("@tanstack/react-router").Register,
+    import("@tanstack/react-router").RootRoute<
+      import("@tanstack/react-router").Register,
+      undefined,
+      {
+        queryClient: import("@tanstack/react-query").QueryClient;
+      },
+      import("@tanstack/router-core").AnyContext,
+      import("@tanstack/router-core").AnyContext,
+      {},
+      undefined,
+      unknown,
+      unknown,
+      unknown,
+      unknown,
+      undefined
+    >,
+    "",
+    "/",
+    "/_chat",
+    "/_chat",
+    undefined,
+    import("@tanstack/router-core").ResolveParams<"">,
+    import("@tanstack/router-core").AnyContext,
+    import("@tanstack/router-core").AnyContext,
+    import("@tanstack/router-core").AnyContext,
+    {},
+    undefined,
+    unknown,
+    unknown,
+    unknown,
+    unknown,
+    undefined
+  >,
+  "/$threadId",
+  "/$threadId",
+  "/_chat/$threadId",
+  "/_chat/$threadId",
+  (search: Record<string, unknown>) => DiffRouteSearch,
+  import("@tanstack/router-core").ResolveParams<"/$threadId">,
+  import("@tanstack/router-core").AnyContext,
+  import("@tanstack/router-core").AnyContext,
+  import("@tanstack/router-core").AnyContext,
+  {},
+  undefined,
+  unknown,
+  unknown,
+  unknown,
+  unknown,
+  undefined
+>;
