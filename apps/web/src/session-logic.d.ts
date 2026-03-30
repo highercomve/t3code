@@ -32,7 +32,7 @@ export interface WorkLogEntry {
   changedFiles?: ReadonlyArray<string>;
   tone: "thinking" | "tool" | "info" | "error";
   toolTitle?: string;
-  itemType?: ToolLifecycleItemType;
+  itemType?: ToolLifecycleItemType | "reasoning";
   requestKind?: PendingApproval["requestKind"];
 }
 export interface PendingApproval {

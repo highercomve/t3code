@@ -8,6 +8,7 @@ import ChatMarkdown from "../ChatMarkdown";
 import {
   BotIcon,
   CheckIcon,
+  ChevronRightIcon,
   CircleAlertIcon,
   EyeIcon,
   GlobeIcon,
@@ -799,6 +800,7 @@ function toolWorkEntryHeading(workEntry) {
 }
 const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props) {
   const { workEntry } = props;
+  const [expanded, setExpanded] = useState(false);
   const iconConfig = workToneIcon(workEntry.tone);
   const EntryIcon = workEntryIcon(workEntry);
   const heading = toolWorkEntryHeading(workEntry);
@@ -806,8 +808,10 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props) {
   const displayText = preview ? `${heading} - ${preview}` : heading;
   const hasChangedFiles = (workEntry.changedFiles?.length ?? 0) > 0;
   const previewIsChangedFiles = hasChangedFiles && !workEntry.command && !workEntry.detail;
+  const hasExpandableContent = !!(workEntry.detail || workEntry.command);
   return _jsxs("div", {
-    className: "rounded-lg px-1 py-1",
+    className: cn("rounded-lg px-1 py-1", hasExpandableContent && "cursor-pointer"),
+    onClick: hasExpandableContent ? () => setExpanded((prev) => !prev) : undefined,
     children: [
       _jsxs("div", {
         className: "flex items-center gap-2 transition-[opacity,translate] duration-200",
@@ -838,8 +842,26 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props) {
               ],
             }),
           }),
+          hasExpandableContent &&
+            _jsx(ChevronRightIcon, {
+              className: cn(
+                "size-3 shrink-0 text-muted-foreground/50 transition-transform duration-150",
+                expanded && "rotate-90",
+              ),
+            }),
         ],
       }),
+      expanded &&
+        hasExpandableContent &&
+        _jsxs("pre", {
+          className:
+            "text-[10px] text-muted-foreground/60 whitespace-pre-wrap break-all max-h-40 overflow-y-auto bg-background/50 rounded px-2 py-1 mt-1 ml-7 font-mono",
+          children: [
+            workEntry.command && workEntry.command,
+            workEntry.command && workEntry.detail && "\n\n",
+            workEntry.detail && workEntry.detail,
+          ],
+        }),
       hasChangedFiles &&
         !previewIsChangedFiles &&
         _jsxs("div", {

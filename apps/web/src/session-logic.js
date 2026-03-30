@@ -483,8 +483,13 @@ function stripTrailingExitCode(value) {
   };
 }
 function extractWorkLogItemType(payload) {
-  if (typeof payload?.itemType === "string" && isToolLifecycleItemType(payload.itemType)) {
-    return payload.itemType;
+  if (typeof payload?.itemType === "string") {
+    if (isToolLifecycleItemType(payload.itemType)) {
+      return payload.itemType;
+    }
+    if (payload.itemType === "reasoning") {
+      return "reasoning";
+    }
   }
   return undefined;
 }

@@ -22,6 +22,7 @@ import ChatMarkdown from "../ChatMarkdown";
 import {
   BotIcon,
   CheckIcon,
+  ChevronRightIcon,
   CircleAlertIcon,
   EyeIcon,
   GlobeIcon,
@@ -881,6 +882,7 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
   workEntry: TimelineWorkEntry;
 }) {
   const { workEntry } = props;
+  const [expanded, setExpanded] = useState<boolean>(false);
   const iconConfig = workToneIcon(workEntry.tone);
   const EntryIcon = workEntryIcon(workEntry);
   const heading = toolWorkEntryHeading(workEntry);
@@ -888,9 +890,13 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
   const displayText = preview ? `${heading} - ${preview}` : heading;
   const hasChangedFiles = (workEntry.changedFiles?.length ?? 0) > 0;
   const previewIsChangedFiles = hasChangedFiles && !workEntry.command && !workEntry.detail;
+  const hasExpandableContent = !!(workEntry.detail || workEntry.command);
 
   return (
-    <div className="rounded-lg px-1 py-1">
+    <div
+      className={cn("rounded-lg px-1 py-1", hasExpandableContent && "cursor-pointer")}
+      onClick={hasExpandableContent ? () => setExpanded((prev) => !prev) : undefined}
+    >
       <div className="flex items-center gap-2 transition-[opacity,translate] duration-200">
         <span
           className={cn("flex size-5 shrink-0 items-center justify-center", iconConfig.className)}
@@ -912,7 +918,22 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
             {preview && <span className="text-muted-foreground/55"> - {preview}</span>}
           </p>
         </div>
+        {hasExpandableContent && (
+          <ChevronRightIcon
+            className={cn(
+              "size-3 shrink-0 text-muted-foreground/50 transition-transform duration-150",
+              expanded && "rotate-90",
+            )}
+          />
+        )}
       </div>
+      {expanded && hasExpandableContent && (
+        <pre className="text-[10px] text-muted-foreground/60 whitespace-pre-wrap break-all max-h-40 overflow-y-auto bg-background/50 rounded px-2 py-1 mt-1 ml-7 font-mono">
+          {workEntry.command && workEntry.command}
+          {workEntry.command && workEntry.detail && "\n\n"}
+          {workEntry.detail && workEntry.detail}
+        </pre>
+      )}
       {hasChangedFiles && !previewIsChangedFiles && (
         <div className="mt-1 flex flex-wrap gap-1 pl-6">
           {workEntry.changedFiles?.slice(0, 4).map((filePath) => (

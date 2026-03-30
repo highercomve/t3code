@@ -1,79 +1,103 @@
 import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
-import { ApprovalRequestId, EventId, IsoDateTime, ProviderItemId, ThreadId, TurnId, } from "./baseSchemas";
-import { ChatAttachment, ModelSelection, PROVIDER_SEND_TURN_MAX_ATTACHMENTS, PROVIDER_SEND_TURN_MAX_INPUT_CHARS, ProviderApprovalDecision, ProviderApprovalPolicy, ProviderInteractionMode, ProviderKind, ProviderRequestKind, ProviderSandboxMode, ProviderUserInputAnswers, RuntimeMode, } from "./orchestration";
+import {
+  ApprovalRequestId,
+  EventId,
+  IsoDateTime,
+  ProviderItemId,
+  ThreadId,
+  TurnId,
+} from "./baseSchemas";
+import {
+  ChatAttachment,
+  ModelSelection,
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
+  ProviderApprovalDecision,
+  ProviderApprovalPolicy,
+  ProviderInteractionMode,
+  ProviderKind,
+  ProviderRequestKind,
+  ProviderSandboxMode,
+  ProviderUserInputAnswers,
+  RuntimeMode,
+} from "./orchestration";
 const ProviderSessionStatus = Schema.Literals([
-    "connecting",
-    "ready",
-    "running",
-    "error",
-    "closed",
+  "connecting",
+  "ready",
+  "running",
+  "error",
+  "closed",
 ]);
 export const ProviderSession = Schema.Struct({
-    provider: ProviderKind,
-    status: ProviderSessionStatus,
-    runtimeMode: RuntimeMode,
-    cwd: Schema.optional(TrimmedNonEmptyString),
-    model: Schema.optional(TrimmedNonEmptyString),
-    threadId: ThreadId,
-    resumeCursor: Schema.optional(Schema.Unknown),
-    activeTurnId: Schema.optional(TurnId),
-    createdAt: IsoDateTime,
-    updatedAt: IsoDateTime,
-    lastError: Schema.optional(TrimmedNonEmptyString),
+  provider: ProviderKind,
+  status: ProviderSessionStatus,
+  runtimeMode: RuntimeMode,
+  cwd: Schema.optional(TrimmedNonEmptyString),
+  model: Schema.optional(TrimmedNonEmptyString),
+  threadId: ThreadId,
+  resumeCursor: Schema.optional(Schema.Unknown),
+  activeTurnId: Schema.optional(TurnId),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+  lastError: Schema.optional(TrimmedNonEmptyString),
 });
 export const ProviderSessionStartInput = Schema.Struct({
-    threadId: ThreadId,
-    provider: Schema.optional(ProviderKind),
-    cwd: Schema.optional(TrimmedNonEmptyString),
-    modelSelection: Schema.optional(ModelSelection),
-    resumeCursor: Schema.optional(Schema.Unknown),
-    approvalPolicy: Schema.optional(ProviderApprovalPolicy),
-    sandboxMode: Schema.optional(ProviderSandboxMode),
-    runtimeMode: RuntimeMode,
+  threadId: ThreadId,
+  provider: Schema.optional(ProviderKind),
+  cwd: Schema.optional(TrimmedNonEmptyString),
+  modelSelection: Schema.optional(ModelSelection),
+  resumeCursor: Schema.optional(Schema.Unknown),
+  approvalPolicy: Schema.optional(ProviderApprovalPolicy),
+  sandboxMode: Schema.optional(ProviderSandboxMode),
+  runtimeMode: RuntimeMode,
 });
 export const ProviderSendTurnInput = Schema.Struct({
-    threadId: ThreadId,
-    input: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS))),
-    attachments: Schema.optional(Schema.Array(ChatAttachment).check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_ATTACHMENTS))),
-    modelSelection: Schema.optional(ModelSelection),
-    interactionMode: Schema.optional(ProviderInteractionMode),
+  threadId: ThreadId,
+  input: Schema.optional(
+    TrimmedNonEmptyString.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),
+  ),
+  attachments: Schema.optional(
+    Schema.Array(ChatAttachment).check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_ATTACHMENTS)),
+  ),
+  modelSelection: Schema.optional(ModelSelection),
+  interactionMode: Schema.optional(ProviderInteractionMode),
 });
 export const ProviderTurnStartResult = Schema.Struct({
-    threadId: ThreadId,
-    turnId: TurnId,
-    resumeCursor: Schema.optional(Schema.Unknown),
+  threadId: ThreadId,
+  turnId: TurnId,
+  resumeCursor: Schema.optional(Schema.Unknown),
 });
 export const ProviderInterruptTurnInput = Schema.Struct({
-    threadId: ThreadId,
-    turnId: Schema.optional(TurnId),
+  threadId: ThreadId,
+  turnId: Schema.optional(TurnId),
 });
 export const ProviderStopSessionInput = Schema.Struct({
-    threadId: ThreadId,
+  threadId: ThreadId,
 });
 export const ProviderRespondToRequestInput = Schema.Struct({
-    threadId: ThreadId,
-    requestId: ApprovalRequestId,
-    decision: ProviderApprovalDecision,
+  threadId: ThreadId,
+  requestId: ApprovalRequestId,
+  decision: ProviderApprovalDecision,
 });
 export const ProviderRespondToUserInputInput = Schema.Struct({
-    threadId: ThreadId,
-    requestId: ApprovalRequestId,
-    answers: ProviderUserInputAnswers,
+  threadId: ThreadId,
+  requestId: ApprovalRequestId,
+  answers: ProviderUserInputAnswers,
 });
 const ProviderEventKind = Schema.Literals(["session", "notification", "request", "error"]);
 export const ProviderEvent = Schema.Struct({
-    id: EventId,
-    kind: ProviderEventKind,
-    provider: ProviderKind,
-    threadId: ThreadId,
-    createdAt: IsoDateTime,
-    method: TrimmedNonEmptyString,
-    message: Schema.optional(TrimmedNonEmptyString),
-    turnId: Schema.optional(TurnId),
-    itemId: Schema.optional(ProviderItemId),
-    requestId: Schema.optional(ApprovalRequestId),
-    requestKind: Schema.optional(ProviderRequestKind),
-    textDelta: Schema.optional(Schema.String),
-    payload: Schema.optional(Schema.Unknown),
+  id: EventId,
+  kind: ProviderEventKind,
+  provider: ProviderKind,
+  threadId: ThreadId,
+  createdAt: IsoDateTime,
+  method: TrimmedNonEmptyString,
+  message: Schema.optional(TrimmedNonEmptyString),
+  turnId: Schema.optional(TurnId),
+  itemId: Schema.optional(ProviderItemId),
+  requestId: Schema.optional(ApprovalRequestId),
+  requestKind: Schema.optional(ProviderRequestKind),
+  textDelta: Schema.optional(Schema.String),
+  payload: Schema.optional(Schema.Unknown),
 });

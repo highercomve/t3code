@@ -462,20 +462,24 @@ function runtimeEventToActivities(
     }
 
     case "item.updated": {
-      if (!isToolLifecycleItemType(event.payload.itemType)) {
+      const isToolItem = isToolLifecycleItemType(event.payload.itemType);
+      const isReasoning = event.payload.itemType === "reasoning";
+      if (!isToolItem && !isReasoning) {
         return [];
       }
+      const kindPrefix = isReasoning ? "reasoning" : "tool";
+      const tone = isReasoning ? "info" : "tool";
       return [
         {
           id: event.eventId,
           createdAt: event.createdAt,
-          tone: "tool",
-          kind: "tool.updated",
-          summary: event.payload.title ?? "Tool updated",
+          tone,
+          kind: `${kindPrefix}.updated`,
+          summary: event.payload.title ?? (isReasoning ? "Reasoning updated" : "Tool updated"),
           payload: {
             itemType: event.payload.itemType,
             ...(event.payload.status ? { status: event.payload.status } : {}),
-            ...(event.payload.detail ? { detail: truncateDetail(event.payload.detail) } : {}),
+            ...(event.payload.detail ? { detail: truncateDetail(event.payload.detail, 800) } : {}),
             ...(event.payload.data !== undefined ? { data: event.payload.data } : {}),
           },
           turnId: toTurnId(event.turnId) ?? null,
@@ -485,19 +489,23 @@ function runtimeEventToActivities(
     }
 
     case "item.completed": {
-      if (!isToolLifecycleItemType(event.payload.itemType)) {
+      const isToolItem = isToolLifecycleItemType(event.payload.itemType);
+      const isReasoning = event.payload.itemType === "reasoning";
+      if (!isToolItem && !isReasoning) {
         return [];
       }
+      const kindPrefix = isReasoning ? "reasoning" : "tool";
+      const tone = isReasoning ? "info" : "tool";
       return [
         {
           id: event.eventId,
           createdAt: event.createdAt,
-          tone: "tool",
-          kind: "tool.completed",
-          summary: event.payload.title ?? "Tool",
+          tone,
+          kind: `${kindPrefix}.completed`,
+          summary: event.payload.title ?? (isReasoning ? "Reasoning" : "Tool"),
           payload: {
             itemType: event.payload.itemType,
-            ...(event.payload.detail ? { detail: truncateDetail(event.payload.detail) } : {}),
+            ...(event.payload.detail ? { detail: truncateDetail(event.payload.detail, 800) } : {}),
           },
           turnId: toTurnId(event.turnId) ?? null,
           ...maybeSequence,
@@ -506,19 +514,23 @@ function runtimeEventToActivities(
     }
 
     case "item.started": {
-      if (!isToolLifecycleItemType(event.payload.itemType)) {
+      const isToolItem = isToolLifecycleItemType(event.payload.itemType);
+      const isReasoning = event.payload.itemType === "reasoning";
+      if (!isToolItem && !isReasoning) {
         return [];
       }
+      const kindPrefix = isReasoning ? "reasoning" : "tool";
+      const tone = isReasoning ? "info" : "tool";
       return [
         {
           id: event.eventId,
           createdAt: event.createdAt,
-          tone: "tool",
-          kind: "tool.started",
-          summary: `${event.payload.title ?? "Tool"} started`,
+          tone,
+          kind: `${kindPrefix}.started`,
+          summary: `${event.payload.title ?? (isReasoning ? "Reasoning" : "Tool")} started`,
           payload: {
             itemType: event.payload.itemType,
-            ...(event.payload.detail ? { detail: truncateDetail(event.payload.detail) } : {}),
+            ...(event.payload.detail ? { detail: truncateDetail(event.payload.detail, 800) } : {}),
           },
           turnId: toTurnId(event.turnId) ?? null,
           ...maybeSequence,

@@ -43,7 +43,7 @@ export interface WorkLogEntry {
   changedFiles?: ReadonlyArray<string>;
   tone: "thinking" | "tool" | "info" | "error";
   toolTitle?: string;
-  itemType?: ToolLifecycleItemType;
+  itemType?: ToolLifecycleItemType | "reasoning";
   requestKind?: PendingApproval["requestKind"];
 }
 
@@ -697,8 +697,13 @@ function stripTrailingExitCode(value: string): {
 function extractWorkLogItemType(
   payload: Record<string, unknown> | null,
 ): WorkLogEntry["itemType"] | undefined {
-  if (typeof payload?.itemType === "string" && isToolLifecycleItemType(payload.itemType)) {
-    return payload.itemType;
+  if (typeof payload?.itemType === "string") {
+    if (isToolLifecycleItemType(payload.itemType)) {
+      return payload.itemType;
+    }
+    if (payload.itemType === "reasoning") {
+      return "reasoning";
+    }
   }
   return undefined;
 }
