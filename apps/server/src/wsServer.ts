@@ -26,7 +26,7 @@ import {
   type WsResponse as WsResponseMessage,
   WsResponse,
   type WsPushEnvelopeBase,
-  type ServerProviderStatus,
+  type ServerProvider,
 } from "@t3tools/contracts";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import {
@@ -84,8 +84,8 @@ import { makeServerReadiness } from "./wsServer/readiness.ts";
 import { decodeJsonResult, formatSchemaError } from "@t3tools/shared/schemaJson";
 
 function enrichProviderStatusesWithDynamicModels(
-  statuses: ReadonlyArray<ServerProviderStatus>,
-): ReadonlyArray<ServerProviderStatus> {
+  statuses: ReadonlyArray<ServerProvider>,
+): ReadonlyArray<ServerProvider> {
   return statuses.map((status) => {
     const dynamicModels = getProviderDynamicModels(status.provider);
     if (!dynamicModels || dynamicModels.length === 0) return status;
@@ -667,9 +667,11 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
   yield* Effect.addFinalizer(() => Effect.sync(unsubDynamicModels));
 
   yield* Stream.runForEach(Stream.fromQueue(dynamicModelQueue), () =>
-    pushBus.publishAll(WS_CHANNELS.serverConfigUpdated, {
-      issues: [],
-      providers: enrichProviderStatusesWithDynamicModels(providerStatuses),
+    Effect.gen(function* () {
+      const providers = yield* Ref.get(providersRef);
+      yield* pushBus.publishAll(WS_CHANNELS.serverProvidersUpdated, {
+        providers: enrichProviderStatusesWithDynamicModels(providers),
+      });
     }),
   ).pipe(Effect.forkIn(subscriptionsScope));
 
@@ -937,7 +939,7 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
           keybindingsConfigPath,
           keybindings: keybindingsConfig.keybindings,
           issues: keybindingsConfig.issues,
-          providers: enrichProviderStatusesWithDynamicModels(providerStatuses),
+          providers: enrichProviderStatusesWithDynamicModels(providers),
           availableEditors,
           settings,
         };

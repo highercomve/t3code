@@ -14,7 +14,6 @@ import {
   type ProviderApprovalDecision,
   type ProviderEvent,
   type ProviderSession,
-  type ProviderSessionStartInput,
   type ProviderTurnStartResult,
   RuntimeMode,
   ProviderInteractionMode,
@@ -106,7 +105,6 @@ export interface GeminiAppServerStartSessionInput {
   readonly model?: string;
   readonly serviceTier?: string;
   readonly resumeCursor?: unknown;
-  readonly providerOptions?: ProviderSessionStartInput["providerOptions"];
   readonly runtimeMode: RuntimeMode;
 }
 
@@ -354,7 +352,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       // Step 2: ACP authenticate
       const authMethods = initResponse?.authMethods ?? [];
       if (authMethods.length > 0) {
-        const methodId = authMethods[0].id;
+        const methodId = authMethods[0]?.id;
         await this.sendRequest(context, "authenticate", { methodId });
         await Effect.logInfo("gemini ACP authenticated", {
           threadId,
@@ -503,7 +501,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       if (attachment.type === "image" && attachment.url) {
         // data: URLs → extract mime and base64
         const dataUrlMatch = attachment.url.match(/^data:([^;]+);base64,(.+)$/);
-        if (dataUrlMatch) {
+        if (dataUrlMatch && dataUrlMatch[1] && dataUrlMatch[2]) {
           promptContent.push({
             type: "image",
             mimeType: dataUrlMatch[1],
@@ -690,16 +688,16 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
 
     // Map decision to ACP outcome
     let outcome: { outcome: string; optionId: string };
-    if (decision === "deny") {
+    if (decision === "decline" || decision === "cancel") {
       outcome = { outcome: "cancelled", optionId: "" };
-    } else if (decision === "always-approve") {
+    } else if (decision === "acceptForSession") {
       const alwaysOption = pendingRequest.options.find((o) => o.kind === "allow_always");
       outcome = {
         outcome: "proceed",
         optionId: alwaysOption?.optionId ?? "ProceedAlways",
       };
     } else {
-      // "approve"
+      // "accept"
       const onceOption = pendingRequest.options.find((o) => o.kind === "allow_once");
       outcome = {
         outcome: "proceed",
@@ -1364,18 +1362,11 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
   }
 }
 
-function readGeminiProviderOptions(input: GeminiAppServerStartSessionInput): {
+function readGeminiProviderOptions(_input: GeminiAppServerStartSessionInput): {
   readonly binaryPath?: string;
   readonly homePath?: string;
 } {
-  const options = input.providerOptions?.gemini;
-  if (!options) {
-    return {};
-  }
-  return {
-    ...(options.binaryPath ? { binaryPath: options.binaryPath } : {}),
-    ...(options.homePath ? { homePath: options.homePath } : {}),
-  };
+  return {};
 }
 
 function readResumeSessionId(input: GeminiAppServerStartSessionInput): string | undefined {

@@ -18,12 +18,12 @@ declare const buttonVariants: (
           | null
           | undefined;
         variant?:
-          | "default"
           | "link"
-          | "ghost"
-          | "outline"
+          | "default"
           | "destructive"
           | "destructive-outline"
+          | "ghost"
+          | "outline"
           | "secondary"
           | null
           | undefined;

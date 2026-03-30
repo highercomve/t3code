@@ -12,6 +12,7 @@ import {
   type ProviderEvent,
   type ProviderRuntimeEvent,
   type ProviderUserInputAnswers,
+  type ThreadTokenUsageSnapshot,
   RuntimeItemId,
   RuntimeRequestId,
   RuntimeTaskId,
@@ -700,12 +701,16 @@ function mapToRuntimeEvents(
   }
 
   if (event.method === "thread/tokenUsage/updated") {
+    const rawUsage = asObject(event.payload);
+    if (!rawUsage || asNumber(rawUsage.usedTokens) === undefined) {
+      return [];
+    }
     return [
       {
         type: "thread.token-usage.updated",
         ...runtimeEventBase(event, canonicalThreadId),
         payload: {
-          usage: event.payload ?? {},
+          usage: rawUsage as unknown as ThreadTokenUsageSnapshot,
         },
       },
     ];
@@ -1302,10 +1307,8 @@ const makeGeminiAdapter = (options?: GeminiAdapterLiveOptions) =>
         provider: "gemini",
         ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
         ...(input.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
-        ...(input.providerOptions !== undefined ? { providerOptions: input.providerOptions } : {}),
         runtimeMode: input.runtimeMode,
-        ...(input.model !== undefined ? { model: input.model } : {}),
-        ...(input.modelOptions?.gemini?.fastMode ? { serviceTier: "fast" } : {}),
+        ...(input.modelSelection?.model !== undefined ? { model: input.modelSelection.model } : {}),
       };
 
       return Effect.tryPromise({
@@ -1327,7 +1330,7 @@ const makeGeminiAdapter = (options?: GeminiAdapterLiveOptions) =>
           (attachment) =>
             Effect.gen(function* () {
               const attachmentPath = resolveAttachmentPath({
-                stateDir: serverConfig.stateDir,
+                attachmentsDir: serverConfig.attachmentsDir,
                 attachment,
               });
               if (!attachmentPath) {
@@ -1350,17 +1353,19 @@ const makeGeminiAdapter = (options?: GeminiAdapterLiveOptions) =>
           { concurrency: 1 },
         );
 
+        const modelSelection = input.modelSelection;
+        const geminiOptions =
+          modelSelection?.provider === "gemini" ? modelSelection.options : undefined;
+
         return yield* Effect.tryPromise({
           try: () => {
             const managerInput = {
               threadId: input.threadId,
               ...(input.input !== undefined ? { input: input.input } : {}),
-              ...(input.model !== undefined ? { model: input.model } : {}),
-              ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
-              ...(input.modelOptions?.gemini?.reasoningEffort !== undefined
-                ? { effort: input.modelOptions.gemini.reasoningEffort }
+              ...(modelSelection?.model !== undefined ? { model: modelSelection.model } : {}),
+              ...(geminiOptions?.thinkingBudget !== undefined
+                ? { thinkingBudget: geminiOptions.thinkingBudget }
                 : {}),
-              ...(input.modelOptions?.gemini?.fastMode ? { serviceTier: "fast" } : {}),
               ...(input.interactionMode !== undefined
                 ? { interactionMode: input.interactionMode }
                 : {}),

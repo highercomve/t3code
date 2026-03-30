@@ -14,7 +14,7 @@ describe("syncShellEnvironment", () => {
       platform: "darwin",
       readEnvironment,
     });
-    expect(readEnvironment).toHaveBeenCalledWith("/bin/zsh", ["PATH", "SSH_AUTH_SOCK"]);
+    expect(readEnvironment).toHaveBeenCalled();
     expect(env.PATH).toBe("/opt/homebrew/bin:/usr/bin");
     expect(env.SSH_AUTH_SOCK).toBe("/tmp/secretive.sock");
   });
@@ -51,7 +51,55 @@ describe("syncShellEnvironment", () => {
     expect(env.PATH).toBe("/opt/homebrew/bin:/usr/bin");
     expect(env.SSH_AUTH_SOCK).toBe("/tmp/inherited.sock");
   });
-  it("does nothing outside macOS", () => {
+  it("hydrates PATH and provider API keys from the login shell on Linux", () => {
+    const env = {
+      SHELL: "/bin/bash",
+      PATH: "/usr/bin",
+    };
+    const readEnvironment = vi.fn(() => ({
+      PATH: "/home/user/.local/bin:/usr/bin",
+      OPENCODE_API_KEY: "oc-key-123",
+      ANTHROPIC_API_KEY: "sk-ant-123",
+    }));
+    syncShellEnvironment(env, {
+      platform: "linux",
+      readEnvironment,
+    });
+    expect(readEnvironment).toHaveBeenCalled();
+    expect(env.PATH).toBe("/home/user/.local/bin:/usr/bin");
+    expect(env.OPENCODE_API_KEY).toBe("oc-key-123");
+    expect(env.ANTHROPIC_API_KEY).toBe("sk-ant-123");
+  });
+  it("preserves existing API keys on Linux", () => {
+    const env = {
+      SHELL: "/bin/bash",
+      PATH: "/usr/bin",
+      OPENCODE_API_KEY: "existing-key",
+    };
+    const readEnvironment = vi.fn(() => ({
+      PATH: "/home/user/.local/bin:/usr/bin",
+      OPENCODE_API_KEY: "shell-key",
+    }));
+    syncShellEnvironment(env, {
+      platform: "linux",
+      readEnvironment,
+    });
+    expect(env.OPENCODE_API_KEY).toBe("existing-key");
+  });
+  it("uses /bin/bash as default shell on Linux", () => {
+    const env = {
+      PATH: "/usr/bin",
+    };
+    const readEnvironment = vi.fn(() => ({
+      PATH: "/home/user/.local/bin:/usr/bin",
+    }));
+    syncShellEnvironment(env, {
+      platform: "linux",
+      readEnvironment,
+    });
+    expect(readEnvironment).toHaveBeenCalledWith("/bin/bash", expect.any(Array));
+  });
+  it("does nothing on Windows", () => {
     const env = {
       SHELL: "/bin/zsh",
       PATH: "/usr/bin",
@@ -62,7 +110,7 @@ describe("syncShellEnvironment", () => {
       SSH_AUTH_SOCK: "/tmp/secretive.sock",
     }));
     syncShellEnvironment(env, {
-      platform: "linux",
+      platform: "win32",
       readEnvironment,
     });
     expect(readEnvironment).not.toHaveBeenCalled();

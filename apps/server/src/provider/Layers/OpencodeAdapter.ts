@@ -12,6 +12,7 @@ import {
   type ProviderEvent,
   type ProviderRuntimeEvent,
   type ProviderUserInputAnswers,
+  type ThreadTokenUsageSnapshot,
   RuntimeItemId,
   RuntimeRequestId,
   RuntimeTaskId,
@@ -662,12 +663,15 @@ function mapToRuntimeEvents(
   }
 
   if (event.method === "thread/tokenUsage/updated") {
+    const rawUsage = asObject(event.payload) ?? {};
+    const usedTokens =
+      typeof rawUsage.usedTokens === "number" ? (rawUsage.usedTokens as number) : 0;
     return [
       {
         type: "thread.token-usage.updated",
         ...runtimeEventBase(event, canonicalThreadId),
         payload: {
-          usage: event.payload ?? {},
+          usage: { ...rawUsage, usedTokens } as ThreadTokenUsageSnapshot,
         },
       },
     ];
@@ -1160,9 +1164,8 @@ const makeOpencodeAdapter = (options?: OpencodeAdapterLiveOptions) =>
         provider: "opencode",
         ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
         ...(input.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
-        ...(input.providerOptions !== undefined ? { providerOptions: input.providerOptions } : {}),
         runtimeMode: input.runtimeMode,
-        ...(input.model !== undefined ? { model: input.model } : {}),
+        ...(input.modelSelection?.model !== undefined ? { model: input.modelSelection.model } : {}),
       };
 
       return Effect.tryPromise({
@@ -1184,7 +1187,7 @@ const makeOpencodeAdapter = (options?: OpencodeAdapterLiveOptions) =>
           (attachment) =>
             Effect.gen(function* () {
               const attachmentPath = resolveAttachmentPath({
-                stateDir: serverConfig.stateDir,
+                attachmentsDir: serverConfig.attachmentsDir,
                 attachment,
               });
               if (!attachmentPath) {
@@ -1209,13 +1212,15 @@ const makeOpencodeAdapter = (options?: OpencodeAdapterLiveOptions) =>
 
         return yield* Effect.tryPromise({
           try: () => {
+            const modelSelection = input.modelSelection;
+            const opcodeOptions =
+              modelSelection?.provider === "opencode" ? modelSelection.options : undefined;
             const managerInput = {
               threadId: input.threadId,
               ...(input.input !== undefined ? { input: input.input } : {}),
-              ...(input.model !== undefined ? { model: input.model } : {}),
-              ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
-              ...(input.modelOptions?.opencode?.reasoningEffort !== undefined
-                ? { effort: input.modelOptions.opencode.reasoningEffort }
+              ...(modelSelection?.model !== undefined ? { model: modelSelection.model } : {}),
+              ...(opcodeOptions?.reasoningEffort !== undefined
+                ? { effort: opcodeOptions.reasoningEffort }
                 : {}),
               ...(input.interactionMode !== undefined
                 ? { interactionMode: input.interactionMode }

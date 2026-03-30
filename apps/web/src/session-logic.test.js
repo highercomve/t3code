@@ -504,19 +504,50 @@ describe("findSidebarProposedPlan", () => {
   });
 });
 describe("deriveWorkLogEntries", () => {
-  it("omits tool started entries and keeps completed entries", () => {
+  it("keeps tool started entries when no later lifecycle event exists", () => {
     const activities = [
-      makeActivity({
-        id: "tool-complete",
-        createdAt: "2026-02-23T00:00:03.000Z",
-        summary: "Tool call complete",
-        kind: "tool.completed",
-      }),
       makeActivity({
         id: "tool-start",
         createdAt: "2026-02-23T00:00:02.000Z",
         summary: "Tool call",
         kind: "tool.started",
+        payload: {
+          itemType: "command_execution",
+          detail: "serena_list_dir",
+        },
+      }),
+    ];
+    const entries = deriveWorkLogEntries(activities, undefined);
+    expect(entries).toMatchObject([
+      {
+        id: "tool-start",
+        label: "Tool call",
+        detail: "serena_list_dir",
+        itemType: "command_execution",
+      },
+    ]);
+  });
+  it("collapses tool started entries into later completed entries for the same tool", () => {
+    const activities = [
+      makeActivity({
+        id: "tool-start",
+        createdAt: "2026-02-23T00:00:02.000Z",
+        summary: "Command run started",
+        kind: "tool.started",
+        payload: {
+          itemType: "command_execution",
+          detail: "serena_list_dir",
+        },
+      }),
+      makeActivity({
+        id: "tool-complete",
+        createdAt: "2026-02-23T00:00:03.000Z",
+        summary: "Command run completed",
+        kind: "tool.completed",
+        payload: {
+          itemType: "command_execution",
+          detail: "serena_list_dir",
+        },
       }),
     ];
     const entries = deriveWorkLogEntries(activities, undefined);
@@ -1044,12 +1075,14 @@ describe("deriveActiveWorkStartedAt", () => {
   });
 });
 describe("PROVIDER_OPTIONS", () => {
-  it("advertises Claude as available while keeping Cursor as a placeholder", () => {
+  it("advertises all providers as available while keeping Cursor as a placeholder", () => {
     const claude = PROVIDER_OPTIONS.find((option) => option.value === "claudeAgent");
     const cursor = PROVIDER_OPTIONS.find((option) => option.value === "cursor");
     expect(PROVIDER_OPTIONS).toEqual([
       { value: "codex", label: "Codex", available: true },
+      { value: "gemini", label: "Gemini", available: true },
       { value: "claudeAgent", label: "Claude", available: true },
+      { value: "opencode", label: "OpenCode", available: true },
       { value: "cursor", label: "Cursor", available: false },
     ]);
     expect(claude).toEqual({

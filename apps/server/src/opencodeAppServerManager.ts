@@ -14,7 +14,6 @@ import {
   type ProviderApprovalDecision,
   type ProviderEvent,
   type ProviderSession,
-  type ProviderSessionStartInput,
   type ProviderTurnStartResult,
   RuntimeMode,
   ProviderInteractionMode,
@@ -121,7 +120,6 @@ export interface OpencodeAppServerStartSessionInput {
   readonly model?: string;
   readonly serviceTier?: string;
   readonly resumeCursor?: unknown;
-  readonly providerOptions?: ProviderSessionStartInput["providerOptions"];
   readonly runtimeMode: RuntimeMode;
 }
 
@@ -345,7 +343,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       // implemented; authentication is managed externally via `opencode auth login`.
       const authMethods = initResponse?.authMethods ?? [];
       if (authMethods.length > 0) {
-        const methodId = authMethods[0].id;
+        const methodId = authMethods[0]?.id;
         await Effect.logInfo("opencode ACP auth advertised but skipped", {
           threadId,
           methodId,
@@ -497,7 +495,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     for (const attachment of input.attachments ?? []) {
       if (attachment.type === "image" && attachment.url) {
         const dataUrlMatch = attachment.url.match(/^data:([^;]+);base64,(.+)$/);
-        if (dataUrlMatch) {
+        if (dataUrlMatch && dataUrlMatch[1] && dataUrlMatch[2]) {
           promptContent.push({
             type: "image",
             mimeType: dataUrlMatch[1],
@@ -665,15 +663,16 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     context.pendingApprovals.delete(requestId);
 
     let outcome: { outcome: string; optionId: string };
-    if (decision === "deny") {
+    if (decision === "decline" || decision === "cancel") {
       outcome = { outcome: "cancelled", optionId: "" };
-    } else if (decision === "always-approve") {
+    } else if (decision === "acceptForSession") {
       const alwaysOption = pendingRequest.options.find((o) => o.kind === "allow_always");
       outcome = {
         outcome: "proceed",
         optionId: alwaysOption?.optionId ?? "ProceedAlways",
       };
     } else {
+      // "accept"
       const onceOption = pendingRequest.options.find((o) => o.kind === "allow_once");
       outcome = {
         outcome: "proceed",
@@ -1345,18 +1344,11 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function readOpencodeProviderOptions(input: OpencodeAppServerStartSessionInput): {
+function readOpencodeProviderOptions(_input: OpencodeAppServerStartSessionInput): {
   readonly binaryPath?: string;
   readonly apiKey?: string;
 } {
-  const options = input.providerOptions?.opencode;
-  if (!options) {
-    return {};
-  }
-  return {
-    ...(options.binaryPath ? { binaryPath: options.binaryPath } : {}),
-    ...(options.apiKey ? { apiKey: options.apiKey } : {}),
-  };
+  return {};
 }
 
 function readResumeSessionId(input: OpencodeAppServerStartSessionInput): string | undefined {

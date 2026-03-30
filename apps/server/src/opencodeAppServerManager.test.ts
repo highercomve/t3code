@@ -94,7 +94,10 @@ describe("OpencodeAppServerManager server requests", () => {
 
     (
       manager as unknown as {
-        handleServerRequest: (context: typeof context, request: Record<string, unknown>) => void;
+        handleServerRequest: (
+          context: Record<string, unknown>,
+          request: Record<string, unknown>,
+        ) => void;
       }
     ).handleServerRequest(context, {
       id: 42,

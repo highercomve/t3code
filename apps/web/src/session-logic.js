@@ -289,7 +289,6 @@ export function deriveWorkLogEntries(activities, latestTurnId) {
   const ordered = [...activities].toSorted(compareActivitiesByOrder);
   const entries = ordered
     .filter((activity) => (latestTurnId ? activity.turnId === latestTurnId : true))
-    .filter((activity) => activity.kind !== "tool.started")
     .filter((activity) => activity.kind !== "task.started" && activity.kind !== "task.completed")
     .filter((activity) => activity.kind !== "context-window.updated")
     .filter((activity) => activity.summary !== "Checkpoint captured")
@@ -362,16 +361,19 @@ function collapseDerivedWorkLogEntries(entries) {
   return collapsed;
 }
 function shouldCollapseToolLifecycleEntries(previous, next) {
-  if (previous.activityKind !== "tool.updated" && previous.activityKind !== "tool.completed") {
+  if (!isCollapsibleToolLifecycleActivity(previous.activityKind)) {
     return false;
   }
-  if (next.activityKind !== "tool.updated" && next.activityKind !== "tool.completed") {
+  if (!isCollapsibleToolLifecycleActivity(next.activityKind)) {
     return false;
   }
   if (previous.activityKind === "tool.completed") {
     return false;
   }
   return previous.collapseKey !== undefined && previous.collapseKey === next.collapseKey;
+}
+function isCollapsibleToolLifecycleActivity(kind) {
+  return kind === "tool.started" || kind === "tool.updated" || kind === "tool.completed";
 }
 function mergeDerivedWorkLogEntries(previous, next) {
   const changedFiles = mergeChangedFiles(previous.changedFiles, next.changedFiles);
@@ -401,7 +403,7 @@ function mergeChangedFiles(previous, next) {
   return [...new Set(merged)];
 }
 function deriveToolLifecycleCollapseKey(entry) {
-  if (entry.activityKind !== "tool.updated" && entry.activityKind !== "tool.completed") {
+  if (!isCollapsibleToolLifecycleActivity(entry.activityKind)) {
     return undefined;
   }
   const normalizedLabel = normalizeCompactToolLabel(entry.toolTitle ?? entry.label);
@@ -413,7 +415,7 @@ function deriveToolLifecycleCollapseKey(entry) {
   return [itemType, normalizedLabel, detail].join("\u001f");
 }
 function normalizeCompactToolLabel(value) {
-  return value.replace(/\s+(?:complete|completed)\s*$/i, "").trim();
+  return value.replace(/\s+(?:start|started|complete|completed)\s*$/i, "").trim();
 }
 function toLatestProposedPlanState(proposedPlan) {
   return {

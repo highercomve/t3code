@@ -5,13 +5,13 @@ declare const badgeVariants: (
     | ({
         size?: "default" | "lg" | "sm" | null | undefined;
         variant?:
-          | "default"
           | "error"
+          | "success"
+          | "default"
           | "info"
           | "warning"
-          | "success"
-          | "outline"
           | "destructive"
+          | "outline"
           | "secondary"
           | null
           | undefined;

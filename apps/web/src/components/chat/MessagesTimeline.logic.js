@@ -13,5 +13,5 @@ export function computeMessageDurationStart(messages) {
   return result;
 }
 export function normalizeCompactToolLabel(value) {
-  return value.replace(/\s+(?:complete|completed)\s*$/i, "").trim();
+  return value.replace(/\s+(?:start|started|complete|completed)\s*$/i, "").trim();
 }

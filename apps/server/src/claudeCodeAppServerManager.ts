@@ -19,7 +19,7 @@ import {
   type ProviderTurnStartResult,
   RuntimeMode,
   ProviderInteractionMode,
-  PROVIDER_CLAUDE_CODE,
+  PROVIDER_CLAUDE_AGENT,
 } from "@t3tools/contracts";
 import { normalizeModelSlug } from "@t3tools/shared/model";
 import { Effect, ServiceMap } from "effect";
@@ -112,7 +112,7 @@ export interface ClaudeCodeAppServerStartSessionInput {
   readonly model?: string;
   readonly serviceTier?: string;
   readonly resumeCursor?: unknown;
-  readonly providerOptions?: ProviderSessionStartInput["providerOptions"];
+  readonly providerOptions?: Record<string, unknown>;
   readonly runtimeMode: RuntimeMode;
 }
 
@@ -128,7 +128,7 @@ export interface ClaudeCodeThreadSnapshot {
 
 // ── Constants ────────────────────────────────────────────────────────
 
-const PROVIDER = PROVIDER_CLAUDE_CODE;
+const PROVIDER = PROVIDER_CLAUDE_AGENT;
 const CLAUDE_CODE_DEFAULT_MODEL = "claude-sonnet-4-6";
 
 /** Timeout for the long-running `prompt` request (10 minutes). */
@@ -313,7 +313,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
       // Step 2: ACP authenticate
       const authMethods = initResponse?.authMethods ?? [];
       if (authMethods.length > 0) {
-        const methodId = authMethods[0].id;
+        const methodId = authMethods[0]?.id;
         await this.sendRequest(context, "authenticate", { methodId });
         await Effect.logInfo("claudeCode ACP authenticated", {
           threadId,
@@ -473,7 +473,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
     for (const attachment of input.attachments ?? []) {
       if (attachment.type === "image" && attachment.url) {
         const dataUrlMatch = attachment.url.match(/^data:([^;]+);base64,(.+)$/);
-        if (dataUrlMatch) {
+        if (dataUrlMatch && dataUrlMatch[1] && dataUrlMatch[2]) {
           promptContent.push({
             type: "image",
             mimeType: dataUrlMatch[1],
@@ -649,9 +649,9 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
     context.pendingApprovals.delete(requestId);
 
     let outcome: { outcome: string; optionId: string };
-    if (decision === "deny") {
+    if (decision === "decline" || decision === "cancel") {
       outcome = { outcome: "cancelled", optionId: "" };
-    } else if (decision === "always-approve") {
+    } else if (decision === "acceptForSession") {
       const alwaysOption = pendingRequest.options.find((o) => o.kind === "allow_always");
       outcome = {
         outcome: "proceed",
@@ -1331,7 +1331,9 @@ function readClaudeCodeProviderOptions(input: ClaudeCodeAppServerStartSessionInp
   readonly binaryPath?: string;
   readonly apiKey?: string;
 } {
-  const options = input.providerOptions?.claudeCode;
+  const options = input.providerOptions?.claudeCode as
+    | { binaryPath?: string; apiKey?: string }
+    | undefined;
   if (!options) {
     return {};
   }
