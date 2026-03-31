@@ -17,3 +17,4 @@ export declare function formatRelativeTime(isoDate: string): {
   value: string;
   suffix: string | null;
 };
+export declare function formatRelativeTimeLabel(isoDate: string): string;

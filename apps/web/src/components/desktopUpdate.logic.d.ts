@@ -8,6 +8,9 @@ export declare function shouldShowArm64IntelBuildWarning(state: DesktopUpdateSta
 export declare function isDesktopUpdateButtonDisabled(state: DesktopUpdateState | null): boolean;
 export declare function getArm64IntelBuildWarningDescription(state: DesktopUpdateState): string;
 export declare function getDesktopUpdateButtonTooltip(state: DesktopUpdateState): string;
+export declare function getDesktopUpdateInstallConfirmationMessage(
+  state: Pick<DesktopUpdateState, "availableVersion" | "downloadedVersion">,
+): string;
 export declare function getDesktopUpdateActionError(
   result: DesktopUpdateActionResult,
 ): string | null;
@@ -17,3 +20,4 @@ export declare function shouldToastDesktopUpdateActionResult(
 export declare function shouldHighlightDesktopUpdateError(
   state: DesktopUpdateState | null,
 ): boolean;
+export declare function canCheckForUpdate(state: DesktopUpdateState | null): boolean;

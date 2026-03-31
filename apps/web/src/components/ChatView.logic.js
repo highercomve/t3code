@@ -1,6 +1,7 @@
 import { ProjectId } from "@t3tools/contracts";
 import { randomUUID } from "~/lib/utils";
 import { Schema } from "effect";
+import { useStore } from "../store";
 import {
   filterTerminalContextsWithText,
   stripInlineTerminalContextPlaceholders,
@@ -21,8 +22,8 @@ export function buildLocalDraftThread(threadId, draftThread, fallbackModelSelect
     messages: [],
     error,
     createdAt: draftThread.createdAt,
+    archivedAt: null,
     latestTurn: null,
-    lastVisitedAt: draftThread.createdAt,
     branch: draftThread.branch,
     worktreePath: draftThread.worktreePath,
     turnDiffSummaries: [],
@@ -119,4 +120,81 @@ export function buildExpiredTerminalContextToastCopy(expiredTerminalContextCount
     title: `${noun} omitted from message`,
     description: "Re-add it if you want that terminal output included.",
   };
+}
+export function threadHasStarted(thread) {
+  return Boolean(
+    thread && (thread.latestTurn !== null || thread.messages.length > 0 || thread.session !== null),
+  );
+}
+export async function waitForStartedServerThread(threadId, timeoutMs = 1_000) {
+  const getThread = () => useStore.getState().threads.find((thread) => thread.id === threadId);
+  const thread = getThread();
+  if (threadHasStarted(thread)) {
+    return true;
+  }
+  return await new Promise((resolve) => {
+    let settled = false;
+    let timeoutId = null;
+    const finish = (result) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeoutId !== null) {
+        globalThis.clearTimeout(timeoutId);
+      }
+      unsubscribe();
+      resolve(result);
+    };
+    const unsubscribe = useStore.subscribe((state) => {
+      if (!threadHasStarted(state.threads.find((thread) => thread.id === threadId))) {
+        return;
+      }
+      finish(true);
+    });
+    if (threadHasStarted(getThread())) {
+      finish(true);
+      return;
+    }
+    timeoutId = globalThis.setTimeout(() => {
+      finish(false);
+    }, timeoutMs);
+  });
+}
+export function createLocalDispatchSnapshot(activeThread, options) {
+  const latestTurn = activeThread?.latestTurn ?? null;
+  const session = activeThread?.session ?? null;
+  return {
+    startedAt: new Date().toISOString(),
+    preparingWorktree: Boolean(options?.preparingWorktree),
+    latestTurnTurnId: latestTurn?.turnId ?? null,
+    latestTurnRequestedAt: latestTurn?.requestedAt ?? null,
+    latestTurnStartedAt: latestTurn?.startedAt ?? null,
+    latestTurnCompletedAt: latestTurn?.completedAt ?? null,
+    sessionOrchestrationStatus: session?.orchestrationStatus ?? null,
+    sessionUpdatedAt: session?.updatedAt ?? null,
+  };
+}
+export function hasServerAcknowledgedLocalDispatch(input) {
+  if (!input.localDispatch) {
+    return false;
+  }
+  if (
+    input.phase === "running" ||
+    input.hasPendingApproval ||
+    input.hasPendingUserInput ||
+    Boolean(input.threadError)
+  ) {
+    return true;
+  }
+  const latestTurn = input.latestTurn ?? null;
+  const session = input.session ?? null;
+  return (
+    input.localDispatch.latestTurnTurnId !== (latestTurn?.turnId ?? null) ||
+    input.localDispatch.latestTurnRequestedAt !== (latestTurn?.requestedAt ?? null) ||
+    input.localDispatch.latestTurnStartedAt !== (latestTurn?.startedAt ?? null) ||
+    input.localDispatch.latestTurnCompletedAt !== (latestTurn?.completedAt ?? null) ||
+    input.localDispatch.sessionOrchestrationStatus !== (session?.orchestrationStatus ?? null) ||
+    input.localDispatch.sessionUpdatedAt !== (session?.updatedAt ?? null)
+  );
 }

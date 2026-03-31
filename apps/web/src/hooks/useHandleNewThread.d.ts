@@ -3,6 +3,7 @@ import { type DraftThreadEnvMode, type DraftThreadState } from "../composerDraft
 export declare function useHandleNewThread(): {
   activeDraftThread: DraftThreadState | null;
   activeThread: import("../types").Thread | undefined;
+  defaultProjectId: (string & import("effect/Brand").Brand<"ProjectId">) | null;
   handleNewThread: (
     projectId: ProjectId,
     options?: {
@@ -11,6 +12,5 @@ export declare function useHandleNewThread(): {
       envMode?: DraftThreadEnvMode;
     },
   ) => Promise<void>;
-  projects: import("../types").Project[];
   routeThreadId: (string & import("effect/Brand").Brand<"ThreadId">) | null;
 };

@@ -1,7 +1,12 @@
 import * as Schema from "effect/Schema";
 import { ProjectId, ThreadId } from "@t3tools/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { COMPOSER_DRAFT_STORAGE_KEY, useComposerDraftStore } from "./composerDraftStore";
+import {
+  COMPOSER_DRAFT_STORAGE_KEY,
+  clearPromotedDraftThread,
+  clearPromotedDraftThreads,
+  useComposerDraftStore,
+} from "./composerDraftStore";
 import { removeLocalStorageItem, setLocalStorageItem } from "./hooks/useLocalStorage";
 import {
   INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
@@ -436,6 +441,45 @@ describe("composerDraftStore project draft thread mapping", () => {
     expect(useComposerDraftStore.getState().getDraftThreadByProjectId(projectId)).toBeNull();
     expect(useComposerDraftStore.getState().getDraftThread(threadId)).toBeNull();
     expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
+  });
+  it("clears a promoted draft by thread id", () => {
+    const store = useComposerDraftStore.getState();
+    store.setProjectDraftThreadId(projectId, threadId);
+    store.setPrompt(threadId, "promote me");
+    clearPromotedDraftThread(threadId);
+    expect(useComposerDraftStore.getState().getDraftThreadByProjectId(projectId)).toBeNull();
+    expect(useComposerDraftStore.getState().getDraftThread(threadId)).toBeNull();
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
+  });
+  it("does not clear composer drafts for existing server threads during promotion cleanup", () => {
+    const store = useComposerDraftStore.getState();
+    store.setPrompt(threadId, "keep me");
+    clearPromotedDraftThread(threadId);
+    expect(useComposerDraftStore.getState().getDraftThread(threadId)).toBeNull();
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.prompt).toBe("keep me");
+  });
+  it("clears promoted drafts from an iterable of server thread ids", () => {
+    const store = useComposerDraftStore.getState();
+    store.setProjectDraftThreadId(projectId, threadId);
+    store.setPrompt(threadId, "promote me");
+    store.setProjectDraftThreadId(otherProjectId, otherThreadId);
+    store.setPrompt(otherThreadId, "keep me");
+    clearPromotedDraftThreads([threadId]);
+    expect(useComposerDraftStore.getState().getDraftThread(threadId)).toBeNull();
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
+    expect(
+      useComposerDraftStore.getState().getDraftThreadByProjectId(otherProjectId)?.threadId,
+    ).toBe(otherThreadId);
+    expect(useComposerDraftStore.getState().draftsByThreadId[otherThreadId]?.prompt).toBe(
+      "keep me",
+    );
+  });
+  it("keeps existing server-thread composer drafts during iterable promotion cleanup", () => {
+    const store = useComposerDraftStore.getState();
+    store.setPrompt(threadId, "keep me");
+    clearPromotedDraftThreads([threadId]);
+    expect(useComposerDraftStore.getState().getDraftThread(threadId)).toBeNull();
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.prompt).toBe("keep me");
   });
   it("updates branch context on an existing draft thread", () => {
     const store = useComposerDraftStore.getState();

@@ -8,12 +8,15 @@ import {
   type ServerProviderModel,
   type ThreadId,
 } from "@t3tools/contracts";
-import { isClaudeUltrathinkPrompt, resolveEffort } from "@t3tools/shared/model";
+import {
+  isClaudeUltrathinkPrompt,
+  normalizeClaudeModelOptionsWithCapabilities,
+  normalizeCodexModelOptionsWithCapabilities,
+  resolveEffort,
+} from "@t3tools/shared/model";
 import type { ReactNode } from "react";
 import {
   getProviderModelCapabilities,
-  normalizeClaudeModelOptionsWithCapabilities,
-  normalizeCodexModelOptionsWithCapabilities,
   normalizeGeminiModelOptionsWithCapabilities,
   normalizeOpencodeModelOptionsWithCapabilities,
 } from "../../providerModels";

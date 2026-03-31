@@ -1,7 +1,7 @@
 import { isMacPlatform } from "./lib/utils";
 const URL_PATTERN = /https?:\/\/[^\s"'`<>]+/g;
 const FILE_PATH_PATTERN =
-  /(?:~\/|\.{1,2}\/|\/|[A-Za-z]:\\|\\\\)[^\s"'`<>]+|[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+(?::\d+){0,2}/g;
+  /(?:~\/|\.{1,2}\/|\/|[A-Za-z]:[\\/]|\\\\)[^\s"'`<>]+|[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+(?::\d+){0,2}/g;
 const TRAILING_PUNCTUATION_PATTERN = /[.,;!?]+$/;
 function trimClosingDelimiters(value) {
   let output = value.replace(TRAILING_PUNCTUATION_PATTERN, "");

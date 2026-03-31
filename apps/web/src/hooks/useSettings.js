@@ -177,6 +177,9 @@ export function buildLegacyServerSettingsMigrationPatch(legacySettings) {
 }
 export function buildLegacyClientSettingsMigrationPatch(legacySettings) {
   const patch = {};
+  if (Predicate.isBoolean(legacySettings.confirmThreadArchive)) {
+    patch.confirmThreadArchive = legacySettings.confirmThreadArchive;
+  }
   if (Predicate.isBoolean(legacySettings.confirmThreadDelete)) {
     patch.confirmThreadDelete = legacySettings.confirmThreadDelete;
   }

@@ -325,7 +325,7 @@ describe("CompactComposerControlsMenu", () => {
       if (result_4) await result_4;
     }
   });
-  it("shows prompt-controlled Ultrathink messaging with disabled effort controls", async () => {
+  it("shows prompt-controlled Ultrathink state with selectable effort controls", async () => {
     const env_5 = { stack: [], error: void 0, hasError: false };
     try {
       const _ = __addDisposableResource(
@@ -344,8 +344,7 @@ describe("CompactComposerControlsMenu", () => {
       await vi.waitFor(() => {
         const text = document.body.textContent ?? "";
         expect(text).toContain("Effort");
-        expect(text).toContain("Remove Ultrathink from the prompt to change effort.");
-        expect(text).not.toContain("Fallback Effort");
+        expect(text).not.toContain("ultrathink");
       });
     } catch (e_5) {
       env_5.error = e_5;
@@ -353,6 +352,36 @@ describe("CompactComposerControlsMenu", () => {
     } finally {
       const result_5 = __disposeResources(env_5);
       if (result_5) await result_5;
+    }
+  });
+  it("warns when ultrathink appears in prompt body text", async () => {
+    const env_6 = { stack: [], error: void 0, hasError: false };
+    try {
+      const _ = __addDisposableResource(
+        env_6,
+        await mountMenu({
+          modelSelection: {
+            provider: "claudeAgent",
+            model: "claude-opus-4-6",
+            options: { effort: "high" },
+          },
+          prompt: "Ultrathink:\nplease ultrathink about this problem",
+        }),
+        true,
+      );
+      await page.getByLabelText("More composer controls").click();
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text).toContain(
+          'Your prompt contains "ultrathink" in the text. Remove it to change effort.',
+        );
+      });
+    } catch (e_6) {
+      env_6.error = e_6;
+      env_6.hasError = true;
+    } finally {
+      const result_6 = __disposeResources(env_6);
+      if (result_6) await result_6;
     }
   });
 });

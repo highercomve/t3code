@@ -103,7 +103,7 @@ const TEST_PROVIDERS = [
     installed: true,
     version: "0.1.0",
     status: "ready",
-    authStatus: "authenticated",
+    auth: { status: "authenticated" },
     checkedAt: "2026-01-01T00:00:00.000Z",
     models: [
       {
@@ -129,7 +129,7 @@ const TEST_PROVIDERS = [
     installed: true,
     version: "0.1.0",
     status: "ready",
-    authStatus: "authenticated",
+    auth: { status: "authenticated" },
     checkedAt: "2026-01-01T00:00:00.000Z",
     models: [
       {
@@ -376,7 +376,7 @@ describe("TraitsPicker (Claude)", () => {
       if (result_4) await result_4;
     }
   });
-  it("shows prompt-controlled Ultrathink state with disabled effort controls", async () => {
+  it("shows prompt-controlled Ultrathink state with selectable effort controls", async () => {
     const env_5 = { stack: [], error: void 0, hasError: false };
     try {
       const _ = __addDisposableResource(
@@ -396,8 +396,7 @@ describe("TraitsPicker (Claude)", () => {
       await vi.waitFor(() => {
         const text = document.body.textContent ?? "";
         expect(text).toContain("Effort");
-        expect(text).toContain("Remove Ultrathink from the prompt to change effort.");
-        expect(text).not.toContain("Fallback Effort");
+        expect(text).not.toContain("ultrathink");
       });
     } catch (e_5) {
       env_5.error = e_5;
@@ -407,11 +406,38 @@ describe("TraitsPicker (Claude)", () => {
       if (result_5) await result_5;
     }
   });
-  it("persists sticky claude model options when traits change", async () => {
+  it("warns when ultrathink appears in prompt body text", async () => {
     const env_6 = { stack: [], error: void 0, hasError: false };
     try {
       const _ = __addDisposableResource(
         env_6,
+        await mountClaudePicker({
+          model: "claude-opus-4-6",
+          options: { effort: "high" },
+          prompt: "Ultrathink:\nplease ultrathink about this problem",
+        }),
+        true,
+      );
+      await page.getByRole("button").click();
+      await vi.waitFor(() => {
+        const text = document.body.textContent ?? "";
+        expect(text).toContain(
+          'Your prompt contains "ultrathink" in the text. Remove it to change effort.',
+        );
+      });
+    } catch (e_6) {
+      env_6.error = e_6;
+      env_6.hasError = true;
+    } finally {
+      const result_6 = __disposeResources(env_6);
+      if (result_6) await result_6;
+    }
+  });
+  it("persists sticky claude model options when traits change", async () => {
+    const env_7 = { stack: [], error: void 0, hasError: false };
+    try {
+      const _ = __addDisposableResource(
+        env_7,
         await mountClaudePicker({
           model: "claude-opus-4-6",
           options: { effort: "medium", fastMode: false },
@@ -428,19 +454,19 @@ describe("TraitsPicker (Claude)", () => {
           effort: "max",
         },
       });
-    } catch (e_6) {
-      env_6.error = e_6;
-      env_6.hasError = true;
+    } catch (e_7) {
+      env_7.error = e_7;
+      env_7.hasError = true;
     } finally {
-      const result_6 = __disposeResources(env_6);
-      if (result_6) await result_6;
+      const result_7 = __disposeResources(env_7);
+      if (result_7) await result_7;
     }
   });
   it("accepts outline trigger styling", async () => {
-    const env_7 = { stack: [], error: void 0, hasError: false };
+    const env_8 = { stack: [], error: void 0, hasError: false };
     try {
       const _ = __addDisposableResource(
-        env_7,
+        env_8,
         await mountClaudePicker({
           triggerVariant: "outline",
         }),
@@ -452,12 +478,12 @@ describe("TraitsPicker (Claude)", () => {
       }
       expect(button.className).toContain("border-input");
       expect(button.className).toContain("bg-popover");
-    } catch (e_7) {
-      env_7.error = e_7;
-      env_7.hasError = true;
+    } catch (e_8) {
+      env_8.error = e_8;
+      env_8.hasError = true;
     } finally {
-      const result_7 = __disposeResources(env_7);
-      if (result_7) await result_7;
+      const result_8 = __disposeResources(env_8);
+      if (result_8) await result_8;
     }
   });
 });
@@ -526,10 +552,10 @@ describe("TraitsPicker (Codex)", () => {
     });
   });
   it("shows fast mode controls", async () => {
-    const env_8 = { stack: [], error: void 0, hasError: false };
+    const env_9 = { stack: [], error: void 0, hasError: false };
     try {
       const _ = __addDisposableResource(
-        env_8,
+        env_9,
         await mountCodexPicker({
           options: { fastMode: false },
         }),
@@ -542,27 +568,6 @@ describe("TraitsPicker (Codex)", () => {
         expect(text).toContain("off");
         expect(text).toContain("on");
       });
-    } catch (e_8) {
-      env_8.error = e_8;
-      env_8.hasError = true;
-    } finally {
-      const result_8 = __disposeResources(env_8);
-      if (result_8) await result_8;
-    }
-  });
-  it("shows Fast in the trigger label when fast mode is active", async () => {
-    const env_9 = { stack: [], error: void 0, hasError: false };
-    try {
-      const _ = __addDisposableResource(
-        env_9,
-        await mountCodexPicker({
-          options: { fastMode: true },
-        }),
-        true,
-      );
-      await vi.waitFor(() => {
-        expect(document.body.textContent ?? "").toContain("High · Fast");
-      });
     } catch (e_9) {
       env_9.error = e_9;
       env_9.hasError = true;
@@ -571,11 +576,32 @@ describe("TraitsPicker (Codex)", () => {
       if (result_9) await result_9;
     }
   });
-  it("shows only the provided effort options", async () => {
+  it("shows Fast in the trigger label when fast mode is active", async () => {
     const env_10 = { stack: [], error: void 0, hasError: false };
     try {
       const _ = __addDisposableResource(
         env_10,
+        await mountCodexPicker({
+          options: { fastMode: true },
+        }),
+        true,
+      );
+      await vi.waitFor(() => {
+        expect(document.body.textContent ?? "").toContain("High · Fast");
+      });
+    } catch (e_10) {
+      env_10.error = e_10;
+      env_10.hasError = true;
+    } finally {
+      const result_10 = __disposeResources(env_10);
+      if (result_10) await result_10;
+    }
+  });
+  it("shows only the provided effort options", async () => {
+    const env_11 = { stack: [], error: void 0, hasError: false };
+    try {
+      const _ = __addDisposableResource(
+        env_11,
         await mountCodexPicker({
           options: { fastMode: false },
         }),
@@ -589,19 +615,19 @@ describe("TraitsPicker (Codex)", () => {
         expect(text).not.toContain("Low");
         expect(text).not.toContain("Medium");
       });
-    } catch (e_10) {
-      env_10.error = e_10;
-      env_10.hasError = true;
+    } catch (e_11) {
+      env_11.error = e_11;
+      env_11.hasError = true;
     } finally {
-      const result_10 = __disposeResources(env_10);
-      if (result_10) await result_10;
+      const result_11 = __disposeResources(env_11);
+      if (result_11) await result_11;
     }
   });
   it("persists sticky codex model options when traits change", async () => {
-    const env_11 = { stack: [], error: void 0, hasError: false };
+    const env_12 = { stack: [], error: void 0, hasError: false };
     try {
       const _ = __addDisposableResource(
-        env_11,
+        env_12,
         await mountCodexPicker({
           options: { fastMode: false },
         }),
@@ -613,12 +639,12 @@ describe("TraitsPicker (Codex)", () => {
         provider: "codex",
         options: { fastMode: true },
       });
-    } catch (e_11) {
-      env_11.error = e_11;
-      env_11.hasError = true;
+    } catch (e_12) {
+      env_12.error = e_12;
+      env_12.hasError = true;
     } finally {
-      const result_11 = __disposeResources(env_11);
-      if (result_11) await result_11;
+      const result_12 = __disposeResources(env_12);
+      if (result_12) await result_12;
     }
   });
 });

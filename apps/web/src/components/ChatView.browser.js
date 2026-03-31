@@ -2,7 +2,9 @@ import { jsx as _jsx } from "react/jsx-runtime";
 // Production CSS is part of the behavior under test because row height depends on it.
 import "../index.css";
 import {
+  EventId,
   ORCHESTRATION_WS_METHODS,
+  ORCHESTRATION_WS_CHANNELS,
   WS_CHANNELS,
   WS_METHODS,
   DEFAULT_SERVER_SETTINGS,
@@ -32,6 +34,8 @@ const ATTACHMENT_SVG = "<svg xmlns='http://www.w3.org/2000/svg' width='120' heig
 let fixture;
 const wsRequests = [];
 let customWsRpcResolver = null;
+let wsClient = null;
+let pushSequence = 1;
 const wsLink = ws.link(/ws(s)?:\/\/.*/);
 const DEFAULT_VIEWPORT = {
   name: "desktop",
@@ -67,7 +71,7 @@ function createBaseServerConfig() {
         installed: true,
         version: "0.116.0",
         status: "ready",
-        authStatus: "authenticated",
+        auth: { status: "authenticated" },
         checkedAt: NOW_ISO,
         models: [],
       },
@@ -179,6 +183,7 @@ function createSnapshotForTargetUser(options) {
         latestTurn: null,
         createdAt: NOW_ISO,
         updatedAt: NOW_ISO,
+        archivedAt: null,
         deletedAt: null,
         messages,
         activities: [],
@@ -231,6 +236,7 @@ function addThreadToSnapshot(snapshot, threadId) {
         latestTurn: null,
         createdAt: NOW_ISO,
         updatedAt: NOW_ISO,
+        archivedAt: null,
         deletedAt: null,
         messages: [],
         activities: [],
@@ -248,6 +254,75 @@ function addThreadToSnapshot(snapshot, threadId) {
       },
     ],
   };
+}
+function createThreadCreatedEvent(threadId, sequence) {
+  return {
+    sequence,
+    eventId: EventId.makeUnsafe(`event-thread-created-${sequence}`),
+    aggregateKind: "thread",
+    aggregateId: threadId,
+    occurredAt: NOW_ISO,
+    commandId: null,
+    causationEventId: null,
+    correlationId: null,
+    metadata: {},
+    type: "thread.created",
+    payload: {
+      threadId,
+      projectId: PROJECT_ID,
+      title: "New thread",
+      modelSelection: {
+        provider: "codex",
+        model: "gpt-5",
+      },
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      branch: "main",
+      worktreePath: null,
+      createdAt: NOW_ISO,
+      updatedAt: NOW_ISO,
+    },
+  };
+}
+function sendOrchestrationDomainEvent(event) {
+  if (!wsClient) {
+    throw new Error("WebSocket client not connected");
+  }
+  wsClient.send(
+    JSON.stringify({
+      type: "push",
+      sequence: pushSequence++,
+      channel: ORCHESTRATION_WS_CHANNELS.domainEvent,
+      data: event,
+    }),
+  );
+}
+async function waitForWsClient() {
+  let client = null;
+  await vi.waitFor(
+    () => {
+      client = wsClient;
+      expect(client).toBeTruthy();
+    },
+    { timeout: 8_000, interval: 16 },
+  );
+  if (!client) {
+    throw new Error("WebSocket client not connected");
+  }
+  return client;
+}
+async function promoteDraftThreadViaDomainEvent(threadId) {
+  await waitForWsClient();
+  fixture.snapshot = addThreadToSnapshot(fixture.snapshot, threadId);
+  sendOrchestrationDomainEvent(
+    createThreadCreatedEvent(threadId, fixture.snapshot.snapshotSequence),
+  );
+  await vi.waitFor(
+    () => {
+      expect(useComposerDraftStore.getState().draftThreadsByThreadId[threadId]).toBeUndefined();
+    },
+    { timeout: 8_000, interval: 16 },
+  );
 }
 function createDraftOnlySnapshot() {
   const snapshot = createSnapshotForTargetUser({
@@ -404,10 +479,12 @@ function resolveWsRpc(body) {
 }
 const worker = setupWorker(
   wsLink.addEventListener("connection", ({ client }) => {
+    wsClient = client;
+    pushSequence = 1;
     client.send(
       JSON.stringify({
         type: "push",
-        sequence: 1,
+        sequence: pushSequence++,
         channel: WS_CHANNELS.serverWelcome,
         data: fixture.welcome,
       }),
@@ -720,7 +797,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     useStore.setState({
       projects: [],
       threads: [],
-      threadsHydrated: false,
+      bootstrapComplete: false,
     });
   });
   afterEach(() => {
@@ -863,6 +940,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
       }
     },
   );
+  it("shows an explicit empty state for projects without threads in the sidebar", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+    });
+    try {
+      await expect.element(page.getByText("No threads yet")).toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
   it("opens the project cwd for draft threads without a worktree path", async () => {
     setDraftThreadWithoutWorktree();
     const mounted = await mountChatView({
@@ -1518,6 +1606,75 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await mounted.cleanup();
     }
   });
+  it("hides the archive action when the pointer leaves a thread row", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-archive-hover-test",
+        targetText: "archive hover target",
+      }),
+    });
+    try {
+      const threadRow = page.getByTestId(`thread-row-${THREAD_ID}`);
+      await expect.element(threadRow).toBeInTheDocument();
+      const archiveButton = await waitForElement(
+        () => document.querySelector(`[data-testid="thread-archive-${THREAD_ID}"]`),
+        "Unable to find archive button.",
+      );
+      const archiveAction = archiveButton.parentElement;
+      expect(
+        archiveAction,
+        "Archive button should render inside a visibility wrapper.",
+      ).not.toBeNull();
+      expect(getComputedStyle(archiveAction).opacity).toBe("0");
+      await threadRow.hover();
+      await vi.waitFor(
+        () => {
+          expect(getComputedStyle(archiveAction).opacity).toBe("1");
+        },
+        { timeout: 4_000, interval: 16 },
+      );
+      await page.getByTestId("composer-editor").hover();
+      await vi.waitFor(
+        () => {
+          expect(getComputedStyle(archiveAction).opacity).toBe("0");
+        },
+        { timeout: 4_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+  it("shows the confirm archive action after clicking the archive button", async () => {
+    localStorage.setItem(
+      "t3code:client-settings:v1",
+      JSON.stringify({
+        ...DEFAULT_CLIENT_SETTINGS,
+        confirmThreadArchive: true,
+      }),
+    );
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-archive-confirm-test",
+        targetText: "archive confirm target",
+      }),
+    });
+    try {
+      const threadRow = page.getByTestId(`thread-row-${THREAD_ID}`);
+      await expect.element(threadRow).toBeInTheDocument();
+      await threadRow.hover();
+      const archiveButton = page.getByTestId(`thread-archive-${THREAD_ID}`);
+      await expect.element(archiveButton).toBeInTheDocument();
+      await archiveButton.click();
+      const confirmButton = page.getByTestId(`thread-archive-confirm-${THREAD_ID}`);
+      await expect.element(confirmButton).toBeInTheDocument();
+      await expect.element(confirmButton).toBeVisible();
+    } finally {
+      localStorage.removeItem("t3code:client-settings:v1");
+      await mounted.cleanup();
+    }
+  });
   it("keeps the new thread selected after clicking the new-thread button", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -1540,19 +1697,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const newThreadId = newThreadPath.slice(1);
       // The composer editor should be present for the new draft thread.
       await waitForComposerEditor();
-      // Simulate the snapshot sync arriving from the server after the draft
-      // thread has been promoted to a server thread (thread.create + turn.start
-      // succeeded). The snapshot now includes the new thread, and the sync
-      // should clear the draft without disrupting the route.
-      const { syncServerReadModel } = useStore.getState();
-      syncServerReadModel(addThreadToSnapshot(fixture.snapshot, newThreadId));
-      // Clear the draft now that the server thread exists (mirrors EventRouter behavior).
-      useComposerDraftStore.getState().clearDraftThread(newThreadId);
+      // Simulate the steady-state promotion path: the server emits
+      // `thread.created`, the client materializes the thread incrementally,
+      // and the draft is cleared by live batch effects.
+      await promoteDraftThreadViaDomainEvent(newThreadId);
       // The route should still be on the new thread — not redirected away.
       await waitForURL(
         mounted.router,
         (path) => path === newThreadPath,
-        "New thread should remain selected after snapshot sync clears the draft.",
+        "New thread should remain selected after server thread promotion clears the draft.",
       );
       // The empty thread view and composer should still be visible.
       await expect
@@ -1842,9 +1995,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Route should have changed to a promoted draft thread UUID.",
       );
       const promotedThreadId = promotedThreadPath.slice(1);
-      const { syncServerReadModel } = useStore.getState();
-      syncServerReadModel(addThreadToSnapshot(fixture.snapshot, promotedThreadId));
-      useComposerDraftStore.getState().clearDraftThread(promotedThreadId);
+      await promoteDraftThreadViaDomainEvent(promotedThreadId);
       const freshThreadPath = await triggerChatNewShortcutUntilPath(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path) && path !== promotedThreadPath,

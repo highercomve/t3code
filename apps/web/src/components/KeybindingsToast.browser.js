@@ -29,7 +29,7 @@ function createBaseServerConfig() {
         installed: true,
         version: "0.116.0",
         status: "ready",
-        authStatus: "authenticated",
+        auth: { status: "authenticated" },
         checkedAt: NOW_ISO,
         models: [],
       },
@@ -82,6 +82,7 @@ function createMinimalSnapshot() {
         latestTurn: null,
         createdAt: NOW_ISO,
         updatedAt: NOW_ISO,
+        archivedAt: null,
         deletedAt: null,
         messages: [
           {
@@ -283,7 +284,7 @@ describe("Keybindings update toast", () => {
     useStore.setState({
       projects: [],
       threads: [],
-      threadsHydrated: false,
+      bootstrapComplete: false,
     });
   });
   afterEach(() => {

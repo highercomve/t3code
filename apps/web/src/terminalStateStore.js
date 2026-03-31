@@ -6,12 +6,16 @@
  */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { resolveStorage } from "./lib/storage";
 import {
   DEFAULT_THREAD_TERMINAL_HEIGHT,
   DEFAULT_THREAD_TERMINAL_ID,
   MAX_TERMINALS_PER_GROUP,
 } from "./types";
 const TERMINAL_STATE_STORAGE_KEY = "t3code:terminal-state:v1";
+function createTerminalStateStorage() {
+  return resolveStorage(typeof window !== "undefined" ? window.localStorage : undefined);
+}
 function normalizeTerminalIds(terminalIds) {
   const ids = [...new Set(terminalIds.map((id) => id.trim()).filter((id) => id.length > 0))];
   return ids.length > 0 ? ids : [DEFAULT_THREAD_TERMINAL_ID];
@@ -414,6 +418,15 @@ export const useTerminalStateStore = create()(
           ),
         clearTerminalState: (threadId) =>
           updateTerminal(threadId, () => createDefaultThreadTerminalState()),
+        removeTerminalState: (threadId) =>
+          set((state) => {
+            if (state.terminalStateByThreadId[threadId] === undefined) {
+              return state;
+            }
+            const next = { ...state.terminalStateByThreadId };
+            delete next[threadId];
+            return { terminalStateByThreadId: next };
+          }),
         removeOrphanedTerminalStates: (activeThreadIds) =>
           set((state) => {
             const orphanedIds = Object.keys(state.terminalStateByThreadId).filter(
@@ -431,7 +444,7 @@ export const useTerminalStateStore = create()(
     {
       name: TERMINAL_STATE_STORAGE_KEY,
       version: 1,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(createTerminalStateStorage),
       partialize: (state) => ({
         terminalStateByThreadId: state.terminalStateByThreadId,
       }),

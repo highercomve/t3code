@@ -1,12 +1,76 @@
 import { Route as rootRouteImport } from "./routes/__root";
+import { Route as SettingsRouteImport } from "./routes/settings";
 import { Route as ChatRouteImport } from "./routes/_chat";
 import { Route as ChatIndexRouteImport } from "./routes/_chat.index";
-import { Route as ChatSettingsRouteImport } from "./routes/_chat.settings";
+import { Route as SettingsGeneralRouteImport } from "./routes/settings.general";
+import { Route as SettingsArchivedRouteImport } from "./routes/settings.archived";
 import { Route as ChatThreadIdRouteImport } from "./routes/_chat.$threadId";
-declare const ChatRoute: import("@tanstack/router-core").Route<
-  Register,
+declare const SettingsRoute: import("@tanstack/router-core").Route<
+  import("@tanstack/react-router").Register,
   import("@tanstack/react-router").RootRoute<
-    Register,
+    import("@tanstack/react-router").Register,
+    undefined,
+    {
+      queryClient: import("@tanstack/react-query").QueryClient;
+    },
+    import("@tanstack/router-core").AnyContext,
+    import("@tanstack/router-core").AnyContext,
+    {},
+    undefined,
+    unknown,
+    unknown,
+    unknown,
+    unknown,
+    undefined
+  >,
+  "/settings",
+  "/settings",
+  "/settings",
+  "/settings",
+  undefined,
+  import("@tanstack/router-core").ResolveParams<"/settings">,
+  import("@tanstack/router-core").AnyContext,
+  import("@tanstack/router-core").AnyContext,
+  ({
+    location,
+  }: import("@tanstack/router-core").BeforeLoadContextOptions<
+    import("@tanstack/react-router").Register,
+    import("@tanstack/react-router").RootRoute<
+      import("@tanstack/react-router").Register,
+      undefined,
+      {
+        queryClient: import("@tanstack/react-query").QueryClient;
+      },
+      import("@tanstack/router-core").AnyContext,
+      import("@tanstack/router-core").AnyContext,
+      {},
+      undefined,
+      unknown,
+      unknown,
+      unknown,
+      unknown,
+      undefined
+    >,
+    undefined,
+    import("@tanstack/router-core").ResolveParams<"/settings">,
+    import("@tanstack/router-core").AnyContext,
+    import("@tanstack/router-core").AnyContext,
+    "/settings",
+    unknown,
+    undefined
+  >) => void,
+  {},
+  undefined,
+  unknown,
+  unknown,
+  unknown,
+  unknown,
+  undefined
+>;
+declare const ChatRoute: import("@tanstack/router-core").Route<
+  import("@tanstack/react-router").Register,
+  import("@tanstack/react-router").RootRoute<
+    import("@tanstack/react-router").Register,
     undefined,
     {
       queryClient: import("@tanstack/react-query").QueryClient;
@@ -39,11 +103,11 @@ declare const ChatRoute: import("@tanstack/router-core").Route<
   undefined
 >;
 declare const ChatIndexRoute: import("@tanstack/router-core").Route<
-  Register,
+  import("@tanstack/react-router").Register,
   import("@tanstack/router-core").Route<
-    Register,
+    import("@tanstack/react-router").Register,
     import("@tanstack/react-router").RootRoute<
-      Register,
+      import("@tanstack/react-router").Register,
       undefined,
       {
         queryClient: import("@tanstack/react-query").QueryClient;
@@ -92,12 +156,12 @@ declare const ChatIndexRoute: import("@tanstack/router-core").Route<
   unknown,
   undefined
 >;
-declare const ChatSettingsRoute: import("@tanstack/router-core").Route<
-  Register,
+declare const SettingsGeneralRoute: import("@tanstack/router-core").Route<
+  import("@tanstack/react-router").Register,
   import("@tanstack/router-core").Route<
-    Register,
+    import("@tanstack/react-router").Register,
     import("@tanstack/react-router").RootRoute<
-      Register,
+      import("@tanstack/react-router").Register,
       undefined,
       {
         queryClient: import("@tanstack/react-query").QueryClient;
@@ -112,15 +176,42 @@ declare const ChatSettingsRoute: import("@tanstack/router-core").Route<
       unknown,
       undefined
     >,
-    "",
-    "/",
-    "/_chat",
-    "/_chat",
+    "/settings",
+    "/settings",
+    "/settings",
+    "/settings",
     undefined,
-    import("@tanstack/router-core").ResolveParams<"">,
+    import("@tanstack/router-core").ResolveParams<"/settings">,
     import("@tanstack/router-core").AnyContext,
     import("@tanstack/router-core").AnyContext,
-    import("@tanstack/router-core").AnyContext,
+    ({
+      location,
+    }: import("@tanstack/router-core").BeforeLoadContextOptions<
+      import("@tanstack/react-router").Register,
+      import("@tanstack/react-router").RootRoute<
+        import("@tanstack/react-router").Register,
+        undefined,
+        {
+          queryClient: import("@tanstack/react-query").QueryClient;
+        },
+        import("@tanstack/router-core").AnyContext,
+        import("@tanstack/router-core").AnyContext,
+        {},
+        undefined,
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+        undefined
+      >,
+      undefined,
+      import("@tanstack/router-core").ResolveParams<"/settings">,
+      import("@tanstack/router-core").AnyContext,
+      import("@tanstack/router-core").AnyContext,
+      "/settings",
+      unknown,
+      undefined
+    >) => void,
     {},
     undefined,
     unknown,
@@ -129,12 +220,93 @@ declare const ChatSettingsRoute: import("@tanstack/router-core").Route<
     unknown,
     undefined
   >,
-  "/settings",
-  "/settings",
-  "/_chat/settings",
-  "/_chat/settings",
+  "/general",
+  "/settings/general",
+  "/settings/general",
+  "/settings/general",
   undefined,
-  import("@tanstack/router-core").ResolveParams<"/settings">,
+  import("@tanstack/router-core").ResolveParams<"/general">,
+  import("@tanstack/router-core").AnyContext,
+  import("@tanstack/router-core").AnyContext,
+  import("@tanstack/router-core").AnyContext,
+  {},
+  undefined,
+  unknown,
+  unknown,
+  unknown,
+  unknown,
+  undefined
+>;
+declare const SettingsArchivedRoute: import("@tanstack/router-core").Route<
+  import("@tanstack/react-router").Register,
+  import("@tanstack/router-core").Route<
+    import("@tanstack/react-router").Register,
+    import("@tanstack/react-router").RootRoute<
+      import("@tanstack/react-router").Register,
+      undefined,
+      {
+        queryClient: import("@tanstack/react-query").QueryClient;
+      },
+      import("@tanstack/router-core").AnyContext,
+      import("@tanstack/router-core").AnyContext,
+      {},
+      undefined,
+      unknown,
+      unknown,
+      unknown,
+      unknown,
+      undefined
+    >,
+    "/settings",
+    "/settings",
+    "/settings",
+    "/settings",
+    undefined,
+    import("@tanstack/router-core").ResolveParams<"/settings">,
+    import("@tanstack/router-core").AnyContext,
+    import("@tanstack/router-core").AnyContext,
+    ({
+      location,
+    }: import("@tanstack/router-core").BeforeLoadContextOptions<
+      import("@tanstack/react-router").Register,
+      import("@tanstack/react-router").RootRoute<
+        import("@tanstack/react-router").Register,
+        undefined,
+        {
+          queryClient: import("@tanstack/react-query").QueryClient;
+        },
+        import("@tanstack/router-core").AnyContext,
+        import("@tanstack/router-core").AnyContext,
+        {},
+        undefined,
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+        undefined
+      >,
+      undefined,
+      import("@tanstack/router-core").ResolveParams<"/settings">,
+      import("@tanstack/router-core").AnyContext,
+      import("@tanstack/router-core").AnyContext,
+      "/settings",
+      unknown,
+      undefined
+    >) => void,
+    {},
+    undefined,
+    unknown,
+    unknown,
+    unknown,
+    unknown,
+    undefined
+  >,
+  "/archived",
+  "/settings/archived",
+  "/settings/archived",
+  "/settings/archived",
+  undefined,
+  import("@tanstack/router-core").ResolveParams<"/archived">,
   import("@tanstack/router-core").AnyContext,
   import("@tanstack/router-core").AnyContext,
   import("@tanstack/router-core").AnyContext,
@@ -147,11 +319,11 @@ declare const ChatSettingsRoute: import("@tanstack/router-core").Route<
   undefined
 >;
 declare const ChatThreadIdRoute: import("@tanstack/router-core").Route<
-  Register,
+  import("@tanstack/react-router").Register,
   import("@tanstack/router-core").Route<
-    Register,
+    import("@tanstack/react-router").Register,
     import("@tanstack/react-router").RootRoute<
-      Register,
+      import("@tanstack/react-router").Register,
       undefined,
       {
         queryClient: import("@tanstack/react-query").QueryClient;
@@ -202,34 +374,55 @@ declare const ChatThreadIdRoute: import("@tanstack/router-core").Route<
 >;
 export interface FileRoutesByFullPath {
   "/": typeof ChatIndexRoute;
+  "/settings": typeof SettingsRouteWithChildren;
   "/$threadId": typeof ChatThreadIdRoute;
-  "/settings": typeof ChatSettingsRoute;
+  "/settings/archived": typeof SettingsArchivedRoute;
+  "/settings/general": typeof SettingsGeneralRoute;
 }
 export interface FileRoutesByTo {
+  "/settings": typeof SettingsRouteWithChildren;
   "/$threadId": typeof ChatThreadIdRoute;
-  "/settings": typeof ChatSettingsRoute;
+  "/settings/archived": typeof SettingsArchivedRoute;
+  "/settings/general": typeof SettingsGeneralRoute;
   "/": typeof ChatIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/_chat": typeof ChatRouteWithChildren;
+  "/settings": typeof SettingsRouteWithChildren;
   "/_chat/$threadId": typeof ChatThreadIdRoute;
-  "/_chat/settings": typeof ChatSettingsRoute;
+  "/settings/archived": typeof SettingsArchivedRoute;
+  "/settings/general": typeof SettingsGeneralRoute;
   "/_chat/": typeof ChatIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/$threadId" | "/settings";
+  fullPaths: "/" | "/settings" | "/$threadId" | "/settings/archived" | "/settings/general";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/$threadId" | "/settings" | "/";
-  id: "__root__" | "/_chat" | "/_chat/$threadId" | "/_chat/settings" | "/_chat/";
+  to: "/settings" | "/$threadId" | "/settings/archived" | "/settings/general" | "/";
+  id:
+    | "__root__"
+    | "/_chat"
+    | "/settings"
+    | "/_chat/$threadId"
+    | "/settings/archived"
+    | "/settings/general"
+    | "/_chat/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   ChatRoute: typeof ChatRouteWithChildren;
+  SettingsRoute: typeof SettingsRouteWithChildren;
 }
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
+    "/settings": {
+      id: "/settings";
+      path: "/settings";
+      fullPath: "/settings";
+      preLoaderRoute: typeof SettingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/_chat": {
       id: "/_chat";
       path: "";
@@ -244,12 +437,19 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ChatIndexRouteImport;
       parentRoute: typeof ChatRoute;
     };
-    "/_chat/settings": {
-      id: "/_chat/settings";
-      path: "/settings";
-      fullPath: "/settings";
-      preLoaderRoute: typeof ChatSettingsRouteImport;
-      parentRoute: typeof ChatRoute;
+    "/settings/general": {
+      id: "/settings/general";
+      path: "/general";
+      fullPath: "/settings/general";
+      preLoaderRoute: typeof SettingsGeneralRouteImport;
+      parentRoute: typeof SettingsRoute;
+    };
+    "/settings/archived": {
+      id: "/settings/archived";
+      path: "/archived";
+      fullPath: "/settings/archived";
+      preLoaderRoute: typeof SettingsArchivedRouteImport;
+      parentRoute: typeof SettingsRoute;
     };
     "/_chat/$threadId": {
       id: "/_chat/$threadId";
@@ -262,7 +462,6 @@ declare module "@tanstack/react-router" {
 }
 interface ChatRouteChildren {
   ChatThreadIdRoute: typeof ChatThreadIdRoute;
-  ChatSettingsRoute: typeof ChatSettingsRoute;
   ChatIndexRoute: typeof ChatIndexRoute;
 }
 declare const ChatRouteChildren: ChatRouteChildren;
@@ -296,6 +495,73 @@ declare const ChatRouteWithChildren: import("@tanstack/router-core").Route<
   {},
   undefined,
   ChatRouteChildren,
+  unknown,
+  unknown,
+  unknown,
+  undefined
+>;
+interface SettingsRouteChildren {
+  SettingsArchivedRoute: typeof SettingsArchivedRoute;
+  SettingsGeneralRoute: typeof SettingsGeneralRoute;
+}
+declare const SettingsRouteChildren: SettingsRouteChildren;
+declare const SettingsRouteWithChildren: import("@tanstack/router-core").Route<
+  import("@tanstack/react-router").Register,
+  import("@tanstack/react-router").RootRoute<
+    import("@tanstack/react-router").Register,
+    undefined,
+    {
+      queryClient: import("@tanstack/react-query").QueryClient;
+    },
+    import("@tanstack/router-core").AnyContext,
+    import("@tanstack/router-core").AnyContext,
+    {},
+    undefined,
+    unknown,
+    unknown,
+    unknown,
+    unknown,
+    undefined
+  >,
+  "/settings",
+  "/settings",
+  "/settings",
+  "/settings",
+  undefined,
+  import("@tanstack/router-core").ResolveParams<"/settings">,
+  import("@tanstack/router-core").AnyContext,
+  import("@tanstack/router-core").AnyContext,
+  ({
+    location,
+  }: import("@tanstack/router-core").BeforeLoadContextOptions<
+    import("@tanstack/react-router").Register,
+    import("@tanstack/react-router").RootRoute<
+      import("@tanstack/react-router").Register,
+      undefined,
+      {
+        queryClient: import("@tanstack/react-query").QueryClient;
+      },
+      import("@tanstack/router-core").AnyContext,
+      import("@tanstack/router-core").AnyContext,
+      {},
+      undefined,
+      unknown,
+      unknown,
+      unknown,
+      unknown,
+      undefined
+    >,
+    undefined,
+    import("@tanstack/router-core").ResolveParams<"/settings">,
+    import("@tanstack/router-core").AnyContext,
+    import("@tanstack/router-core").AnyContext,
+    "/settings",
+    unknown,
+    undefined
+  >) => void,
+  {},
+  undefined,
+  SettingsRouteChildren,
   unknown,
   unknown,
   unknown,

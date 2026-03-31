@@ -1,23 +1,32 @@
 import { DEFAULT_RUNTIME_MODE, ThreadId } from "@t3tools/contracts";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { newThreadId } from "../lib/utils";
+import { orderItemsByPreferredIds } from "../components/Sidebar.logic";
 import { useStore } from "../store";
+import { useThreadById } from "../storeSelectors";
+import { useUiStateStore } from "../uiStateStore";
 export function useHandleNewThread() {
-  const projects = useStore((store) => store.projects);
-  const threads = useStore((store) => store.threads);
+  const projectIds = useStore(useShallow((store) => store.projects.map((project) => project.id)));
+  const projectOrder = useUiStateStore((store) => store.projectOrder);
   const navigate = useNavigate();
   const routeThreadId = useParams({
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
   });
+  const activeThread = useThreadById(routeThreadId);
   const activeDraftThread = useComposerDraftStore((store) =>
     routeThreadId ? (store.draftThreadsByThreadId[routeThreadId] ?? null) : null,
   );
-  const activeThread = routeThreadId
-    ? threads.find((thread) => thread.id === routeThreadId)
-    : undefined;
+  const orderedProjects = useMemo(() => {
+    return orderItemsByPreferredIds({
+      items: projectIds,
+      preferredIds: projectOrder,
+      getId: (projectId) => projectId,
+    });
+  }, [projectIds, projectOrder]);
   const handleNewThread = useCallback(
     (projectId, options) => {
       const {
@@ -90,8 +99,8 @@ export function useHandleNewThread() {
   return {
     activeDraftThread,
     activeThread,
+    defaultProjectId: orderedProjects[0] ?? null,
     handleNewThread,
-    projects,
     routeThreadId,
   };
 }

@@ -1,19 +1,20 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import {
-  ArrowLeftIcon,
+  ArchiveIcon,
   ArrowUpDownIcon,
   ChevronRightIcon,
   FolderIcon,
   GitPullRequestIcon,
   PlusIcon,
-  RocketIcon,
   SettingsIcon,
   SquarePenIcon,
   TerminalIcon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { ProjectFavicon } from "./ProjectFavicon";
 import { autoAnimate } from "@formkit/auto-animate";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   DndContext,
   PointerSensor,
@@ -26,35 +27,44 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { DEFAULT_MODEL_BY_PROVIDER, ThreadId } from "@t3tools/contracts";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { isElectron } from "../env";
 import { APP_STAGE_LABEL, APP_VERSION } from "../branding";
+import { isTerminalFocused } from "../lib/terminalFocus";
 import { isLinuxPlatform, isMacPlatform, newCommandId, newProjectId } from "../lib/utils";
 import { useStore } from "../store";
-import { shortcutLabelForCommand } from "../keybindings";
+import { useUiStateStore } from "../uiStateStore";
+import {
+  resolveShortcutCommand,
+  shortcutLabelForCommand,
+  shouldShowThreadJumpHints,
+  threadJumpCommandForIndex,
+  threadJumpIndexFromCommand,
+  threadTraversalDirectionFromCommand,
+} from "../keybindings";
 import { derivePendingApprovals, derivePendingUserInputs } from "../session-logic";
-import { gitRemoveWorktreeMutationOptions, gitStatusQueryOptions } from "../lib/gitReactQuery";
+import { gitStatusQueryOptions } from "../lib/gitReactQuery";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { readNativeApi } from "../nativeApi";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useThreadActions } from "../hooks/useThreadActions";
 import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
 import { toastManager } from "./ui/toast";
+import { formatRelativeTimeLabel } from "../timestampFormat";
+import { SettingsSidebarNav } from "./settings/SettingsSidebarNav";
 import {
   getArm64IntelBuildWarningDescription,
   getDesktopUpdateActionError,
-  getDesktopUpdateButtonTooltip,
+  getDesktopUpdateInstallConfirmationMessage,
   isDesktopUpdateButtonDisabled,
   resolveDesktopUpdateButtonAction,
   shouldShowArm64IntelBuildWarning,
-  shouldHighlightDesktopUpdateError,
-  shouldShowDesktopUpdateButton,
   shouldToastDesktopUpdateActionResult,
 } from "./desktopUpdate.logic";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "./ui/alert";
 import { Button } from "./ui/button";
-import { Collapsible, CollapsibleContent } from "./ui/collapsible";
 import { Menu, MenuGroup, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import {
@@ -73,19 +83,23 @@ import {
   SidebarTrigger,
 } from "./ui/sidebar";
 import { useThreadSelectionStore } from "../threadSelectionStore";
-import { formatWorktreePathForDisplay, getOrphanedWorktreePathForThread } from "../worktreeCleanup";
 import { isNonEmpty as isNonEmptyString } from "effect/String";
 import {
-  getFallbackThreadIdAfterDelete,
+  getVisibleSidebarThreadIds,
   getVisibleThreadsForProject,
+  resolveAdjacentThreadId,
+  isContextMenuPointerDown,
   resolveProjectStatusIndicator,
   resolveSidebarNewThreadEnvMode,
   resolveThreadRowClassName,
   resolveThreadStatusPill,
+  orderItemsByPreferredIds,
   shouldClearThreadSelectionOnMouseDown,
   sortProjectsForSidebar,
   sortThreadsForSidebar,
+  useThreadJumpHintVisibility,
 } from "./Sidebar.logic";
+import { SidebarUpdatePill } from "./sidebar/SidebarUpdatePill";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { useSettings, useUpdateSettings } from "~/hooks/useSettings";
 const EMPTY_KEYBINDINGS = [];
@@ -103,15 +117,67 @@ const SIDEBAR_LIST_ANIMATION_OPTIONS = {
   duration: 180,
   easing: "ease-out",
 };
-const loadedProjectFaviconSrcs = new Set();
-function formatRelativeTime(iso) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+const sidebarThreadSnapshotCache = new WeakMap();
+function getLatestUserMessageAt(thread) {
+  let latestUserMessageAt = null;
+  for (const message of thread.messages) {
+    if (message.role !== "user") {
+      continue;
+    }
+    if (latestUserMessageAt === null || message.createdAt > latestUserMessageAt) {
+      latestUserMessageAt = message.createdAt;
+    }
+  }
+  return latestUserMessageAt;
+}
+function toSidebarThreadSnapshot(thread, lastVisitedAt) {
+  const cached = sidebarThreadSnapshotCache.get(thread);
+  if (cached && cached.lastVisitedAt === lastVisitedAt) {
+    return cached.snapshot;
+  }
+  const snapshot = {
+    id: thread.id,
+    projectId: thread.projectId,
+    title: thread.title,
+    interactionMode: thread.interactionMode,
+    session: thread.session,
+    createdAt: thread.createdAt,
+    updatedAt: thread.updatedAt,
+    archivedAt: thread.archivedAt,
+    latestTurn: thread.latestTurn,
+    lastVisitedAt,
+    branch: thread.branch,
+    worktreePath: thread.worktreePath,
+    activities: thread.activities,
+    proposedPlans: thread.proposedPlans,
+    latestUserMessageAt: getLatestUserMessageAt(thread),
+  };
+  sidebarThreadSnapshotCache.set(thread, { lastVisitedAt, snapshot });
+  return snapshot;
+}
+function ThreadStatusLabel({ status, compact = false }) {
+  if (compact) {
+    return _jsxs("span", {
+      title: status.label,
+      className: `inline-flex size-3.5 shrink-0 items-center justify-center ${status.colorClass}`,
+      children: [
+        _jsx("span", {
+          className: `size-[9px] rounded-full ${status.dotClass} ${status.pulse ? "animate-pulse" : ""}`,
+        }),
+        _jsx("span", { className: "sr-only", children: status.label }),
+      ],
+    });
+  }
+  return _jsxs("span", {
+    title: status.label,
+    className: `inline-flex items-center gap-1 text-[10px] ${status.colorClass}`,
+    children: [
+      _jsx("span", {
+        className: `h-1.5 w-1.5 rounded-full ${status.dotClass} ${status.pulse ? "animate-pulse" : ""}`,
+      }),
+      _jsx("span", { className: "hidden md:inline", children: status.label }),
+    ],
+  });
 }
 function terminalStatusFromRunningIds(runningTerminalIds) {
   if (runningTerminalIds.length === 0) {
@@ -161,47 +227,6 @@ function T3Wordmark() {
       d: "M33.4509 93V47.56H15.5309V37H64.3309V47.56H46.4109V93H33.4509ZM86.7253 93.96C82.832 93.96 78.9653 93.4533 75.1253 92.44C71.2853 91.3733 68.032 89.88 65.3653 87.96L70.4053 78.04C72.5386 79.5867 75.0186 80.8133 77.8453 81.72C80.672 82.6267 83.5253 83.08 86.4053 83.08C89.6586 83.08 92.2186 82.44 94.0853 81.16C95.952 79.88 96.8853 78.12 96.8853 75.88C96.8853 73.7467 96.0586 72.0667 94.4053 70.84C92.752 69.6133 90.0853 69 86.4053 69H80.4853V60.44L96.0853 42.76L97.5253 47.4H68.1653V37H107.365V45.4L91.8453 63.08L85.2853 59.32H89.0453C95.9253 59.32 101.125 60.8667 104.645 63.96C108.165 67.0533 109.925 71.0267 109.925 75.88C109.925 79.0267 109.099 81.9867 107.445 84.76C105.792 87.48 103.259 89.6933 99.8453 91.4C96.432 93.1067 92.0586 93.96 86.7253 93.96Z",
       fill: "currentColor",
     }),
-  });
-}
-/**
- * Derives the server's HTTP origin (scheme + host + port) from the same
- * sources WsTransport uses, converting ws(s) to http(s).
- */
-function getServerHttpOrigin() {
-  const bridgeUrl = window.desktopBridge?.getWsUrl();
-  const envUrl = import.meta.env.VITE_WS_URL;
-  const wsUrl =
-    bridgeUrl && bridgeUrl.length > 0
-      ? bridgeUrl
-      : envUrl && envUrl.length > 0
-        ? envUrl
-        : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`;
-  // Parse to extract just the origin, dropping path/query (e.g. ?token=…)
-  const httpUrl = wsUrl.replace(/^wss:/, "https:").replace(/^ws:/, "http:");
-  try {
-    return new URL(httpUrl).origin;
-  } catch {
-    return httpUrl;
-  }
-}
-const serverHttpOrigin = getServerHttpOrigin();
-function ProjectFavicon({ cwd }) {
-  const src = `${serverHttpOrigin}/api/project-favicon?cwd=${encodeURIComponent(cwd)}`;
-  const [status, setStatus] = useState(() =>
-    loadedProjectFaviconSrcs.has(src) ? "loaded" : "loading",
-  );
-  if (status === "error") {
-    return _jsx(FolderIcon, { className: "size-3.5 shrink-0 text-muted-foreground/50" });
-  }
-  return _jsx("img", {
-    src: src,
-    alt: "",
-    className: `size-3.5 shrink-0 rounded-sm object-contain ${status === "loading" ? "hidden" : ""}`,
-    onLoad: () => {
-      loadedProjectFaviconSrcs.add(src);
-      setStatus("loaded");
-    },
-    onError: () => setStatus("error"),
   });
 }
 function ProjectSortMenu({
@@ -301,27 +326,32 @@ function SortableProjectItem({ projectId, disabled = false, children }) {
 }
 export default function Sidebar() {
   const projects = useStore((store) => store.projects);
-  const threads = useStore((store) => store.threads);
-  const markThreadUnread = useStore((store) => store.markThreadUnread);
-  const toggleProject = useStore((store) => store.toggleProject);
-  const reorderProjects = useStore((store) => store.reorderProjects);
+  const serverThreads = useStore((store) => store.threads);
+  const { projectExpandedById, projectOrder, threadLastVisitedAtById } = useUiStateStore(
+    useShallow((store) => ({
+      projectExpandedById: store.projectExpandedById,
+      projectOrder: store.projectOrder,
+      threadLastVisitedAtById: store.threadLastVisitedAtById,
+    })),
+  );
+  const markThreadUnread = useUiStateStore((store) => store.markThreadUnread);
+  const toggleProject = useUiStateStore((store) => store.toggleProject);
+  const reorderProjects = useUiStateStore((store) => store.reorderProjects);
   const clearComposerDraftForThread = useComposerDraftStore((store) => store.clearDraftThread);
   const getDraftThreadByProjectId = useComposerDraftStore(
     (store) => store.getDraftThreadByProjectId,
   );
   const terminalStateByThreadId = useTerminalStateStore((state) => state.terminalStateByThreadId);
-  const clearTerminalState = useTerminalStateStore((state) => state.clearTerminalState);
   const clearProjectDraftThreadId = useComposerDraftStore(
     (store) => store.clearProjectDraftThreadId,
   );
-  const clearProjectDraftThreadById = useComposerDraftStore(
-    (store) => store.clearProjectDraftThreadById,
-  );
   const navigate = useNavigate();
-  const isOnSettings = useLocation({ select: (loc) => loc.pathname === "/settings" });
+  const pathname = useLocation({ select: (loc) => loc.pathname });
+  const isOnSettings = pathname.startsWith("/settings");
   const appSettings = useSettings();
   const { updateSettings } = useUpdateSettings();
   const { handleNewThread } = useHandleNewThread();
+  const { archiveThread, deleteThread } = useThreadActions();
   const routeThreadId = useParams({
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
@@ -330,8 +360,6 @@ export default function Sidebar() {
     ...serverConfigQueryOptions(),
     select: (config) => config.keybindings,
   });
-  const queryClient = useQueryClient();
-  const removeWorktreeMutation = useMutation(gitRemoveWorktreeMutationOptions({ queryClient }));
   const [addingProject, setAddingProject] = useState(false);
   const [newCwd, setNewCwd] = useState("");
   const [isPickingFolder, setIsPickingFolder] = useState(false);
@@ -340,11 +368,15 @@ export default function Sidebar() {
   const addProjectInputRef = useRef(null);
   const [renamingThreadId, setRenamingThreadId] = useState(null);
   const [renamingTitle, setRenamingTitle] = useState("");
+  const [confirmingArchiveThreadId, setConfirmingArchiveThreadId] = useState(null);
   const [expandedThreadListsByProject, setExpandedThreadListsByProject] = useState(() => new Set());
+  const { showThreadJumpHints, updateThreadJumpHintsVisibility } = useThreadJumpHintVisibility();
   const renamingCommittedRef = useRef(false);
   const renamingInputRef = useRef(null);
+  const confirmArchiveButtonRefs = useRef(new Map());
   const dragInProgressRef = useRef(false);
   const suppressProjectClickAfterDragRef = useRef(false);
+  const suppressProjectClickForContextMenuRef = useRef(false);
   const [desktopUpdateState, setDesktopUpdateState] = useState(null);
   const selectedThreadIds = useThreadSelectionStore((s) => s.selectedThreadIds);
   const toggleThreadSelection = useThreadSelectionStore((s) => s.toggleThread);
@@ -353,11 +385,47 @@ export default function Sidebar() {
   const removeFromSelection = useThreadSelectionStore((s) => s.removeFromSelection);
   const setSelectionAnchor = useThreadSelectionStore((s) => s.setAnchor);
   const isLinuxDesktop = isElectron && isLinuxPlatform(navigator.platform);
+  const platform = navigator.platform;
   const shouldBrowseForProjectImmediately = isElectron && !isLinuxDesktop;
   const shouldShowProjectPathEntry = addingProject && !shouldBrowseForProjectImmediately;
+  const orderedProjects = useMemo(() => {
+    return orderItemsByPreferredIds({
+      items: projects,
+      preferredIds: projectOrder,
+      getId: (project) => project.id,
+    });
+  }, [projectOrder, projects]);
+  const sidebarProjects = useMemo(
+    () =>
+      orderedProjects.map((project) => ({
+        ...project,
+        expanded: projectExpandedById[project.id] ?? true,
+      })),
+    [orderedProjects, projectExpandedById],
+  );
+  const threads = useMemo(
+    () =>
+      serverThreads.map((thread) =>
+        toSidebarThreadSnapshot(thread, threadLastVisitedAtById[thread.id]),
+      ),
+    [serverThreads, threadLastVisitedAtById],
+  );
   const projectCwdById = useMemo(
     () => new Map(projects.map((project) => [project.id, project.cwd])),
     [projects],
+  );
+  const routeTerminalOpen = routeThreadId
+    ? selectThreadTerminalState(terminalStateByThreadId, routeThreadId).terminalOpen
+    : false;
+  const sidebarShortcutLabelOptions = useMemo(
+    () => ({
+      platform,
+      context: {
+        terminalFocus: false,
+        terminalOpen: routeTerminalOpen,
+      },
+    }),
+    [platform, routeTerminalOpen],
   );
   const threadGitTargets = useMemo(
     () =>
@@ -424,10 +492,24 @@ export default function Sidebar() {
       });
     });
   }, []);
+  const attemptArchiveThread = useCallback(
+    async (threadId) => {
+      try {
+        await archiveThread(threadId);
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: "Failed to archive thread",
+          description: error instanceof Error ? error.message : "An error occurred.",
+        });
+      }
+    },
+    [archiveThread],
+  );
   const focusMostRecentThreadForProject = useCallback(
     (projectId) => {
       const latestThread = sortThreadsForSidebar(
-        threads.filter((thread) => thread.projectId === projectId),
+        threads.filter((thread) => thread.projectId === projectId && thread.archivedAt === null),
         appSettings.sidebarThreadSortOrder,
       )[0];
       if (!latestThread) return;
@@ -545,7 +627,10 @@ export default function Sidebar() {
     };
     const trimmed = newTitle.trim();
     if (trimmed.length === 0) {
-      toastManager.add({ type: "warning", title: "Thread title cannot be empty" });
+      toastManager.add({
+        type: "warning",
+        title: "Thread title cannot be empty",
+      });
       finishRename();
       return;
     }
@@ -574,119 +659,6 @@ export default function Sidebar() {
     }
     finishRename();
   }, []);
-  /**
-   * Delete a single thread: stop session, close terminal, dispatch delete,
-   * clean up drafts/state, and optionally remove orphaned worktree.
-   * Callers handle thread-level confirmation; this still prompts for worktree removal.
-   */
-  const deleteThread = useCallback(
-    async (threadId, opts = {}) => {
-      const api = readNativeApi();
-      if (!api) return;
-      const thread = threads.find((t) => t.id === threadId);
-      if (!thread) return;
-      const threadProject = projects.find((project) => project.id === thread.projectId);
-      // When bulk-deleting, exclude the other threads being deleted so
-      // getOrphanedWorktreePathForThread correctly detects that no surviving
-      // threads will reference this worktree.
-      const deletedIds = opts.deletedThreadIds;
-      const survivingThreads =
-        deletedIds && deletedIds.size > 0
-          ? threads.filter((t) => t.id === threadId || !deletedIds.has(t.id))
-          : threads;
-      const orphanedWorktreePath = getOrphanedWorktreePathForThread(survivingThreads, threadId);
-      const displayWorktreePath = orphanedWorktreePath
-        ? formatWorktreePathForDisplay(orphanedWorktreePath)
-        : null;
-      const canDeleteWorktree = orphanedWorktreePath !== null && threadProject !== undefined;
-      const shouldDeleteWorktree =
-        canDeleteWorktree &&
-        (await api.dialogs.confirm(
-          [
-            "This thread is the only one linked to this worktree:",
-            displayWorktreePath ?? orphanedWorktreePath,
-            "",
-            "Delete the worktree too?",
-          ].join("\n"),
-        ));
-      if (thread.session && thread.session.status !== "closed") {
-        await api.orchestration
-          .dispatchCommand({
-            type: "thread.session.stop",
-            commandId: newCommandId(),
-            threadId,
-            createdAt: new Date().toISOString(),
-          })
-          .catch(() => undefined);
-      }
-      try {
-        await api.terminal.close({ threadId, deleteHistory: true });
-      } catch {
-        // Terminal may already be closed
-      }
-      const allDeletedIds = deletedIds ?? new Set();
-      const shouldNavigateToFallback = routeThreadId === threadId;
-      const fallbackThreadId = getFallbackThreadIdAfterDelete({
-        threads,
-        deletedThreadId: threadId,
-        deletedThreadIds: allDeletedIds,
-        sortOrder: appSettings.sidebarThreadSortOrder,
-      });
-      await api.orchestration.dispatchCommand({
-        type: "thread.delete",
-        commandId: newCommandId(),
-        threadId,
-      });
-      clearComposerDraftForThread(threadId);
-      clearProjectDraftThreadById(thread.projectId, thread.id);
-      clearTerminalState(threadId);
-      if (shouldNavigateToFallback) {
-        if (fallbackThreadId) {
-          void navigate({
-            to: "/$threadId",
-            params: { threadId: fallbackThreadId },
-            replace: true,
-          });
-        } else {
-          void navigate({ to: "/", replace: true });
-        }
-      }
-      if (!shouldDeleteWorktree || !orphanedWorktreePath || !threadProject) {
-        return;
-      }
-      try {
-        await removeWorktreeMutation.mutateAsync({
-          cwd: threadProject.cwd,
-          path: orphanedWorktreePath,
-          force: true,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error removing worktree.";
-        console.error("Failed to remove orphaned worktree after thread deletion", {
-          threadId,
-          projectCwd: threadProject.cwd,
-          worktreePath: orphanedWorktreePath,
-          error,
-        });
-        toastManager.add({
-          type: "error",
-          title: "Thread deleted, but worktree removal failed",
-          description: `Could not remove ${displayWorktreePath ?? orphanedWorktreePath}. ${message}`,
-        });
-      }
-    },
-    [
-      appSettings.sidebarThreadSortOrder,
-      clearComposerDraftForThread,
-      clearProjectDraftThreadById,
-      clearTerminalState,
-      navigate,
-      projects,
-      removeWorktreeMutation,
-      routeThreadId,
-      threads,
-    ],
-  );
   const { copyToClipboard: copyThreadIdToClipboard } = useCopyToClipboard({
     onCopy: (ctx) => {
       toastManager.add({
@@ -744,7 +716,7 @@ export default function Sidebar() {
         return;
       }
       if (clicked === "mark-unread") {
-        markThreadUnread(threadId);
+        markThreadUnread(threadId, thread.latestTurn?.completedAt);
         return;
       }
       if (clicked === "copy-path") {
@@ -803,7 +775,8 @@ export default function Sidebar() {
       );
       if (clicked === "mark-unread") {
         for (const id of ids) {
-          markThreadUnread(id);
+          const thread = threads.find((candidate) => candidate.id === id);
+          markThreadUnread(id, thread?.latestTurn?.completedAt);
         }
         clearSelection();
         return;
@@ -831,6 +804,7 @@ export default function Sidebar() {
       markThreadUnread,
       removeFromSelection,
       selectedThreadIds,
+      threads,
     ],
   );
   const handleThreadClick = useCallback(
@@ -867,17 +841,37 @@ export default function Sidebar() {
       toggleThreadSelection,
     ],
   );
+  const navigateToThread = useCallback(
+    (threadId) => {
+      if (selectedThreadIds.size > 0) {
+        clearSelection();
+      }
+      setSelectionAnchor(threadId);
+      void navigate({
+        to: "/$threadId",
+        params: { threadId },
+      });
+    },
+    [clearSelection, navigate, selectedThreadIds.size, setSelectionAnchor],
+  );
   const handleProjectContextMenu = useCallback(
     async (projectId, position) => {
       const api = readNativeApi();
       if (!api) return;
-      const clicked = await api.contextMenu.show(
-        [{ id: "delete", label: "Remove project", destructive: true }],
-        position,
-      );
-      if (clicked !== "delete") return;
       const project = projects.find((entry) => entry.id === projectId);
       if (!project) return;
+      const clicked = await api.contextMenu.show(
+        [
+          { id: "copy-path", label: "Copy Project Path" },
+          { id: "delete", label: "Remove project", destructive: true },
+        ],
+        position,
+      );
+      if (clicked === "copy-path") {
+        copyPathToClipboard(project.cwd, { path: project.cwd });
+        return;
+      }
+      if (clicked !== "delete") return;
       const projectThreads = threads.filter((thread) => thread.projectId === projectId);
       if (projectThreads.length > 0) {
         toastManager.add({
@@ -913,6 +907,7 @@ export default function Sidebar() {
     [
       clearComposerDraftForThread,
       clearProjectDraftThreadId,
+      copyPathToClipboard,
       getDraftThreadByProjectId,
       projects,
       threads,
@@ -939,12 +934,12 @@ export default function Sidebar() {
       dragInProgressRef.current = false;
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const activeProject = projects.find((project) => project.id === active.id);
-      const overProject = projects.find((project) => project.id === over.id);
+      const activeProject = sidebarProjects.find((project) => project.id === active.id);
+      const overProject = sidebarProjects.find((project) => project.id === over.id);
       if (!activeProject || !overProject) return;
       reorderProjects(activeProject.id, overProject.id);
     },
-    [appSettings.sidebarProjectSortOrder, projects, reorderProjects],
+    [appSettings.sidebarProjectSortOrder, reorderProjects, sidebarProjects],
   );
   const handleProjectDragStart = useCallback(
     (_event) => {
@@ -975,83 +970,267 @@ export default function Sidebar() {
     autoAnimate(node, SIDEBAR_LIST_ANIMATION_OPTIONS);
     animatedThreadListsRef.current.add(node);
   }, []);
-  const handleProjectTitlePointerDownCapture = useCallback(() => {
+  const handleProjectTitlePointerDownCapture = useCallback((event) => {
+    suppressProjectClickForContextMenuRef.current = false;
+    if (
+      isContextMenuPointerDown({
+        button: event.button,
+        ctrlKey: event.ctrlKey,
+        isMac: isMacPlatform(navigator.platform),
+      })
+    ) {
+      // Keep context-menu gestures from arming the sortable drag sensor.
+      event.stopPropagation();
+    }
     suppressProjectClickAfterDragRef.current = false;
   }, []);
+  const visibleThreads = useMemo(
+    () => threads.filter((thread) => thread.archivedAt === null),
+    [threads],
+  );
   const sortedProjects = useMemo(
-    () => sortProjectsForSidebar(projects, threads, appSettings.sidebarProjectSortOrder),
-    [appSettings.sidebarProjectSortOrder, projects, threads],
+    () =>
+      sortProjectsForSidebar(sidebarProjects, visibleThreads, appSettings.sidebarProjectSortOrder),
+    [appSettings.sidebarProjectSortOrder, sidebarProjects, visibleThreads],
   );
   const isManualProjectSorting = appSettings.sidebarProjectSortOrder === "manual";
-  function renderProjectItem(project, dragHandleProps) {
-    const projectThreads = sortThreadsForSidebar(
-      threads.filter((thread) => thread.projectId === project.id),
+  const renderedProjects = useMemo(
+    () =>
+      sortedProjects.map((project) => {
+        const projectThreads = sortThreadsForSidebar(
+          visibleThreads.filter((thread) => thread.projectId === project.id),
+          appSettings.sidebarThreadSortOrder,
+        );
+        const threadStatuses = new Map(
+          projectThreads.map((thread) => [
+            thread.id,
+            resolveThreadStatusPill({
+              thread,
+              hasPendingApprovals: derivePendingApprovals(thread.activities).length > 0,
+              hasPendingUserInput: derivePendingUserInputs(thread.activities).length > 0,
+            }),
+          ]),
+        );
+        const projectStatus = resolveProjectStatusIndicator(
+          projectThreads.map((thread) => threadStatuses.get(thread.id) ?? null),
+        );
+        const activeThreadId = routeThreadId ?? undefined;
+        const isThreadListExpanded = expandedThreadListsByProject.has(project.id);
+        const pinnedCollapsedThread =
+          !project.expanded && activeThreadId
+            ? (projectThreads.find((thread) => thread.id === activeThreadId) ?? null)
+            : null;
+        const shouldShowThreadPanel = project.expanded || pinnedCollapsedThread !== null;
+        const {
+          hasHiddenThreads,
+          hiddenThreads,
+          visibleThreads: visibleProjectThreads,
+        } = getVisibleThreadsForProject({
+          threads: projectThreads,
+          activeThreadId,
+          isThreadListExpanded,
+          previewLimit: THREAD_PREVIEW_LIMIT,
+        });
+        const hiddenThreadStatus = resolveProjectStatusIndicator(
+          hiddenThreads.map((thread) => threadStatuses.get(thread.id) ?? null),
+        );
+        const orderedProjectThreadIds = projectThreads.map((thread) => thread.id);
+        const renderedThreads = pinnedCollapsedThread
+          ? [pinnedCollapsedThread]
+          : visibleProjectThreads;
+        const showEmptyThreadState = project.expanded && projectThreads.length === 0;
+        return {
+          hasHiddenThreads,
+          hiddenThreadStatus,
+          orderedProjectThreadIds,
+          project,
+          projectStatus,
+          projectThreads,
+          threadStatuses,
+          renderedThreads,
+          showEmptyThreadState,
+          shouldShowThreadPanel,
+          isThreadListExpanded,
+        };
+      }),
+    [
       appSettings.sidebarThreadSortOrder,
-    );
-    const projectStatus = resolveProjectStatusIndicator(
-      projectThreads.map((thread) =>
-        resolveThreadStatusPill({
-          thread,
-          hasPendingApprovals: derivePendingApprovals(thread.activities).length > 0,
-          hasPendingUserInput: derivePendingUserInputs(thread.activities).length > 0,
-        }),
-      ),
-    );
-    const activeThreadId = routeThreadId ?? undefined;
-    const isThreadListExpanded = expandedThreadListsByProject.has(project.id);
-    const pinnedCollapsedThread =
-      !project.expanded && activeThreadId
-        ? (projectThreads.find((thread) => thread.id === activeThreadId) ?? null)
-        : null;
-    const shouldShowThreadPanel = project.expanded || pinnedCollapsedThread !== null;
-    const { hasHiddenThreads, visibleThreads } = getVisibleThreadsForProject({
-      threads: projectThreads,
-      activeThreadId,
-      isThreadListExpanded,
-      previewLimit: THREAD_PREVIEW_LIMIT,
+      expandedThreadListsByProject,
+      routeThreadId,
+      sortedProjects,
+      visibleThreads,
+    ],
+  );
+  const visibleSidebarThreadIds = useMemo(
+    () => getVisibleSidebarThreadIds(renderedProjects),
+    [renderedProjects],
+  );
+  const threadJumpCommandById = useMemo(() => {
+    const mapping = new Map();
+    for (const [visibleThreadIndex, threadId] of visibleSidebarThreadIds.entries()) {
+      const jumpCommand = threadJumpCommandForIndex(visibleThreadIndex);
+      if (!jumpCommand) {
+        return mapping;
+      }
+      mapping.set(threadId, jumpCommand);
+    }
+    return mapping;
+  }, [visibleSidebarThreadIds]);
+  const threadJumpThreadIds = useMemo(
+    () => [...threadJumpCommandById.keys()],
+    [threadJumpCommandById],
+  );
+  const threadJumpLabelById = useMemo(() => {
+    const mapping = new Map();
+    for (const [threadId, command] of threadJumpCommandById) {
+      const label = shortcutLabelForCommand(keybindings, command, sidebarShortcutLabelOptions);
+      if (label) {
+        mapping.set(threadId, label);
+      }
+    }
+    return mapping;
+  }, [keybindings, sidebarShortcutLabelOptions, threadJumpCommandById]);
+  const orderedSidebarThreadIds = visibleSidebarThreadIds;
+  useEffect(() => {
+    const getShortcutContext = () => ({
+      terminalFocus: isTerminalFocused(),
+      terminalOpen: routeTerminalOpen,
     });
-    const orderedProjectThreadIds = projectThreads.map((thread) => thread.id);
-    const renderedThreads = pinnedCollapsedThread ? [pinnedCollapsedThread] : visibleThreads;
+    const onWindowKeyDown = (event) => {
+      updateThreadJumpHintsVisibility(
+        shouldShowThreadJumpHints(event, keybindings, {
+          platform,
+          context: getShortcutContext(),
+        }),
+      );
+      if (event.defaultPrevented || event.repeat) {
+        return;
+      }
+      const command = resolveShortcutCommand(event, keybindings, {
+        platform,
+        context: getShortcutContext(),
+      });
+      const traversalDirection = threadTraversalDirectionFromCommand(command);
+      if (traversalDirection !== null) {
+        const targetThreadId = resolveAdjacentThreadId({
+          threadIds: orderedSidebarThreadIds,
+          currentThreadId: routeThreadId,
+          direction: traversalDirection,
+        });
+        if (!targetThreadId) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        navigateToThread(targetThreadId);
+        return;
+      }
+      const jumpIndex = threadJumpIndexFromCommand(command ?? "");
+      if (jumpIndex === null) {
+        return;
+      }
+      const targetThreadId = threadJumpThreadIds[jumpIndex];
+      if (!targetThreadId) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      navigateToThread(targetThreadId);
+    };
+    const onWindowKeyUp = (event) => {
+      updateThreadJumpHintsVisibility(
+        shouldShowThreadJumpHints(event, keybindings, {
+          platform,
+          context: getShortcutContext(),
+        }),
+      );
+    };
+    const onWindowBlur = () => {
+      updateThreadJumpHintsVisibility(false);
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    window.addEventListener("keyup", onWindowKeyUp);
+    window.addEventListener("blur", onWindowBlur);
+    return () => {
+      window.removeEventListener("keydown", onWindowKeyDown);
+      window.removeEventListener("keyup", onWindowKeyUp);
+      window.removeEventListener("blur", onWindowBlur);
+    };
+  }, [
+    keybindings,
+    navigateToThread,
+    orderedSidebarThreadIds,
+    platform,
+    routeTerminalOpen,
+    routeThreadId,
+    threadJumpThreadIds,
+    updateThreadJumpHintsVisibility,
+  ]);
+  function renderProjectItem(renderedProject, dragHandleProps) {
+    const {
+      hasHiddenThreads,
+      hiddenThreadStatus,
+      orderedProjectThreadIds,
+      project,
+      projectStatus,
+      projectThreads,
+      threadStatuses,
+      renderedThreads,
+      showEmptyThreadState,
+      shouldShowThreadPanel,
+      isThreadListExpanded,
+    } = renderedProject;
     const renderThreadRow = (thread) => {
       const isActive = routeThreadId === thread.id;
       const isSelected = selectedThreadIds.has(thread.id);
       const isHighlighted = isActive || isSelected;
-      const threadStatus = resolveThreadStatusPill({
-        thread,
-        hasPendingApprovals: derivePendingApprovals(thread.activities).length > 0,
-        hasPendingUserInput: derivePendingUserInputs(thread.activities).length > 0,
-      });
+      const jumpLabel = threadJumpLabelById.get(thread.id) ?? null;
+      const isThreadRunning =
+        thread.session?.status === "running" && thread.session.activeTurnId != null;
+      const threadStatus = threadStatuses.get(thread.id) ?? null;
       const prStatus = prStatusIndicator(prByThreadId.get(thread.id) ?? null);
       const terminalStatus = terminalStatusFromRunningIds(
         selectThreadTerminalState(terminalStateByThreadId, thread.id).runningTerminalIds,
       );
+      const isConfirmingArchive = confirmingArchiveThreadId === thread.id && !isThreadRunning;
+      const threadMetaClassName = isConfirmingArchive
+        ? "pointer-events-none opacity-0"
+        : !isThreadRunning
+          ? "pointer-events-none transition-opacity duration-150 group-hover/menu-sub-item:opacity-0 group-focus-within/menu-sub-item:opacity-0"
+          : "pointer-events-none";
       return _jsx(
         SidebarMenuSubItem,
         {
           className: "w-full",
           "data-thread-item": true,
+          onMouseLeave: () => {
+            setConfirmingArchiveThreadId((current) => (current === thread.id ? null : current));
+          },
+          onBlurCapture: (event) => {
+            const currentTarget = event.currentTarget;
+            requestAnimationFrame(() => {
+              if (currentTarget.contains(document.activeElement)) {
+                return;
+              }
+              setConfirmingArchiveThreadId((current) => (current === thread.id ? null : current));
+            });
+          },
           children: _jsxs(SidebarMenuSubButton, {
             render: _jsx("div", { role: "button", tabIndex: 0 }),
             size: "sm",
             isActive: isActive,
-            className: resolveThreadRowClassName({
+            "data-testid": `thread-row-${thread.id}`,
+            className: `${resolveThreadRowClassName({
               isActive,
               isSelected,
-            }),
+            })} relative isolate`,
             onClick: (event) => {
               handleThreadClick(event, thread.id, orderedProjectThreadIds);
             },
             onKeyDown: (event) => {
               if (event.key !== "Enter" && event.key !== " ") return;
               event.preventDefault();
-              if (selectedThreadIds.size > 0) {
-                clearSelection();
-              }
-              setSelectionAnchor(thread.id);
-              void navigate({
-                to: "/$threadId",
-                params: { threadId: thread.id },
-              });
+              navigateToThread(thread.id);
             },
             onContextMenu: (event) => {
               event.preventDefault();
@@ -1091,19 +1270,7 @@ export default function Sidebar() {
                         _jsx(TooltipPopup, { side: "top", children: prStatus.tooltip }),
                       ],
                     }),
-                  threadStatus &&
-                    _jsxs("span", {
-                      className: `inline-flex items-center gap-1 text-[10px] ${threadStatus.colorClass}`,
-                      children: [
-                        _jsx("span", {
-                          className: `h-1.5 w-1.5 rounded-full ${threadStatus.dotClass} ${threadStatus.pulse ? "animate-pulse" : ""}`,
-                        }),
-                        _jsx("span", {
-                          className: "hidden md:inline",
-                          children: threadStatus.label,
-                        }),
-                      ],
-                    }),
+                  threadStatus && _jsx(ThreadStatusLabel, { status: threadStatus }),
                   renamingThreadId === thread.id
                     ? _jsx("input", {
                         ref: (el) => {
@@ -1155,13 +1322,114 @@ export default function Sidebar() {
                         className: `size-3 ${terminalStatus.pulse ? "animate-pulse" : ""}`,
                       }),
                     }),
-                  _jsx("span", {
-                    className: `text-[10px] ${
-                      isHighlighted
-                        ? "text-foreground/72 dark:text-foreground/82"
-                        : "text-muted-foreground/40"
-                    }`,
-                    children: formatRelativeTime(thread.updatedAt ?? thread.createdAt),
+                  _jsxs("div", {
+                    className: "flex min-w-12 justify-end",
+                    children: [
+                      isConfirmingArchive
+                        ? _jsx("button", {
+                            ref: (element) => {
+                              if (element) {
+                                confirmArchiveButtonRefs.current.set(thread.id, element);
+                              } else {
+                                confirmArchiveButtonRefs.current.delete(thread.id);
+                              }
+                            },
+                            type: "button",
+                            "data-thread-selection-safe": true,
+                            "data-testid": `thread-archive-confirm-${thread.id}`,
+                            "aria-label": `Confirm archive ${thread.title}`,
+                            className:
+                              "absolute top-1/2 right-1 inline-flex h-5 -translate-y-1/2 cursor-pointer items-center rounded-full bg-destructive/12 px-2 text-[10px] font-medium text-destructive transition-colors hover:bg-destructive/18 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-destructive/40",
+                            onPointerDown: (event) => {
+                              event.stopPropagation();
+                            },
+                            onClick: (event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              setConfirmingArchiveThreadId((current) =>
+                                current === thread.id ? null : current,
+                              );
+                              void attemptArchiveThread(thread.id);
+                            },
+                            children: "Confirm",
+                          })
+                        : !isThreadRunning
+                          ? appSettings.confirmThreadArchive
+                            ? _jsx("div", {
+                                className:
+                                  "pointer-events-none absolute top-1/2 right-1 -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover/menu-sub-item:pointer-events-auto group-hover/menu-sub-item:opacity-100 group-focus-within/menu-sub-item:pointer-events-auto group-focus-within/menu-sub-item:opacity-100",
+                                children: _jsx("button", {
+                                  type: "button",
+                                  "data-thread-selection-safe": true,
+                                  "data-testid": `thread-archive-${thread.id}`,
+                                  "aria-label": `Archive ${thread.title}`,
+                                  className:
+                                    "inline-flex size-5 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                                  onPointerDown: (event) => {
+                                    event.stopPropagation();
+                                  },
+                                  onClick: (event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setConfirmingArchiveThreadId(thread.id);
+                                    requestAnimationFrame(() => {
+                                      confirmArchiveButtonRefs.current.get(thread.id)?.focus();
+                                    });
+                                  },
+                                  children: _jsx(ArchiveIcon, { className: "size-3.5" }),
+                                }),
+                              })
+                            : _jsxs(Tooltip, {
+                                children: [
+                                  _jsx(TooltipTrigger, {
+                                    render: _jsx("div", {
+                                      className:
+                                        "pointer-events-none absolute top-1/2 right-1 -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover/menu-sub-item:pointer-events-auto group-hover/menu-sub-item:opacity-100 group-focus-within/menu-sub-item:pointer-events-auto group-focus-within/menu-sub-item:opacity-100",
+                                      children: _jsx("button", {
+                                        type: "button",
+                                        "data-thread-selection-safe": true,
+                                        "data-testid": `thread-archive-${thread.id}`,
+                                        "aria-label": `Archive ${thread.title}`,
+                                        className:
+                                          "inline-flex size-5 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                                        onPointerDown: (event) => {
+                                          event.stopPropagation();
+                                        },
+                                        onClick: (event) => {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          void attemptArchiveThread(thread.id);
+                                        },
+                                        children: _jsx(ArchiveIcon, { className: "size-3.5" }),
+                                      }),
+                                    }),
+                                  }),
+                                  _jsx(TooltipPopup, { side: "top", children: "Archive" }),
+                                ],
+                              })
+                          : null,
+                      _jsx("span", {
+                        className: threadMetaClassName,
+                        children:
+                          showThreadJumpHints && jumpLabel
+                            ? _jsx("span", {
+                                className:
+                                  "inline-flex h-5 items-center rounded-full border border-border/80 bg-background/90 px-1.5 font-mono text-[10px] font-medium tracking-tight text-foreground shadow-sm",
+                                title: jumpLabel,
+                                children: jumpLabel,
+                              })
+                            : _jsx("span", {
+                                className: `text-[10px] ${
+                                  isHighlighted
+                                    ? "text-foreground/72 dark:text-foreground/82"
+                                    : "text-muted-foreground/40"
+                                }`,
+                                children: formatRelativeTimeLabel(
+                                  thread.updatedAt ?? thread.createdAt,
+                                ),
+                              }),
+                      }),
+                    ],
                   }),
                 ],
               }),
@@ -1171,9 +1439,7 @@ export default function Sidebar() {
         thread.id,
       );
     };
-    return _jsxs(Collapsible, {
-      className: "group/collapsible",
-      open: shouldShowThreadPanel,
+    return _jsxs(_Fragment, {
       children: [
         _jsxs("div", {
           className: "group/project-header relative",
@@ -1189,6 +1455,7 @@ export default function Sidebar() {
               onKeyDown: (event) => handleProjectTitleKeyDown(event, project.id),
               onContextMenu: (event) => {
                 event.preventDefault();
+                suppressProjectClickForContextMenuRef.current = true;
                 void handleProjectContextMenu(project.id, {
                   x: event.clientX,
                   y: event.clientY,
@@ -1235,7 +1502,7 @@ export default function Sidebar() {
                     }),
                     showOnHover: true,
                     className:
-                      "top-1 right-1 size-5 rounded-md p-0 text-muted-foreground/70 hover:bg-secondary hover:text-foreground",
+                      "top-1 right-1.5 size-5 rounded-md p-0 text-muted-foreground/70 hover:bg-secondary hover:text-foreground",
                     onClick: (event) => {
                       event.preventDefault();
                       event.stopPropagation();
@@ -1258,54 +1525,77 @@ export default function Sidebar() {
             }),
           ],
         }),
-        _jsx(CollapsibleContent, {
-          children: _jsxs(SidebarMenuSub, {
-            ref: attachThreadListAutoAnimateRef,
-            className: "mx-1 my-0 w-full translate-x-0 gap-0.5 px-1.5 py-0",
-            children: [
-              renderedThreads.map((thread) => renderThreadRow(thread)),
-              project.expanded &&
-                hasHiddenThreads &&
-                !isThreadListExpanded &&
-                _jsx(SidebarMenuSubItem, {
+        _jsxs(SidebarMenuSub, {
+          ref: attachThreadListAutoAnimateRef,
+          className: "mx-1 my-0 w-full translate-x-0 gap-0.5 overflow-hidden px-1.5 py-0",
+          children: [
+            shouldShowThreadPanel && showEmptyThreadState
+              ? _jsx(SidebarMenuSubItem, {
                   className: "w-full",
-                  children: _jsx(SidebarMenuSubButton, {
-                    render: _jsx("button", { type: "button" }),
+                  "data-thread-selection-safe": true,
+                  children: _jsx("div", {
                     "data-thread-selection-safe": true,
-                    size: "sm",
                     className:
-                      "h-6 w-full translate-x-0 justify-start px-2 text-left text-[10px] text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground/80",
-                    onClick: () => {
-                      expandThreadListForProject(project.id);
-                    },
-                    children: _jsx("span", { children: "Show more" }),
+                      "flex h-6 w-full translate-x-0 items-center px-2 text-left text-[10px] text-muted-foreground/60",
+                    children: _jsx("span", { children: "No threads yet" }),
+                  }),
+                })
+              : null,
+            shouldShowThreadPanel && renderedThreads.map((thread) => renderThreadRow(thread)),
+            project.expanded &&
+              hasHiddenThreads &&
+              !isThreadListExpanded &&
+              _jsx(SidebarMenuSubItem, {
+                className: "w-full",
+                children: _jsx(SidebarMenuSubButton, {
+                  render: _jsx("button", { type: "button" }),
+                  "data-thread-selection-safe": true,
+                  size: "sm",
+                  className:
+                    "h-6 w-full translate-x-0 justify-start px-2 text-left text-[10px] text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground/80",
+                  onClick: () => {
+                    expandThreadListForProject(project.id);
+                  },
+                  children: _jsxs("span", {
+                    className: "flex min-w-0 flex-1 items-center gap-2",
+                    children: [
+                      hiddenThreadStatus &&
+                        _jsx(ThreadStatusLabel, { status: hiddenThreadStatus, compact: true }),
+                      _jsx("span", { children: "Show more" }),
+                    ],
                   }),
                 }),
-              project.expanded &&
-                hasHiddenThreads &&
-                isThreadListExpanded &&
-                _jsx(SidebarMenuSubItem, {
-                  className: "w-full",
-                  children: _jsx(SidebarMenuSubButton, {
-                    render: _jsx("button", { type: "button" }),
-                    "data-thread-selection-safe": true,
-                    size: "sm",
-                    className:
-                      "h-6 w-full translate-x-0 justify-start px-2 text-left text-[10px] text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground/80",
-                    onClick: () => {
-                      collapseThreadListForProject(project.id);
-                    },
-                    children: _jsx("span", { children: "Show less" }),
-                  }),
+              }),
+            project.expanded &&
+              hasHiddenThreads &&
+              isThreadListExpanded &&
+              _jsx(SidebarMenuSubItem, {
+                className: "w-full",
+                children: _jsx(SidebarMenuSubButton, {
+                  render: _jsx("button", { type: "button" }),
+                  "data-thread-selection-safe": true,
+                  size: "sm",
+                  className:
+                    "h-6 w-full translate-x-0 justify-start px-2 text-left text-[10px] text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground/80",
+                  onClick: () => {
+                    collapseThreadListForProject(project.id);
+                  },
+                  children: _jsx("span", { children: "Show less" }),
                 }),
-            ],
-          }),
+              }),
+          ],
         }),
       ],
     });
   }
   const handleProjectTitleClick = useCallback(
     (event, projectId) => {
+      if (suppressProjectClickForContextMenuRef.current) {
+        suppressProjectClickForContextMenuRef.current = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (dragInProgressRef.current) {
         event.preventDefault();
         event.stopPropagation();
@@ -1377,10 +1667,6 @@ export default function Sidebar() {
       unsubscribe();
     };
   }, []);
-  const showDesktopUpdateButton = isElectron && shouldShowDesktopUpdateButton(desktopUpdateState);
-  const desktopUpdateTooltip = desktopUpdateState
-    ? getDesktopUpdateButtonTooltip(desktopUpdateState)
-    : "Update available";
   const desktopUpdateButtonDisabled = isDesktopUpdateButtonDisabled(desktopUpdateState);
   const desktopUpdateButtonAction = desktopUpdateState
     ? resolveDesktopUpdateButtonAction(desktopUpdateState)
@@ -1391,20 +1677,9 @@ export default function Sidebar() {
     desktopUpdateState && showArm64IntelBuildWarning
       ? getArm64IntelBuildWarningDescription(desktopUpdateState)
       : null;
-  const desktopUpdateButtonInteractivityClasses = desktopUpdateButtonDisabled
-    ? "cursor-not-allowed opacity-60"
-    : "hover:bg-accent hover:text-foreground";
-  const desktopUpdateButtonClasses =
-    desktopUpdateState?.status === "downloaded"
-      ? "text-emerald-500"
-      : desktopUpdateState?.status === "downloading"
-        ? "text-sky-400"
-        : shouldHighlightDesktopUpdateError(desktopUpdateState)
-          ? "text-rose-500 animate-pulse"
-          : "text-amber-500 animate-pulse";
   const newThreadShortcutLabel =
-    shortcutLabelForCommand(keybindings, "chat.newLocal") ??
-    shortcutLabelForCommand(keybindings, "chat.new");
+    shortcutLabelForCommand(keybindings, "chat.newLocal", sidebarShortcutLabelOptions) ??
+    shortcutLabelForCommand(keybindings, "chat.new", sidebarShortcutLabelOptions);
   const handleDesktopUpdateButtonClick = useCallback(() => {
     const bridge = window.desktopBridge;
     if (!bridge || !desktopUpdateState) return;
@@ -1439,6 +1714,10 @@ export default function Sidebar() {
       return;
     }
     if (desktopUpdateButtonAction === "install") {
+      const confirmed = window.confirm(
+        getDesktopUpdateInstallConfirmationMessage(desktopUpdateState),
+      );
+      if (!confirmed) return;
       void bridge
         .installUpdate()
         .then((result) => {
@@ -1511,265 +1790,234 @@ export default function Sidebar() {
   return _jsxs(_Fragment, {
     children: [
       isElectron
-        ? _jsx(_Fragment, {
-            children: _jsxs(SidebarHeader, {
-              className: "drag-region h-[52px] flex-row items-center gap-2 px-4 py-0 pl-[90px]",
-              children: [
-                wordmark,
-                showDesktopUpdateButton &&
-                  _jsxs(Tooltip, {
-                    children: [
-                      _jsx(TooltipTrigger, {
-                        render: _jsx("button", {
-                          type: "button",
-                          "aria-label": desktopUpdateTooltip,
-                          "aria-disabled": desktopUpdateButtonDisabled || undefined,
-                          disabled: desktopUpdateButtonDisabled,
-                          className: `inline-flex size-7 ml-auto mt-1.5 items-center justify-center rounded-md text-muted-foreground transition-colors ${desktopUpdateButtonInteractivityClasses} ${desktopUpdateButtonClasses}`,
-                          onClick: handleDesktopUpdateButtonClick,
-                          children: _jsx(RocketIcon, { className: "size-3.5" }),
-                        }),
-                      }),
-                      _jsx(TooltipPopup, { side: "bottom", children: desktopUpdateTooltip }),
-                    ],
-                  }),
-              ],
-            }),
+        ? _jsx(SidebarHeader, {
+            className: "drag-region h-[52px] flex-row items-center gap-2 px-4 py-0 pl-[90px]",
+            children: wordmark,
           })
         : _jsx(SidebarHeader, {
             className: "gap-3 px-3 py-2 sm:gap-2.5 sm:px-4 sm:py-3",
             children: wordmark,
           }),
-      _jsxs(SidebarContent, {
-        className: "gap-0",
-        children: [
-          showArm64IntelBuildWarning && arm64IntelBuildWarningDescription
-            ? _jsx(SidebarGroup, {
-                className: "px-2 pt-2 pb-0",
-                children: _jsxs(Alert, {
-                  variant: "warning",
-                  className: "rounded-2xl border-warning/40 bg-warning/8",
-                  children: [
-                    _jsx(TriangleAlertIcon, {}),
-                    _jsx(AlertTitle, { children: "Intel build on Apple Silicon" }),
-                    _jsx(AlertDescription, { children: arm64IntelBuildWarningDescription }),
-                    desktopUpdateButtonAction !== "none"
-                      ? _jsx(AlertAction, {
-                          children: _jsx(Button, {
-                            size: "xs",
-                            variant: "outline",
-                            disabled: desktopUpdateButtonDisabled,
-                            onClick: handleDesktopUpdateButtonClick,
-                            children:
-                              desktopUpdateButtonAction === "download"
-                                ? "Download ARM build"
-                                : "Install ARM build",
-                          }),
-                        })
-                      : null,
-                  ],
-                }),
-              })
-            : null,
-          _jsxs(SidebarGroup, {
-            className: "px-2 py-2",
+      isOnSettings
+        ? _jsx(SettingsSidebarNav, { pathname: pathname })
+        : _jsxs(_Fragment, {
             children: [
-              _jsxs("div", {
-                className: "mb-1 flex items-center justify-between px-2",
+              _jsxs(SidebarContent, {
+                className: "gap-0",
                 children: [
-                  _jsx("span", {
-                    className:
-                      "text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60",
-                    children: "Projects",
-                  }),
-                  _jsxs("div", {
-                    className: "flex items-center gap-1",
+                  showArm64IntelBuildWarning && arm64IntelBuildWarningDescription
+                    ? _jsx(SidebarGroup, {
+                        className: "px-2 pt-2 pb-0",
+                        children: _jsxs(Alert, {
+                          variant: "warning",
+                          className: "rounded-2xl border-warning/40 bg-warning/8",
+                          children: [
+                            _jsx(TriangleAlertIcon, {}),
+                            _jsx(AlertTitle, { children: "Intel build on Apple Silicon" }),
+                            _jsx(AlertDescription, { children: arm64IntelBuildWarningDescription }),
+                            desktopUpdateButtonAction !== "none"
+                              ? _jsx(AlertAction, {
+                                  children: _jsx(Button, {
+                                    size: "xs",
+                                    variant: "outline",
+                                    disabled: desktopUpdateButtonDisabled,
+                                    onClick: handleDesktopUpdateButtonClick,
+                                    children:
+                                      desktopUpdateButtonAction === "download"
+                                        ? "Download ARM build"
+                                        : "Install ARM build",
+                                  }),
+                                })
+                              : null,
+                          ],
+                        }),
+                      })
+                    : null,
+                  _jsxs(SidebarGroup, {
+                    className: "px-2 py-2",
                     children: [
-                      _jsx(ProjectSortMenu, {
-                        projectSortOrder: appSettings.sidebarProjectSortOrder,
-                        threadSortOrder: appSettings.sidebarThreadSortOrder,
-                        onProjectSortOrderChange: (sortOrder) => {
-                          updateSettings({ sidebarProjectSortOrder: sortOrder });
-                        },
-                        onThreadSortOrderChange: (sortOrder) => {
-                          updateSettings({ sidebarThreadSortOrder: sortOrder });
-                        },
-                      }),
-                      _jsxs(Tooltip, {
+                      _jsxs("div", {
+                        className: "mb-1 flex items-center justify-between pl-2 pr-1.5",
                         children: [
-                          _jsx(TooltipTrigger, {
-                            render: _jsx("button", {
-                              type: "button",
-                              "aria-label": shouldShowProjectPathEntry
-                                ? "Cancel add project"
-                                : "Add project",
-                              "aria-pressed": shouldShowProjectPathEntry,
-                              className:
-                                "inline-flex size-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground",
-                              onClick: handleStartAddProject,
-                            }),
-                            children: _jsx(PlusIcon, {
-                              className: `size-3.5 transition-transform duration-150 ${shouldShowProjectPathEntry ? "rotate-45" : "rotate-0"}`,
-                            }),
+                          _jsx("span", {
+                            className:
+                              "text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60",
+                            children: "Projects",
                           }),
-                          _jsx(TooltipPopup, {
-                            side: "right",
-                            children: shouldShowProjectPathEntry
-                              ? "Cancel add project"
-                              : "Add project",
+                          _jsxs("div", {
+                            className: "flex items-center gap-1",
+                            children: [
+                              _jsx(ProjectSortMenu, {
+                                projectSortOrder: appSettings.sidebarProjectSortOrder,
+                                threadSortOrder: appSettings.sidebarThreadSortOrder,
+                                onProjectSortOrderChange: (sortOrder) => {
+                                  updateSettings({ sidebarProjectSortOrder: sortOrder });
+                                },
+                                onThreadSortOrderChange: (sortOrder) => {
+                                  updateSettings({ sidebarThreadSortOrder: sortOrder });
+                                },
+                              }),
+                              _jsxs(Tooltip, {
+                                children: [
+                                  _jsx(TooltipTrigger, {
+                                    render: _jsx("button", {
+                                      type: "button",
+                                      "aria-label": shouldShowProjectPathEntry
+                                        ? "Cancel add project"
+                                        : "Add project",
+                                      "aria-pressed": shouldShowProjectPathEntry,
+                                      className:
+                                        "inline-flex size-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground",
+                                      onClick: handleStartAddProject,
+                                    }),
+                                    children: _jsx(PlusIcon, {
+                                      className: `size-3.5 transition-transform duration-150 ${shouldShowProjectPathEntry ? "rotate-45" : "rotate-0"}`,
+                                    }),
+                                  }),
+                                  _jsx(TooltipPopup, {
+                                    side: "right",
+                                    children: shouldShowProjectPathEntry
+                                      ? "Cancel add project"
+                                      : "Add project",
+                                  }),
+                                ],
+                              }),
+                            ],
                           }),
                         ],
                       }),
+                      shouldShowProjectPathEntry &&
+                        _jsxs("div", {
+                          className: "mb-2 px-1",
+                          children: [
+                            isElectron &&
+                              _jsxs("button", {
+                                type: "button",
+                                className:
+                                  "mb-1.5 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-secondary py-1.5 text-xs text-foreground/80 transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60",
+                                onClick: () => void handlePickFolder(),
+                                disabled: isPickingFolder || isAddingProject,
+                                children: [
+                                  _jsx(FolderIcon, { className: "size-3.5" }),
+                                  isPickingFolder ? "Picking folder..." : "Browse for folder",
+                                ],
+                              }),
+                            _jsxs("div", {
+                              className: "flex gap-1.5",
+                              children: [
+                                _jsx("input", {
+                                  ref: addProjectInputRef,
+                                  className: `min-w-0 flex-1 rounded-md border bg-secondary px-2 py-1 font-mono text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none ${
+                                    addProjectError
+                                      ? "border-red-500/70 focus:border-red-500"
+                                      : "border-border focus:border-ring"
+                                  }`,
+                                  placeholder: "/path/to/project",
+                                  value: newCwd,
+                                  onChange: (event) => {
+                                    setNewCwd(event.target.value);
+                                    setAddProjectError(null);
+                                  },
+                                  onKeyDown: (event) => {
+                                    if (event.key === "Enter") handleAddProject();
+                                    if (event.key === "Escape") {
+                                      setAddingProject(false);
+                                      setAddProjectError(null);
+                                    }
+                                  },
+                                  autoFocus: true,
+                                }),
+                                _jsx("button", {
+                                  type: "button",
+                                  className:
+                                    "shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90 disabled:opacity-60",
+                                  onClick: handleAddProject,
+                                  disabled: !canAddProject,
+                                  children: isAddingProject ? "Adding..." : "Add",
+                                }),
+                              ],
+                            }),
+                            addProjectError &&
+                              _jsx("p", {
+                                className: "mt-1 px-0.5 text-[11px] leading-tight text-red-400",
+                                children: addProjectError,
+                              }),
+                          ],
+                        }),
+                      isManualProjectSorting
+                        ? _jsx(DndContext, {
+                            sensors: projectDnDSensors,
+                            collisionDetection: projectCollisionDetection,
+                            modifiers: [restrictToVerticalAxis, restrictToFirstScrollableAncestor],
+                            onDragStart: handleProjectDragStart,
+                            onDragEnd: handleProjectDragEnd,
+                            onDragCancel: handleProjectDragCancel,
+                            children: _jsx(SidebarMenu, {
+                              children: _jsx(SortableContext, {
+                                items: renderedProjects.map(
+                                  (renderedProject) => renderedProject.project.id,
+                                ),
+                                strategy: verticalListSortingStrategy,
+                                children: renderedProjects.map((renderedProject) =>
+                                  _jsx(
+                                    SortableProjectItem,
+                                    {
+                                      projectId: renderedProject.project.id,
+                                      children: (dragHandleProps) =>
+                                        renderProjectItem(renderedProject, dragHandleProps),
+                                    },
+                                    renderedProject.project.id,
+                                  ),
+                                ),
+                              }),
+                            }),
+                          })
+                        : _jsx(SidebarMenu, {
+                            ref: attachProjectListAutoAnimateRef,
+                            children: renderedProjects.map((renderedProject) =>
+                              _jsx(
+                                SidebarMenuItem,
+                                {
+                                  className: "rounded-md",
+                                  children: renderProjectItem(renderedProject, null),
+                                },
+                                renderedProject.project.id,
+                              ),
+                            ),
+                          }),
+                      projects.length === 0 &&
+                        !shouldShowProjectPathEntry &&
+                        _jsx("div", {
+                          className: "px-2 pt-4 text-center text-xs text-muted-foreground/60",
+                          children: "No projects yet",
+                        }),
                     ],
                   }),
                 ],
               }),
-              shouldShowProjectPathEntry &&
-                _jsxs("div", {
-                  className: "mb-2 px-1",
-                  children: [
-                    isElectron &&
-                      _jsxs("button", {
-                        type: "button",
+              _jsx(SidebarSeparator, {}),
+              _jsxs(SidebarFooter, {
+                className: "p-2",
+                children: [
+                  _jsx(SidebarUpdatePill, {}),
+                  _jsx(SidebarMenu, {
+                    children: _jsx(SidebarMenuItem, {
+                      children: _jsxs(SidebarMenuButton, {
+                        size: "sm",
                         className:
-                          "mb-1.5 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-secondary py-1.5 text-xs text-foreground/80 transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60",
-                        onClick: () => void handlePickFolder(),
-                        disabled: isPickingFolder || isAddingProject,
+                          "gap-2 px-2 py-1.5 text-muted-foreground/70 hover:bg-accent hover:text-foreground",
+                        onClick: () => void navigate({ to: "/settings" }),
                         children: [
-                          _jsx(FolderIcon, { className: "size-3.5" }),
-                          isPickingFolder ? "Picking folder..." : "Browse for folder",
+                          _jsx(SettingsIcon, { className: "size-3.5" }),
+                          _jsx("span", { className: "text-xs", children: "Settings" }),
                         ],
                       }),
-                    _jsxs("div", {
-                      className: "flex gap-1.5",
-                      children: [
-                        _jsx("input", {
-                          ref: addProjectInputRef,
-                          className: `min-w-0 flex-1 rounded-md border bg-secondary px-2 py-1 font-mono text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none ${
-                            addProjectError
-                              ? "border-red-500/70 focus:border-red-500"
-                              : "border-border focus:border-ring"
-                          }`,
-                          placeholder: "/path/to/project",
-                          value: newCwd,
-                          onChange: (event) => {
-                            setNewCwd(event.target.value);
-                            setAddProjectError(null);
-                          },
-                          onKeyDown: (event) => {
-                            if (event.key === "Enter") handleAddProject();
-                            if (event.key === "Escape") {
-                              setAddingProject(false);
-                              setAddProjectError(null);
-                            }
-                          },
-                          autoFocus: true,
-                        }),
-                        _jsx("button", {
-                          type: "button",
-                          className:
-                            "shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90 disabled:opacity-60",
-                          onClick: handleAddProject,
-                          disabled: !canAddProject,
-                          children: isAddingProject ? "Adding..." : "Add",
-                        }),
-                      ],
                     }),
-                    addProjectError &&
-                      _jsx("p", {
-                        className: "mt-1 px-0.5 text-[11px] leading-tight text-red-400",
-                        children: addProjectError,
-                      }),
-                    _jsx("div", {
-                      className: "mt-1.5 px-0.5",
-                      children: _jsx("button", {
-                        type: "button",
-                        className:
-                          "text-[11px] text-muted-foreground/50 transition-colors hover:text-muted-foreground",
-                        onClick: () => {
-                          setAddingProject(false);
-                          setAddProjectError(null);
-                        },
-                        children: "Cancel",
-                      }),
-                    }),
-                  ],
-                }),
-              isManualProjectSorting
-                ? _jsx(DndContext, {
-                    sensors: projectDnDSensors,
-                    collisionDetection: projectCollisionDetection,
-                    modifiers: [restrictToVerticalAxis, restrictToFirstScrollableAncestor],
-                    onDragStart: handleProjectDragStart,
-                    onDragEnd: handleProjectDragEnd,
-                    onDragCancel: handleProjectDragCancel,
-                    children: _jsx(SidebarMenu, {
-                      children: _jsx(SortableContext, {
-                        items: sortedProjects.map((project) => project.id),
-                        strategy: verticalListSortingStrategy,
-                        children: sortedProjects.map((project) =>
-                          _jsx(
-                            SortableProjectItem,
-                            {
-                              projectId: project.id,
-                              children: (dragHandleProps) =>
-                                renderProjectItem(project, dragHandleProps),
-                            },
-                            project.id,
-                          ),
-                        ),
-                      }),
-                    }),
-                  })
-                : _jsx(SidebarMenu, {
-                    ref: attachProjectListAutoAnimateRef,
-                    children: sortedProjects.map((project) =>
-                      _jsx(
-                        SidebarMenuItem,
-                        { className: "rounded-md", children: renderProjectItem(project, null) },
-                        project.id,
-                      ),
-                    ),
                   }),
-              projects.length === 0 &&
-                !shouldShowProjectPathEntry &&
-                _jsx("div", {
-                  className: "px-2 pt-4 text-center text-xs text-muted-foreground/60",
-                  children: "No projects yet",
-                }),
+                ],
+              }),
             ],
           }),
-        ],
-      }),
-      _jsx(SidebarSeparator, {}),
-      _jsx(SidebarFooter, {
-        className: "p-2",
-        children: _jsx(SidebarMenu, {
-          children: _jsx(SidebarMenuItem, {
-            children: isOnSettings
-              ? _jsxs(SidebarMenuButton, {
-                  size: "sm",
-                  className:
-                    "gap-2 px-2 py-1.5 text-muted-foreground/70 hover:bg-accent hover:text-foreground",
-                  onClick: () => window.history.back(),
-                  children: [
-                    _jsx(ArrowLeftIcon, { className: "size-3.5" }),
-                    _jsx("span", { className: "text-xs", children: "Back" }),
-                  ],
-                })
-              : _jsxs(SidebarMenuButton, {
-                  size: "sm",
-                  className:
-                    "gap-2 px-2 py-1.5 text-muted-foreground/70 hover:bg-accent hover:text-foreground",
-                  onClick: () => void navigate({ to: "/settings" }),
-                  children: [
-                    _jsx(SettingsIcon, { className: "size-3.5" }),
-                    _jsx("span", { className: "text-xs", children: "Settings" }),
-                  ],
-                }),
-          }),
-        }),
-      }),
     ],
   });
 }

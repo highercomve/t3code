@@ -1,5 +1,5 @@
-import { type ModelSelection, type ThreadId } from "@t3tools/contracts";
-import { type ChatMessage, type Thread } from "../types";
+import { type ModelSelection, type ThreadId, type TurnId } from "@t3tools/contracts";
+import { type ChatMessage, type SessionPhase, type Thread, type ThreadSession } from "../types";
 import { type ComposerImageAttachment, type DraftThreadState } from "../composerDraftStore";
 import { Schema } from "effect";
 import { type TerminalContextDraft } from "../lib/terminalContext";
@@ -17,7 +17,6 @@ export declare function buildLocalDraftThread(
 export declare function revokeBlobPreviewUrl(previewUrl: string | undefined): void;
 export declare function revokeUserMessagePreviewUrls(message: ChatMessage): void;
 export declare function collectUserMessageBlobPreviewUrls(message: ChatMessage): string[];
-export type SendPhase = "idle" | "preparing-worktree" | "sending-turn";
 export interface PullRequestDialogState {
   initialReference: string | null;
   key: number;
@@ -44,3 +43,33 @@ export declare function buildExpiredTerminalContextToastCopy(
   title: string;
   description: string;
 };
+export declare function threadHasStarted(thread: Thread | null | undefined): boolean;
+export declare function waitForStartedServerThread(
+  threadId: ThreadId,
+  timeoutMs?: number,
+): Promise<boolean>;
+export interface LocalDispatchSnapshot {
+  startedAt: string;
+  preparingWorktree: boolean;
+  latestTurnTurnId: TurnId | null;
+  latestTurnRequestedAt: string | null;
+  latestTurnStartedAt: string | null;
+  latestTurnCompletedAt: string | null;
+  sessionOrchestrationStatus: ThreadSession["orchestrationStatus"] | null;
+  sessionUpdatedAt: string | null;
+}
+export declare function createLocalDispatchSnapshot(
+  activeThread: Thread | undefined,
+  options?: {
+    preparingWorktree?: boolean;
+  },
+): LocalDispatchSnapshot;
+export declare function hasServerAcknowledgedLocalDispatch(input: {
+  localDispatch: LocalDispatchSnapshot | null;
+  phase: SessionPhase;
+  latestTurn: Thread["latestTurn"] | null;
+  session: Thread["session"] | null;
+  hasPendingApproval: boolean;
+  hasPendingUserInput: boolean;
+  threadError: string | null | undefined;
+}): boolean;

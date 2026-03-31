@@ -1,17 +1,27 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { memo } from "react";
+import { memo, useLayoutEffect, useRef } from "react";
 import { BotIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { Badge } from "../ui/badge";
 import { Command, CommandItem, CommandList } from "../ui/command";
 import { VscodeEntryIcon } from "./VscodeEntryIcon";
 export const ComposerCommandMenu = memo(function ComposerCommandMenu(props) {
+  const listRef = useRef(null);
+  useLayoutEffect(() => {
+    if (!props.activeItemId || !listRef.current) return;
+    const el = listRef.current.querySelector(
+      `[data-composer-item-id="${CSS.escape(props.activeItemId)}"]`,
+    );
+    el?.scrollIntoView({ block: "nearest" });
+  }, [props.activeItemId]);
   return _jsx(Command, {
+    autoHighlight: false,
     mode: "none",
     onItemHighlighted: (highlightedValue) => {
       props.onHighlightedItemChange(typeof highlightedValue === "string" ? highlightedValue : null);
     },
     children: _jsxs("div", {
+      ref: listRef,
       className:
         "relative overflow-hidden rounded-xl border border-border/80 bg-popover/96 shadow-lg/8 backdrop-blur-xs",
       children: [
@@ -24,6 +34,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props) {
                 item: item,
                 resolvedTheme: props.resolvedTheme,
                 isActive: props.activeItemId === item.id,
+                onHighlight: props.onHighlightedItemChange,
                 onSelect: props.onSelect,
               },
               item.id,
@@ -46,10 +57,14 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props) {
 const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props) {
   return _jsxs(CommandItem, {
     value: props.item.id,
+    "data-composer-item-id": props.item.id,
     className: cn(
-      "cursor-pointer select-none gap-2",
-      props.isActive && "bg-accent text-accent-foreground",
+      "cursor-pointer select-none gap-2 hover:bg-transparent hover:text-inherit data-highlighted:bg-transparent data-highlighted:text-inherit",
+      props.isActive && "bg-accent! text-accent-foreground!",
     ),
+    onMouseMove: () => {
+      if (!props.isActive) props.onHighlight(props.item.id);
+    },
     onMouseDown: (event) => {
       event.preventDefault();
     },

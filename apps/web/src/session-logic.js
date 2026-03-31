@@ -621,6 +621,43 @@ export function deriveTimelineEntries(messages, proposedPlans, workEntries) {
     a.createdAt.localeCompare(b.createdAt),
   );
 }
+export function deriveCompletionDividerBeforeEntryId(timelineEntries, latestTurn) {
+  if (!latestTurn?.startedAt || !latestTurn.completedAt) {
+    return null;
+  }
+  if (latestTurn.assistantMessageId) {
+    const exactMatch = timelineEntries.find(
+      (timelineEntry) =>
+        timelineEntry.kind === "message" &&
+        timelineEntry.message.role === "assistant" &&
+        timelineEntry.message.id === latestTurn.assistantMessageId,
+    );
+    if (exactMatch) {
+      return exactMatch.id;
+    }
+  }
+  const turnStartedAt = Date.parse(latestTurn.startedAt);
+  const turnCompletedAt = Date.parse(latestTurn.completedAt);
+  if (Number.isNaN(turnStartedAt) || Number.isNaN(turnCompletedAt)) {
+    return null;
+  }
+  let inRangeMatch = null;
+  let fallbackMatch = null;
+  for (const timelineEntry of timelineEntries) {
+    if (timelineEntry.kind !== "message" || timelineEntry.message.role !== "assistant") {
+      continue;
+    }
+    const messageAt = Date.parse(timelineEntry.message.createdAt);
+    if (Number.isNaN(messageAt) || messageAt < turnStartedAt) {
+      continue;
+    }
+    fallbackMatch = timelineEntry.id;
+    if (messageAt <= turnCompletedAt) {
+      inRangeMatch = timelineEntry.id;
+    }
+  }
+  return inRangeMatch ?? fallbackMatch;
+}
 export function inferCheckpointTurnCountByTurnId(summaries) {
   const sorted = [...summaries].toSorted((a, b) => a.completedAt.localeCompare(b.completedAt));
   const result = {};

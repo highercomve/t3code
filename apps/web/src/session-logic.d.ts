@@ -132,6 +132,13 @@ export declare function deriveTimelineEntries(
   proposedPlans: ProposedPlan[],
   workEntries: WorkLogEntry[],
 ): TimelineEntry[];
+export declare function deriveCompletionDividerBeforeEntryId(
+  timelineEntries: ReadonlyArray<TimelineEntry>,
+  latestTurn: Pick<
+    OrchestrationLatestTurn,
+    "assistantMessageId" | "startedAt" | "completedAt"
+  > | null,
+): string | null;
 export declare function inferCheckpointTurnCountByTurnId(
   summaries: TurnDiffSummary[],
 ): Record<TurnId, number>;

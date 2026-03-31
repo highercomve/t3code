@@ -1,4 +1,4 @@
-export function truncateTitle(text: string, maxLength = 50): string {
+export function truncate(text, maxLength = 50) {
   const trimmed = text.trim();
   if (trimmed.length <= maxLength) {
     return trimmed;

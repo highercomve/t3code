@@ -18,10 +18,10 @@ export const readBootstrapEnvelope = Effect.fn("readBootstrapEnvelope")(function
     timeoutMs?: number;
   },
 ): Effect.fn.Return<Option.Option<A>, BootstrapError> {
-  const fdStats = yield* getBootstrapFdStats(fd);
-  if (Option.isNone(fdStats)) return Option.none();
+  const fdReady = yield* isFdReady(fd);
+  if (!fdReady) return Option.none();
 
-  const stream = yield* makeBootstrapInputStream(fd, fdStats.value);
+  const stream = yield* makeBootstrapInputStream(fd);
 
   const timeoutMs = options?.timeoutMs ?? 1000;
 
@@ -87,7 +87,7 @@ const isUnavailableBootstrapFdError = Predicate.compose(
   (_) => _.code === "EBADF" || _.code === "ENOENT",
 );
 
-const getBootstrapFdStats = (fd: number) =>
+const isFdReady = (fd: number) =>
   Effect.try({
     try: () => NFS.fstatSync(fd),
     catch: (error) =>
@@ -96,41 +96,38 @@ const getBootstrapFdStats = (fd: number) =>
         cause: error,
       }),
   }).pipe(
-    Effect.map(Option.some),
+    Effect.as(true),
     Effect.catchIf(
       (error) => isUnavailableBootstrapFdError(error.cause),
-      () => Effect.succeed(Option.none()),
+      () => Effect.succeed(false),
     ),
   );
 
-const makeBootstrapInputStream = (fd: number, fdStats: NFS.Stats) =>
+const makeBootstrapInputStream = (fd: number) =>
   Effect.try<Readable, BootstrapError>({
     try: () => {
       const fdPath = resolveFdPath(fd);
-      if (fdPath !== undefined && fdStats.isFile()) {
-        const streamFd = NFS.openSync(fdPath, "r");
+      if (fdPath === undefined) {
+        return makeDirectBootstrapStream(fd);
+      }
+
+      let streamFd: number | undefined;
+      try {
+        streamFd = NFS.openSync(fdPath, "r");
         return NFS.createReadStream("", {
           fd: streamFd,
           encoding: "utf8",
           autoClose: true,
         });
+      } catch (error) {
+        if (isBootstrapFdPathDuplicationError(error)) {
+          if (streamFd !== undefined) {
+            NFS.closeSync(streamFd);
+          }
+          return makeDirectBootstrapStream(fd);
+        }
+        throw error;
       }
-
-      if (fdStats.isFIFO() || fdStats.isSocket()) {
-        const stream = new Net.Socket({
-          fd,
-          readable: true,
-          writable: false,
-        });
-        stream.setEncoding("utf8");
-        return stream;
-      }
-
-      return NFS.createReadStream("", {
-        fd,
-        encoding: "utf8",
-        autoClose: false,
-      });
     },
     catch: (error) =>
       new BootstrapError({
@@ -138,6 +135,29 @@ const makeBootstrapInputStream = (fd: number, fdStats: NFS.Stats) =>
         cause: error,
       }),
   });
+
+const makeDirectBootstrapStream = (fd: number): Readable => {
+  try {
+    return NFS.createReadStream("", {
+      fd,
+      encoding: "utf8",
+      autoClose: true,
+    });
+  } catch {
+    const stream = new Net.Socket({
+      fd,
+      readable: true,
+      writable: false,
+    });
+    stream.setEncoding("utf8");
+    return stream;
+  }
+};
+
+const isBootstrapFdPathDuplicationError = Predicate.compose(
+  Predicate.hasProperty("code"),
+  (_) => _.code === "ENXIO" || _.code === "EINVAL" || _.code === "EPERM",
+);
 
 export function resolveFdPath(
   fd: number,

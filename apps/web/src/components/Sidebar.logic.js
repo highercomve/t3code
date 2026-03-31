@@ -1,3 +1,4 @@
+import * as React from "react";
 import { cn } from "../lib/utils";
 import {
   findLatestProposedPlan,
@@ -5,6 +6,7 @@ import {
   isLatestTurnSettled,
 } from "../session-logic";
 export const THREAD_SELECTION_SAFE_SELECTOR = "[data-thread-item], [data-thread-selection-safe]";
+export const THREAD_JUMP_HINT_SHOW_DELAY_MS = 100;
 const THREAD_STATUS_PRIORITY = {
   "Pending Approval": 5,
   "Awaiting Input": 4,
@@ -13,6 +15,68 @@ const THREAD_STATUS_PRIORITY = {
   "Plan Ready": 2,
   Completed: 1,
 };
+export function createThreadJumpHintVisibilityController(input) {
+  const setTimeoutFn = input.setTimeoutFn ?? globalThis.setTimeout;
+  const clearTimeoutFn = input.clearTimeoutFn ?? globalThis.clearTimeout;
+  let isVisible = false;
+  let timeoutId = null;
+  const clearPendingShow = () => {
+    if (timeoutId === null) {
+      return;
+    }
+    clearTimeoutFn(timeoutId);
+    timeoutId = null;
+  };
+  return {
+    sync: (shouldShow) => {
+      if (!shouldShow) {
+        clearPendingShow();
+        if (isVisible) {
+          isVisible = false;
+          input.onVisibilityChange(false);
+        }
+        return;
+      }
+      if (isVisible || timeoutId !== null) {
+        return;
+      }
+      timeoutId = setTimeoutFn(() => {
+        timeoutId = null;
+        isVisible = true;
+        input.onVisibilityChange(true);
+      }, input.delayMs);
+    },
+    dispose: () => {
+      clearPendingShow();
+    },
+  };
+}
+export function useThreadJumpHintVisibility() {
+  const [showThreadJumpHints, setShowThreadJumpHints] = React.useState(false);
+  const controllerRef = React.useRef(null);
+  React.useEffect(() => {
+    const controller = createThreadJumpHintVisibilityController({
+      delayMs: THREAD_JUMP_HINT_SHOW_DELAY_MS,
+      onVisibilityChange: (visible) => {
+        setShowThreadJumpHints(visible);
+      },
+      setTimeoutFn: window.setTimeout.bind(window),
+      clearTimeoutFn: window.clearTimeout.bind(window),
+    });
+    controllerRef.current = controller;
+    return () => {
+      controller.dispose();
+      controllerRef.current = null;
+    };
+  }, []);
+  const updateThreadJumpHintsVisibility = React.useCallback((shouldShow) => {
+    controllerRef.current?.sync(shouldShow);
+  }, []);
+  return {
+    showThreadJumpHints,
+    updateThreadJumpHintsVisibility,
+  };
+}
 export function hasUnseenCompletion(thread) {
   if (!thread.latestTurn?.completedAt) return false;
   const completedAt = Date.parse(thread.latestTurn.completedAt);
@@ -28,6 +92,56 @@ export function shouldClearThreadSelectionOnMouseDown(target) {
 }
 export function resolveSidebarNewThreadEnvMode(input) {
   return input.requestedEnvMode ?? input.defaultEnvMode;
+}
+export function orderItemsByPreferredIds(input) {
+  const { getId, items, preferredIds } = input;
+  if (preferredIds.length === 0) {
+    return [...items];
+  }
+  const itemsById = new Map(items.map((item) => [getId(item), item]));
+  const preferredIdSet = new Set(preferredIds);
+  const emittedPreferredIds = new Set();
+  const ordered = preferredIds.flatMap((id) => {
+    if (emittedPreferredIds.has(id)) {
+      return [];
+    }
+    const item = itemsById.get(id);
+    if (!item) {
+      return [];
+    }
+    emittedPreferredIds.add(id);
+    return [item];
+  });
+  const remaining = items.filter((item) => !preferredIdSet.has(getId(item)));
+  return [...ordered, ...remaining];
+}
+export function getVisibleSidebarThreadIds(renderedProjects) {
+  return renderedProjects.flatMap((renderedProject) =>
+    renderedProject.shouldShowThreadPanel === false
+      ? []
+      : renderedProject.renderedThreads.map((thread) => thread.id),
+  );
+}
+export function resolveAdjacentThreadId(input) {
+  const { currentThreadId, direction, threadIds } = input;
+  if (threadIds.length === 0) {
+    return null;
+  }
+  if (currentThreadId === null) {
+    return direction === "previous" ? (threadIds.at(-1) ?? null) : (threadIds[0] ?? null);
+  }
+  const currentIndex = threadIds.indexOf(currentThreadId);
+  if (currentIndex === -1) {
+    return null;
+  }
+  if (direction === "previous") {
+    return currentIndex > 0 ? (threadIds[currentIndex - 1] ?? null) : null;
+  }
+  return currentIndex < threadIds.length - 1 ? (threadIds[currentIndex + 1] ?? null) : null;
+}
+export function isContextMenuPointerDown(input) {
+  if (input.button === 2) return true;
+  return input.isMac && input.button === 0 && input.ctrlKey;
 }
 export function resolveThreadRowClassName(input) {
   const baseClassName =
@@ -130,6 +244,7 @@ export function getVisibleThreadsForProject(input) {
   if (!hasHiddenThreads || isThreadListExpanded) {
     return {
       hasHiddenThreads,
+      hiddenThreads: [],
       visibleThreads: [...threads],
     };
   }
@@ -137,6 +252,7 @@ export function getVisibleThreadsForProject(input) {
   if (!activeThreadId || previewThreads.some((thread) => thread.id === activeThreadId)) {
     return {
       hasHiddenThreads: true,
+      hiddenThreads: threads.slice(previewLimit),
       visibleThreads: previewThreads,
     };
   }
@@ -144,12 +260,14 @@ export function getVisibleThreadsForProject(input) {
   if (!activeThread) {
     return {
       hasHiddenThreads: true,
+      hiddenThreads: threads.slice(previewLimit),
       visibleThreads: previewThreads,
     };
   }
   const visibleThreadIds = new Set([...previewThreads, activeThread].map((thread) => thread.id));
   return {
     hasHiddenThreads: true,
+    hiddenThreads: threads.filter((thread) => !visibleThreadIds.has(thread.id)),
     visibleThreads: threads.filter((thread) => visibleThreadIds.has(thread.id)),
   };
 }
@@ -159,8 +277,11 @@ function toSortableTimestamp(iso) {
   return Number.isFinite(ms) ? ms : null;
 }
 function getLatestUserMessageTimestamp(thread) {
+  if (thread.latestUserMessageAt) {
+    return toSortableTimestamp(thread.latestUserMessageAt) ?? Number.NEGATIVE_INFINITY;
+  }
   let latestUserMessageTimestamp = null;
-  for (const message of thread.messages) {
+  for (const message of thread.messages ?? []) {
     if (message.role !== "user") continue;
     const messageTimestamp = toSortableTimestamp(message.createdAt);
     if (messageTimestamp === null) continue;

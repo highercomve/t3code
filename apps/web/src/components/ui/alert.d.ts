@@ -3,7 +3,7 @@ import type * as React from "react";
 declare const alertVariants: (
   props?:
     | ({
-        variant?: "warning" | "error" | "default" | "info" | "success" | null | undefined;
+        variant?: "default" | "error" | "info" | "warning" | "success" | null | undefined;
       } & import("class-variance-authority/types").ClassProp)
     | undefined,
 ) => string;

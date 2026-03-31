@@ -5,10 +5,17 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 import { Route as rootRouteImport } from "./routes/__root";
+import { Route as SettingsRouteImport } from "./routes/settings";
 import { Route as ChatRouteImport } from "./routes/_chat";
 import { Route as ChatIndexRouteImport } from "./routes/_chat.index";
-import { Route as ChatSettingsRouteImport } from "./routes/_chat.settings";
+import { Route as SettingsGeneralRouteImport } from "./routes/settings.general";
+import { Route as SettingsArchivedRouteImport } from "./routes/settings.archived";
 import { Route as ChatThreadIdRouteImport } from "./routes/_chat.$threadId";
+const SettingsRoute = SettingsRouteImport.update({
+  id: "/settings",
+  path: "/settings",
+  getParentRoute: () => rootRouteImport,
+});
 const ChatRoute = ChatRouteImport.update({
   id: "/_chat",
   getParentRoute: () => rootRouteImport,
@@ -18,10 +25,15 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
   path: "/",
   getParentRoute: () => ChatRoute,
 });
-const ChatSettingsRoute = ChatSettingsRouteImport.update({
-  id: "/settings",
-  path: "/settings",
-  getParentRoute: () => ChatRoute,
+const SettingsGeneralRoute = SettingsGeneralRouteImport.update({
+  id: "/general",
+  path: "/general",
+  getParentRoute: () => SettingsRoute,
+});
+const SettingsArchivedRoute = SettingsArchivedRouteImport.update({
+  id: "/archived",
+  path: "/archived",
+  getParentRoute: () => SettingsRoute,
 });
 const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
   id: "/$threadId",
@@ -30,11 +42,16 @@ const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
 });
 const ChatRouteChildren = {
   ChatThreadIdRoute: ChatThreadIdRoute,
-  ChatSettingsRoute: ChatSettingsRoute,
   ChatIndexRoute: ChatIndexRoute,
 };
 const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren);
+const SettingsRouteChildren = {
+  SettingsArchivedRoute: SettingsArchivedRoute,
+  SettingsGeneralRoute: SettingsGeneralRoute,
+};
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(SettingsRouteChildren);
 const rootRouteChildren = {
   ChatRoute: ChatRouteWithChildren,
+  SettingsRoute: SettingsRouteWithChildren,
 };
 export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren)._addFileTypes();

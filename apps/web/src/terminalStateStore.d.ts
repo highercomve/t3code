@@ -33,6 +33,7 @@ interface TerminalStateStoreState {
     hasRunningSubprocess: boolean,
   ) => void;
   clearTerminalState: (threadId: ThreadId) => void;
+  removeTerminalState: (threadId: ThreadId) => void;
   removeOrphanedTerminalStates: (activeThreadIds: Set<ThreadId>) => void;
 }
 export declare const useTerminalStateStore: import("zustand").UseBoundStore<

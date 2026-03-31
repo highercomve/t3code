@@ -1,6 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { createRouter } from "@tanstack/react-router";
-type RouterHistory = NonNullable<Parameters<typeof createRouter>[0]["history"]>;
+import { RouterHistory } from "@tanstack/react-router";
 export declare function getRouter(
   history: RouterHistory,
 ): import("@tanstack/router-core").RouterCore<
@@ -28,7 +27,7 @@ export declare function getRouter(
   >,
   "never",
   false,
-  import("@tanstack/history").RouterHistory,
+  RouterHistory,
   Record<string, any>
 >;
 export type AppRouter = ReturnType<typeof getRouter>;
@@ -37,4 +36,3 @@ declare module "@tanstack/react-router" {
     router: AppRouter;
   }
 }
-export {};

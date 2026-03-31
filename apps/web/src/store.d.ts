@@ -1,32 +1,28 @@
-import { type ReactNode } from "react";
-import { ThreadId, type OrchestrationReadModel } from "@t3tools/contracts";
+import { type OrchestrationEvent, ThreadId, type OrchestrationReadModel } from "@t3tools/contracts";
 import { type Project, type Thread } from "./types";
 export interface AppState {
   projects: Project[];
   threads: Thread[];
-  threadsHydrated: boolean;
+  bootstrapComplete: boolean;
 }
 export declare function syncServerReadModel(
   state: AppState,
   readModel: OrchestrationReadModel,
 ): AppState;
-export declare function markThreadVisited(
+export declare function applyOrchestrationEvent(
   state: AppState,
-  threadId: ThreadId,
-  visitedAt?: string,
+  event: OrchestrationEvent,
 ): AppState;
-export declare function markThreadUnread(state: AppState, threadId: ThreadId): AppState;
-export declare function toggleProject(state: AppState, projectId: Project["id"]): AppState;
-export declare function setProjectExpanded(
+export declare function applyOrchestrationEvents(
   state: AppState,
-  projectId: Project["id"],
-  expanded: boolean,
+  events: ReadonlyArray<OrchestrationEvent>,
 ): AppState;
-export declare function reorderProjects(
-  state: AppState,
-  draggedProjectId: Project["id"],
-  targetProjectId: Project["id"],
-): AppState;
+export declare const selectProjectById: (
+  projectId: Project["id"] | null | undefined,
+) => (state: AppState) => Project | undefined;
+export declare const selectThreadById: (
+  threadId: ThreadId | null | undefined,
+) => (state: AppState) => Thread | undefined;
 export declare function setError(
   state: AppState,
   threadId: ThreadId,
@@ -40,20 +36,12 @@ export declare function setThreadBranch(
 ): AppState;
 interface AppStore extends AppState {
   syncServerReadModel: (readModel: OrchestrationReadModel) => void;
-  markThreadVisited: (threadId: ThreadId, visitedAt?: string) => void;
-  markThreadUnread: (threadId: ThreadId) => void;
-  toggleProject: (projectId: Project["id"]) => void;
-  setProjectExpanded: (projectId: Project["id"], expanded: boolean) => void;
-  reorderProjects: (draggedProjectId: Project["id"], targetProjectId: Project["id"]) => void;
+  applyOrchestrationEvent: (event: OrchestrationEvent) => void;
+  applyOrchestrationEvents: (events: ReadonlyArray<OrchestrationEvent>) => void;
   setError: (threadId: ThreadId, error: string | null) => void;
   setThreadBranch: (threadId: ThreadId, branch: string | null, worktreePath: string | null) => void;
 }
 export declare const useStore: import("zustand").UseBoundStore<
   import("zustand").StoreApi<AppStore>
 >;
-export declare function StoreProvider({
-  children,
-}: {
-  children: ReactNode;
-}): import("react").FunctionComponentElement<import("react").FragmentProps>;
 export {};

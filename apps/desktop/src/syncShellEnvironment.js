@@ -1,4 +1,4 @@
-import { readEnvironmentFromLoginShell } from "@t3tools/shared/shell";
+import { readEnvironmentFromLoginShell, resolveLoginShell } from "@t3tools/shared/shell";
 /**
  * Environment variables to sync from the user's login shell.
  *
@@ -24,8 +24,8 @@ export function syncShellEnvironment(env = process.env, options = {}) {
   const platform = options.platform ?? process.platform;
   if (platform !== "darwin" && platform !== "linux") return;
   try {
-    const defaultShell = platform === "darwin" ? "/bin/zsh" : "/bin/bash";
-    const shell = env.SHELL ?? defaultShell;
+    const shell = resolveLoginShell(platform, env.SHELL);
+    if (!shell) return;
     const shellEnvironment = (options.readEnvironment ?? readEnvironmentFromLoginShell)(
       shell,
       SYNC_ENV_NAMES,

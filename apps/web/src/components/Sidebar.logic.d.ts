@@ -2,6 +2,7 @@ import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t3tools/c
 import type { Thread } from "../types";
 export declare const THREAD_SELECTION_SAFE_SELECTOR =
   "[data-thread-item], [data-thread-selection-safe]";
+export declare const THREAD_JUMP_HINT_SHOW_DELAY_MS = 100;
 export type SidebarNewThreadEnvMode = "local" | "worktree";
 type SidebarProject = {
   id: string;
@@ -9,7 +10,11 @@ type SidebarProject = {
   createdAt?: string | undefined;
   updatedAt?: string | undefined;
 };
-type SidebarThreadSortInput = Pick<Thread, "createdAt" | "updatedAt" | "messages">;
+type SidebarThreadSortInput = Pick<Thread, "createdAt" | "updatedAt"> & {
+  latestUserMessageAt?: string | null;
+  messages?: Pick<Thread["messages"][number], "createdAt" | "role">[];
+};
+export type ThreadTraversalDirection = "previous" | "next";
 export interface ThreadStatusPill {
   label:
     | "Working"
@@ -24,14 +29,53 @@ export interface ThreadStatusPill {
 }
 type ThreadStatusInput = Pick<
   Thread,
-  "interactionMode" | "latestTurn" | "lastVisitedAt" | "proposedPlans" | "session"
->;
+  "interactionMode" | "latestTurn" | "proposedPlans" | "session"
+> & {
+  lastVisitedAt?: string | undefined;
+};
+export interface ThreadJumpHintVisibilityController {
+  sync: (shouldShow: boolean) => void;
+  dispose: () => void;
+}
+export declare function createThreadJumpHintVisibilityController(input: {
+  delayMs: number;
+  onVisibilityChange: (visible: boolean) => void;
+  setTimeoutFn?: typeof globalThis.setTimeout;
+  clearTimeoutFn?: typeof globalThis.clearTimeout;
+}): ThreadJumpHintVisibilityController;
+export declare function useThreadJumpHintVisibility(): {
+  showThreadJumpHints: boolean;
+  updateThreadJumpHintsVisibility: (shouldShow: boolean) => void;
+};
 export declare function hasUnseenCompletion(thread: ThreadStatusInput): boolean;
 export declare function shouldClearThreadSelectionOnMouseDown(target: HTMLElement | null): boolean;
 export declare function resolveSidebarNewThreadEnvMode(input: {
   requestedEnvMode?: SidebarNewThreadEnvMode;
   defaultEnvMode: SidebarNewThreadEnvMode;
 }): SidebarNewThreadEnvMode;
+export declare function orderItemsByPreferredIds<TItem, TId>(input: {
+  items: readonly TItem[];
+  preferredIds: readonly TId[];
+  getId: (item: TItem) => TId;
+}): TItem[];
+export declare function getVisibleSidebarThreadIds<TThreadId>(
+  renderedProjects: readonly {
+    shouldShowThreadPanel?: boolean;
+    renderedThreads: readonly {
+      id: TThreadId;
+    }[];
+  }[],
+): TThreadId[];
+export declare function resolveAdjacentThreadId<T>(input: {
+  threadIds: readonly T[];
+  currentThreadId: T | null;
+  direction: ThreadTraversalDirection;
+}): T | null;
+export declare function isContextMenuPointerDown(input: {
+  button: number;
+  ctrlKey: boolean;
+  isMac: boolean;
+}): boolean;
 export declare function resolveThreadRowClassName(input: {
   isActive: boolean;
   isSelected: boolean;
@@ -44,20 +88,21 @@ export declare function resolveThreadStatusPill(input: {
 export declare function resolveProjectStatusIndicator(
   statuses: ReadonlyArray<ThreadStatusPill | null>,
 ): ThreadStatusPill | null;
-export declare function getVisibleThreadsForProject(input: {
-  threads: readonly Thread[];
-  activeThreadId: Thread["id"] | undefined;
+export declare function getVisibleThreadsForProject<T extends Pick<Thread, "id">>(input: {
+  threads: readonly T[];
+  activeThreadId: T["id"] | undefined;
   isThreadListExpanded: boolean;
   previewLimit: number;
 }): {
   hasHiddenThreads: boolean;
-  visibleThreads: Thread[];
+  visibleThreads: T[];
+  hiddenThreads: T[];
 };
 export declare function sortThreadsForSidebar<
-  T extends Pick<Thread, "id" | "createdAt" | "updatedAt" | "messages">,
+  T extends Pick<Thread, "id" | "createdAt" | "updatedAt"> & SidebarThreadSortInput,
 >(threads: readonly T[], sortOrder: SidebarThreadSortOrder): T[];
 export declare function getFallbackThreadIdAfterDelete<
-  T extends Pick<Thread, "id" | "projectId" | "createdAt" | "updatedAt" | "messages">,
+  T extends Pick<Thread, "id" | "projectId" | "createdAt" | "updatedAt"> & SidebarThreadSortInput,
 >(input: {
   threads: readonly T[];
   deletedThreadId: T["id"];
@@ -71,7 +116,7 @@ export declare function getProjectSortTimestamp(
 ): number;
 export declare function sortProjectsForSidebar<
   TProject extends SidebarProject,
-  TThread extends Thread,
+  TThread extends Pick<Thread, "projectId" | "createdAt" | "updatedAt"> & SidebarThreadSortInput,
 >(
   projects: readonly TProject[],
   threads: readonly TThread[],

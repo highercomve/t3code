@@ -16,8 +16,8 @@ export declare function projectSearchEntriesQueryOptions(input: {
   import("@tanstack/react-query").UseQueryOptions<
     {
       readonly entries: readonly {
-        readonly kind: "file" | "directory";
         readonly path: string;
+        readonly kind: "directory" | "file";
         readonly parentPath?: string | undefined;
       }[];
       readonly truncated: boolean;
@@ -25,8 +25,8 @@ export declare function projectSearchEntriesQueryOptions(input: {
     Error,
     {
       readonly entries: readonly {
-        readonly kind: "file" | "directory";
         readonly path: string;
+        readonly kind: "directory" | "file";
         readonly parentPath?: string | undefined;
       }[];
       readonly truncated: boolean;
@@ -38,8 +38,8 @@ export declare function projectSearchEntriesQueryOptions(input: {
   queryFn?: import("@tanstack/react-query").QueryFunction<
     {
       readonly entries: readonly {
-        readonly kind: "file" | "directory";
         readonly path: string;
+        readonly kind: "directory" | "file";
         readonly parentPath?: string | undefined;
       }[];
       readonly truncated: boolean;
@@ -51,8 +51,8 @@ export declare function projectSearchEntriesQueryOptions(input: {
   queryKey: readonly ["projects", "search-entries", string | null, string, number] & {
     [dataTagSymbol]: {
       readonly entries: readonly {
-        readonly kind: "file" | "directory";
         readonly path: string;
+        readonly kind: "directory" | "file";
         readonly parentPath?: string | undefined;
       }[];
       readonly truncated: boolean;

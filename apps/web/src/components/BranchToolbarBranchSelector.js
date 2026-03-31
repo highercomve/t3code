@@ -362,7 +362,6 @@ export function BranchToolbarBranchSelector({
         hideIndicator: true,
         index: index,
         value: itemValue,
-        className: itemValue === resolvedActiveBranch ? "bg-accent text-foreground" : undefined,
         style: style,
         onClick: () => selectBranch(branch),
         children: _jsxs("div", {

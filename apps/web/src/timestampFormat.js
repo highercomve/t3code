@@ -50,3 +50,7 @@ export function formatRelativeTime(isoDate) {
   const days = Math.floor(hours / 24);
   return { value: `${days}d`, suffix: "ago" };
 }
+export function formatRelativeTimeLabel(isoDate) {
+  const relative = formatRelativeTime(isoDate);
+  return relative.suffix ? `${relative.value} ${relative.suffix}` : relative.value;
+}

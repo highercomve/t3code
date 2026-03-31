@@ -4,9 +4,7 @@ import { selectThreadTerminalState, useTerminalStateStore } from "./terminalStat
 const THREAD_ID = ThreadId.makeUnsafe("thread-1");
 describe("terminalStateStore actions", () => {
   beforeEach(() => {
-    if (typeof localStorage !== "undefined") {
-      localStorage.clear();
-    }
+    useTerminalStateStore.persist.clearStorage();
     useTerminalStateStore.setState({ terminalStateByThreadId: {} });
   });
   it("returns a closed default terminal state for unknown threads", () => {

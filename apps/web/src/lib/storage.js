@@ -11,21 +11,34 @@ export function createMemoryStorage() {
     },
   };
 }
+export function isStateStorage(storage) {
+  return (
+    storage !== null &&
+    storage !== undefined &&
+    typeof storage.getItem === "function" &&
+    typeof storage.setItem === "function" &&
+    typeof storage.removeItem === "function"
+  );
+}
+export function resolveStorage(storage) {
+  return isStateStorage(storage) ? storage : createMemoryStorage();
+}
 export function createDebouncedStorage(baseStorage, debounceMs = 300) {
+  const resolvedStorage = resolveStorage(baseStorage);
   const debouncedSetItem = new Debouncer(
     (name, value) => {
-      baseStorage.setItem(name, value);
+      resolvedStorage.setItem(name, value);
     },
     { wait: debounceMs },
   );
   return {
-    getItem: (name) => baseStorage.getItem(name),
+    getItem: (name) => resolvedStorage.getItem(name),
     setItem: (name, value) => {
       debouncedSetItem.maybeExecute(name, value);
     },
     removeItem: (name) => {
       debouncedSetItem.cancel();
-      baseStorage.removeItem(name);
+      resolvedStorage.removeItem(name);
     },
     flush: () => {
       debouncedSetItem.flush();

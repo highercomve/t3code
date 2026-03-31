@@ -195,7 +195,7 @@ function ChatMarkdown({ text, cwd, isStreaming = false }) {
       a({ node: _node, href, ...props }) {
         const targetPath = resolveMarkdownFileLinkTarget(href, cwd);
         if (!targetPath) {
-          return _jsx("a", { ...props, href: href, target: "_blank", rel: "noreferrer" });
+          return _jsx("a", { ...props, href: href, target: "_blank", rel: "noopener noreferrer" });
         }
         return _jsx("a", {
           ...props,
