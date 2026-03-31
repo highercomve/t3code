@@ -16,6 +16,8 @@ import {
   GitRunStackedActionResult,
   GitStatusInput,
   GitStatusResult,
+  GitSuggestCommitMessageInput,
+  GitSuggestCommitMessageResult,
 } from "@t3tools/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
@@ -63,6 +65,13 @@ export interface GitManagerShape {
     input: GitRunStackedActionInput,
     options?: GitRunStackedActionOptions,
   ) => Effect.Effect<GitRunStackedActionResult, GitManagerServiceError>;
+
+  /**
+   * Generate a commit message suggestion from the currently staged changes.
+   */
+  readonly suggestCommitMessage: (
+    input: GitSuggestCommitMessageInput,
+  ) => Effect.Effect<GitSuggestCommitMessageResult, GitManagerServiceError>;
 }
 
 /**

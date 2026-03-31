@@ -1303,11 +1303,38 @@ export const makeGitManager = Effect.fn("makeGitManager")(function* () {
     },
   );
 
+  const suggestCommitMessage: GitManagerShape["suggestCommitMessage"] = Effect.fn(
+    "suggestCommitMessage",
+  )(function* (input) {
+    const modelSelection = yield* serverSettingsService.getSettings.pipe(
+      Effect.map((settings) => settings.textGenerationModelSelection),
+      Effect.mapError((cause) =>
+        gitManagerError("suggestCommitMessage", "Failed to get server settings.", cause),
+      ),
+    );
+
+    const statusInfo = yield* gitCore.statusDetails(input.cwd);
+
+    const suggestion = yield* resolveCommitAndBranchSuggestion({
+      cwd: input.cwd,
+      branch: statusInfo.branch,
+      ...(input.filePaths ? { filePaths: input.filePaths } : {}),
+      modelSelection,
+    });
+
+    if (!suggestion) {
+      return yield* gitManagerError("suggestCommitMessage", "No staged changes found.");
+    }
+
+    return { subject: suggestion.subject, body: suggestion.body };
+  });
+
   return {
     status,
     resolvePullRequest,
     preparePullRequestThread,
     runStackedAction,
+    suggestCommitMessage,
   } satisfies GitManagerShape;
 });
 

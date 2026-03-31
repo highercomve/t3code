@@ -12,13 +12,20 @@ export declare const serverQueryKeys: {
 export declare function serverConfigQueryOptions(): import("@tanstack/react-query").OmitKeyof<
   import("@tanstack/react-query").UseQueryOptions<
     {
+      readonly cwd: string;
+      readonly availableEditors: readonly (
+        | "cursor"
+        | "vscode"
+        | "vscode-insiders"
+        | "vscodium"
+        | "zed"
+        | "antigravity"
+        | "file-manager"
+      )[];
       readonly providers: readonly {
-        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
-        readonly enabled: boolean;
+        readonly status: "disabled" | "error" | "ready" | "warning";
         readonly version: string | null;
-        readonly status: "error" | "ready" | "disabled" | "warning";
         readonly models: readonly {
-          readonly slug: string;
           readonly name: string;
           readonly capabilities: {
             readonly reasoningEffortLevels: readonly {
@@ -35,33 +42,26 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             readonly supportsFastMode: boolean;
             readonly supportsThinkingToggle: boolean;
           } | null;
+          readonly slug: string;
           readonly isCustom: boolean;
         }[];
+        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
+        readonly enabled: boolean;
         readonly installed: boolean;
         readonly auth: {
           readonly status: "authenticated" | "unauthenticated" | "unknown";
-          readonly label?: string | undefined;
           readonly type?: string | undefined;
+          readonly label?: string | undefined;
         };
         readonly checkedAt: string;
         readonly message?: string | undefined;
         readonly dynamicModels?:
           | readonly {
-              readonly id: string;
               readonly name: string;
+              readonly id: string;
             }[]
           | undefined;
       }[];
-      readonly cwd: string;
-      readonly availableEditors: readonly (
-        | "cursor"
-        | "vscode"
-        | "vscode-insiders"
-        | "vscodium"
-        | "zed"
-        | "antigravity"
-        | "file-manager"
-      )[];
       readonly keybindingsConfigPath: string;
       readonly keybindings: readonly {
         readonly command:
@@ -97,18 +97,18 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
       }[];
       readonly issues: readonly (
         | {
-            readonly kind: "keybindings.malformed-config";
             readonly message: string;
+            readonly kind: "keybindings.malformed-config";
           }
         | {
-            readonly kind: "keybindings.invalid-entry";
             readonly message: string;
+            readonly kind: "keybindings.invalid-entry";
             readonly index: number;
           }
       )[];
       readonly settings: {
         readonly enableAssistantStreaming: boolean;
-        readonly defaultThreadEnvMode: "local" | "worktree";
+        readonly defaultThreadEnvMode: "worktree" | "local";
         readonly textGenerationModelSelection:
           | {
               readonly provider: "codex";
@@ -171,13 +171,20 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
     },
     Error,
     {
+      readonly cwd: string;
+      readonly availableEditors: readonly (
+        | "cursor"
+        | "vscode"
+        | "vscode-insiders"
+        | "vscodium"
+        | "zed"
+        | "antigravity"
+        | "file-manager"
+      )[];
       readonly providers: readonly {
-        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
-        readonly enabled: boolean;
+        readonly status: "disabled" | "error" | "ready" | "warning";
         readonly version: string | null;
-        readonly status: "error" | "ready" | "disabled" | "warning";
         readonly models: readonly {
-          readonly slug: string;
           readonly name: string;
           readonly capabilities: {
             readonly reasoningEffortLevels: readonly {
@@ -194,33 +201,26 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             readonly supportsFastMode: boolean;
             readonly supportsThinkingToggle: boolean;
           } | null;
+          readonly slug: string;
           readonly isCustom: boolean;
         }[];
+        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
+        readonly enabled: boolean;
         readonly installed: boolean;
         readonly auth: {
           readonly status: "authenticated" | "unauthenticated" | "unknown";
-          readonly label?: string | undefined;
           readonly type?: string | undefined;
+          readonly label?: string | undefined;
         };
         readonly checkedAt: string;
         readonly message?: string | undefined;
         readonly dynamicModels?:
           | readonly {
-              readonly id: string;
               readonly name: string;
+              readonly id: string;
             }[]
           | undefined;
       }[];
-      readonly cwd: string;
-      readonly availableEditors: readonly (
-        | "cursor"
-        | "vscode"
-        | "vscode-insiders"
-        | "vscodium"
-        | "zed"
-        | "antigravity"
-        | "file-manager"
-      )[];
       readonly keybindingsConfigPath: string;
       readonly keybindings: readonly {
         readonly command:
@@ -256,18 +256,18 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
       }[];
       readonly issues: readonly (
         | {
-            readonly kind: "keybindings.malformed-config";
             readonly message: string;
+            readonly kind: "keybindings.malformed-config";
           }
         | {
-            readonly kind: "keybindings.invalid-entry";
             readonly message: string;
+            readonly kind: "keybindings.invalid-entry";
             readonly index: number;
           }
       )[];
       readonly settings: {
         readonly enableAssistantStreaming: boolean;
-        readonly defaultThreadEnvMode: "local" | "worktree";
+        readonly defaultThreadEnvMode: "worktree" | "local";
         readonly textGenerationModelSelection:
           | {
               readonly provider: "codex";
@@ -334,13 +334,20 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
 > & {
   queryFn?: import("@tanstack/react-query").QueryFunction<
     {
+      readonly cwd: string;
+      readonly availableEditors: readonly (
+        | "cursor"
+        | "vscode"
+        | "vscode-insiders"
+        | "vscodium"
+        | "zed"
+        | "antigravity"
+        | "file-manager"
+      )[];
       readonly providers: readonly {
-        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
-        readonly enabled: boolean;
+        readonly status: "disabled" | "error" | "ready" | "warning";
         readonly version: string | null;
-        readonly status: "error" | "ready" | "disabled" | "warning";
         readonly models: readonly {
-          readonly slug: string;
           readonly name: string;
           readonly capabilities: {
             readonly reasoningEffortLevels: readonly {
@@ -357,33 +364,26 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             readonly supportsFastMode: boolean;
             readonly supportsThinkingToggle: boolean;
           } | null;
+          readonly slug: string;
           readonly isCustom: boolean;
         }[];
+        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
+        readonly enabled: boolean;
         readonly installed: boolean;
         readonly auth: {
           readonly status: "authenticated" | "unauthenticated" | "unknown";
-          readonly label?: string | undefined;
           readonly type?: string | undefined;
+          readonly label?: string | undefined;
         };
         readonly checkedAt: string;
         readonly message?: string | undefined;
         readonly dynamicModels?:
           | readonly {
-              readonly id: string;
               readonly name: string;
+              readonly id: string;
             }[]
           | undefined;
       }[];
-      readonly cwd: string;
-      readonly availableEditors: readonly (
-        | "cursor"
-        | "vscode"
-        | "vscode-insiders"
-        | "vscodium"
-        | "zed"
-        | "antigravity"
-        | "file-manager"
-      )[];
       readonly keybindingsConfigPath: string;
       readonly keybindings: readonly {
         readonly command:
@@ -419,18 +419,18 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
       }[];
       readonly issues: readonly (
         | {
-            readonly kind: "keybindings.malformed-config";
             readonly message: string;
+            readonly kind: "keybindings.malformed-config";
           }
         | {
-            readonly kind: "keybindings.invalid-entry";
             readonly message: string;
+            readonly kind: "keybindings.invalid-entry";
             readonly index: number;
           }
       )[];
       readonly settings: {
         readonly enableAssistantStreaming: boolean;
-        readonly defaultThreadEnvMode: "local" | "worktree";
+        readonly defaultThreadEnvMode: "worktree" | "local";
         readonly textGenerationModelSelection:
           | {
               readonly provider: "codex";
@@ -497,13 +497,20 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
 } & {
   queryKey: readonly ["server", "config"] & {
     [dataTagSymbol]: {
+      readonly cwd: string;
+      readonly availableEditors: readonly (
+        | "cursor"
+        | "vscode"
+        | "vscode-insiders"
+        | "vscodium"
+        | "zed"
+        | "antigravity"
+        | "file-manager"
+      )[];
       readonly providers: readonly {
-        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
-        readonly enabled: boolean;
+        readonly status: "disabled" | "error" | "ready" | "warning";
         readonly version: string | null;
-        readonly status: "error" | "ready" | "disabled" | "warning";
         readonly models: readonly {
-          readonly slug: string;
           readonly name: string;
           readonly capabilities: {
             readonly reasoningEffortLevels: readonly {
@@ -520,33 +527,26 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             readonly supportsFastMode: boolean;
             readonly supportsThinkingToggle: boolean;
           } | null;
+          readonly slug: string;
           readonly isCustom: boolean;
         }[];
+        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
+        readonly enabled: boolean;
         readonly installed: boolean;
         readonly auth: {
           readonly status: "authenticated" | "unauthenticated" | "unknown";
-          readonly label?: string | undefined;
           readonly type?: string | undefined;
+          readonly label?: string | undefined;
         };
         readonly checkedAt: string;
         readonly message?: string | undefined;
         readonly dynamicModels?:
           | readonly {
-              readonly id: string;
               readonly name: string;
+              readonly id: string;
             }[]
           | undefined;
       }[];
-      readonly cwd: string;
-      readonly availableEditors: readonly (
-        | "cursor"
-        | "vscode"
-        | "vscode-insiders"
-        | "vscodium"
-        | "zed"
-        | "antigravity"
-        | "file-manager"
-      )[];
       readonly keybindingsConfigPath: string;
       readonly keybindings: readonly {
         readonly command:
@@ -582,18 +582,18 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
       }[];
       readonly issues: readonly (
         | {
-            readonly kind: "keybindings.malformed-config";
             readonly message: string;
+            readonly kind: "keybindings.malformed-config";
           }
         | {
-            readonly kind: "keybindings.invalid-entry";
             readonly message: string;
+            readonly kind: "keybindings.invalid-entry";
             readonly index: number;
           }
       )[];
       readonly settings: {
         readonly enableAssistantStreaming: boolean;
-        readonly defaultThreadEnvMode: "local" | "worktree";
+        readonly defaultThreadEnvMode: "worktree" | "local";
         readonly textGenerationModelSelection:
           | {
               readonly provider: "codex";

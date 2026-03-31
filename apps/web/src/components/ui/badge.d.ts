@@ -5,14 +5,14 @@ declare const badgeVariants: (
     | ({
         size?: "default" | "lg" | "sm" | null | undefined;
         variant?:
-          | "default"
           | "error"
-          | "info"
-          | "destructive"
-          | "outline"
-          | "secondary"
+          | "default"
           | "warning"
+          | "info"
           | "success"
+          | "outline"
+          | "destructive"
+          | "secondary"
           | null
           | undefined;
       } & import("class-variance-authority/types").ClassProp)

@@ -74,6 +74,53 @@ export function sanitizeThreadTitle(raw: string): string {
   return `${normalized.slice(0, 47).trimEnd()}...`;
 }
 
+/**
+ * Extract a JSON string from a free-text model response.
+ *
+ * Handles: raw JSON, markdown-fenced JSON, and JSON embedded in prose.
+ * Returns the extracted string (unparsed) so the caller can validate
+ * with their own schema.
+ */
+export function extractJsonFromText(raw: string): string {
+  const trimmed = raw.trim();
+
+  // 1. Already valid JSON
+  try {
+    JSON.parse(trimmed);
+    return trimmed;
+  } catch {
+    // continue
+  }
+
+  // 2. Markdown code fence: ```json ... ``` or ``` ... ```
+  const fenceMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+  if (fenceMatch?.[1]) {
+    const candidate = fenceMatch[1].trim();
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      // continue
+    }
+  }
+
+  // 3. First complete JSON object in the text
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = trimmed.slice(firstBrace, lastBrace + 1);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      // continue
+    }
+  }
+
+  // Give up – return as-is; Schema validation will surface the error.
+  return trimmed;
+}
+
 /** CLI name to human-readable label, e.g. "codex" → "Codex CLI (`codex`)" */
 function cliLabel(cliName: string): string {
   const capitalized = cliName.charAt(0).toUpperCase() + cliName.slice(1);

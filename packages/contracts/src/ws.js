@@ -23,6 +23,7 @@ import {
   GitRemoveWorktreeInput,
   GitRunStackedActionInput,
   GitStatusInput,
+  GitSuggestCommitMessageInput,
 } from "./git";
 import {
   TerminalClearInput,
@@ -60,6 +61,7 @@ export const WS_METHODS = {
   gitInit: "git.init",
   gitResolvePullRequest: "git.resolvePullRequest",
   gitPreparePullRequestThread: "git.preparePullRequestThread",
+  gitSuggestCommitMessage: "git.suggestCommitMessage",
   // Terminal methods
   terminalOpen: "terminal.open",
   terminalWrite: "terminal.write",
@@ -116,6 +118,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitInit, GitInitInput),
   tagRequestBody(WS_METHODS.gitResolvePullRequest, GitPullRequestRefInput),
   tagRequestBody(WS_METHODS.gitPreparePullRequestThread, GitPreparePullRequestThreadInput),
+  tagRequestBody(WS_METHODS.gitSuggestCommitMessage, GitSuggestCommitMessageInput),
   // Terminal methods
   tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),
   tagRequestBody(WS_METHODS.terminalWrite, TerminalWriteInput),

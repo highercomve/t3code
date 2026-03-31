@@ -21,7 +21,7 @@ export declare function buildLegacyServerSettingsMigrationPatch(
   legacySettings: Record<string, unknown>,
 ): {
   enableAssistantStreaming?: boolean;
-  defaultThreadEnvMode?: "local" | "worktree";
+  defaultThreadEnvMode?: "worktree" | "local";
   textGenerationModelSelection?:
     | {
         provider?: "codex";

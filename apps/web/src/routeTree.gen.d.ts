@@ -6,9 +6,9 @@ import { Route as SettingsGeneralRouteImport } from "./routes/settings.general";
 import { Route as SettingsArchivedRouteImport } from "./routes/settings.archived";
 import { Route as ChatThreadIdRouteImport } from "./routes/_chat.$threadId";
 declare const SettingsRoute: import("@tanstack/router-core").Route<
-  import("@tanstack/react-router").Register,
+  Register,
   import("@tanstack/react-router").RootRoute<
-    import("@tanstack/react-router").Register,
+    Register,
     undefined,
     {
       queryClient: import("@tanstack/react-query").QueryClient;
@@ -34,9 +34,9 @@ declare const SettingsRoute: import("@tanstack/router-core").Route<
   ({
     location,
   }: import("@tanstack/router-core").BeforeLoadContextOptions<
-    import("@tanstack/react-router").Register,
+    Register,
     import("@tanstack/react-router").RootRoute<
-      import("@tanstack/react-router").Register,
+      Register,
       undefined,
       {
         queryClient: import("@tanstack/react-query").QueryClient;
@@ -68,9 +68,9 @@ declare const SettingsRoute: import("@tanstack/router-core").Route<
   undefined
 >;
 declare const ChatRoute: import("@tanstack/router-core").Route<
-  import("@tanstack/react-router").Register,
+  Register,
   import("@tanstack/react-router").RootRoute<
-    import("@tanstack/react-router").Register,
+    Register,
     undefined,
     {
       queryClient: import("@tanstack/react-query").QueryClient;
@@ -103,11 +103,11 @@ declare const ChatRoute: import("@tanstack/router-core").Route<
   undefined
 >;
 declare const ChatIndexRoute: import("@tanstack/router-core").Route<
-  import("@tanstack/react-router").Register,
+  Register,
   import("@tanstack/router-core").Route<
-    import("@tanstack/react-router").Register,
+    Register,
     import("@tanstack/react-router").RootRoute<
-      import("@tanstack/react-router").Register,
+      Register,
       undefined,
       {
         queryClient: import("@tanstack/react-query").QueryClient;
@@ -157,11 +157,11 @@ declare const ChatIndexRoute: import("@tanstack/router-core").Route<
   undefined
 >;
 declare const SettingsGeneralRoute: import("@tanstack/router-core").Route<
-  import("@tanstack/react-router").Register,
+  Register,
   import("@tanstack/router-core").Route<
-    import("@tanstack/react-router").Register,
+    Register,
     import("@tanstack/react-router").RootRoute<
-      import("@tanstack/react-router").Register,
+      Register,
       undefined,
       {
         queryClient: import("@tanstack/react-query").QueryClient;
@@ -187,9 +187,9 @@ declare const SettingsGeneralRoute: import("@tanstack/router-core").Route<
     ({
       location,
     }: import("@tanstack/router-core").BeforeLoadContextOptions<
-      import("@tanstack/react-router").Register,
+      Register,
       import("@tanstack/react-router").RootRoute<
-        import("@tanstack/react-router").Register,
+        Register,
         undefined,
         {
           queryClient: import("@tanstack/react-query").QueryClient;
@@ -238,11 +238,11 @@ declare const SettingsGeneralRoute: import("@tanstack/router-core").Route<
   undefined
 >;
 declare const SettingsArchivedRoute: import("@tanstack/router-core").Route<
-  import("@tanstack/react-router").Register,
+  Register,
   import("@tanstack/router-core").Route<
-    import("@tanstack/react-router").Register,
+    Register,
     import("@tanstack/react-router").RootRoute<
-      import("@tanstack/react-router").Register,
+      Register,
       undefined,
       {
         queryClient: import("@tanstack/react-query").QueryClient;
@@ -268,9 +268,9 @@ declare const SettingsArchivedRoute: import("@tanstack/router-core").Route<
     ({
       location,
     }: import("@tanstack/router-core").BeforeLoadContextOptions<
-      import("@tanstack/react-router").Register,
+      Register,
       import("@tanstack/react-router").RootRoute<
-        import("@tanstack/react-router").Register,
+        Register,
         undefined,
         {
           queryClient: import("@tanstack/react-query").QueryClient;
@@ -319,11 +319,11 @@ declare const SettingsArchivedRoute: import("@tanstack/router-core").Route<
   undefined
 >;
 declare const ChatThreadIdRoute: import("@tanstack/router-core").Route<
-  import("@tanstack/react-router").Register,
+  Register,
   import("@tanstack/router-core").Route<
-    import("@tanstack/react-router").Register,
+    Register,
     import("@tanstack/react-router").RootRoute<
-      import("@tanstack/react-router").Register,
+      Register,
       undefined,
       {
         queryClient: import("@tanstack/react-query").QueryClient;

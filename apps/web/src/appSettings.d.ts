@@ -118,17 +118,17 @@ export declare function getProviderStartOptions(
 export declare function useAppSettings(): {
   readonly settings: {
     readonly enableAssistantStreaming: boolean;
-    readonly defaultThreadEnvMode: "local" | "worktree";
+    readonly defaultThreadEnvMode: "worktree" | "local";
     readonly confirmThreadDelete: boolean;
     readonly diffWordWrap: boolean;
     readonly timestampFormat: "locale" | "12-hour" | "24-hour";
-    readonly claudeBinaryPath: string;
-    readonly codexBinaryPath: string;
-    readonly codexHomePath: string;
     readonly customCodexModels: readonly string[];
     readonly customClaudeModels: readonly string[];
     readonly customGeminiModels: readonly string[];
     readonly customOpencodeModels: readonly string[];
+    readonly claudeBinaryPath: string;
+    readonly codexBinaryPath: string;
+    readonly codexHomePath: string;
     readonly geminiApiKey: string;
     readonly textGenerationModel?: string | undefined;
   };
@@ -136,17 +136,17 @@ export declare function useAppSettings(): {
   readonly resetSettings: () => void;
   readonly defaults: {
     readonly enableAssistantStreaming: boolean;
-    readonly defaultThreadEnvMode: "local" | "worktree";
+    readonly defaultThreadEnvMode: "worktree" | "local";
     readonly confirmThreadDelete: boolean;
     readonly diffWordWrap: boolean;
     readonly timestampFormat: "locale" | "12-hour" | "24-hour";
-    readonly claudeBinaryPath: string;
-    readonly codexBinaryPath: string;
-    readonly codexHomePath: string;
     readonly customCodexModels: readonly string[];
     readonly customClaudeModels: readonly string[];
     readonly customGeminiModels: readonly string[];
     readonly customOpencodeModels: readonly string[];
+    readonly claudeBinaryPath: string;
+    readonly codexBinaryPath: string;
+    readonly codexHomePath: string;
     readonly geminiApiKey: string;
     readonly textGenerationModel?: string | undefined;
   };

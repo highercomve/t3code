@@ -7,23 +7,23 @@ declare const buttonVariants: (
         size?:
           | "default"
           | "icon"
+          | "lg"
+          | "sm"
+          | "xs"
           | "icon-lg"
           | "icon-sm"
           | "icon-xl"
           | "icon-xs"
-          | "lg"
-          | "sm"
           | "xl"
-          | "xs"
           | null
           | undefined;
         variant?:
           | "link"
           | "default"
+          | "outline"
           | "destructive"
           | "destructive-outline"
           | "ghost"
-          | "outline"
           | "secondary"
           | null
           | undefined;

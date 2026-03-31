@@ -1,7 +1,14 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
-import { ChevronDownIcon, CloudUploadIcon, GitCommitIcon, InfoIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  CloudUploadIcon,
+  GitCommitIcon,
+  InfoIcon,
+  SparklesIcon,
+  LoaderIcon,
+} from "lucide-react";
 import { GitHubIcon } from "./Icons";
 import {
   buildGitActionProgressStages,
@@ -36,6 +43,7 @@ import {
   gitPullMutationOptions,
   gitRunStackedActionMutationOptions,
   gitStatusQueryOptions,
+  gitSuggestCommitMessageMutationOptions,
   invalidateGitQueries,
 } from "~/lib/gitReactQuery";
 import { randomUUID } from "~/lib/utils";
@@ -183,6 +191,9 @@ export default function GitActionsControl({ gitCwd, activeThreadId }) {
     }),
   );
   const pullMutation = useMutation(gitPullMutationOptions({ cwd: gitCwd, queryClient }));
+  const suggestCommitMessageMutation = useMutation(
+    gitSuggestCommitMessageMutationOptions({ cwd: gitCwd }),
+  );
   const isRunStackedActionRunning =
     useIsMutating({ mutationKey: gitMutationKeys.runStackedAction(gitCwd) }) > 0;
   const isPullRunning = useIsMutating({ mutationKey: gitMutationKeys.pull(gitCwd) }) > 0;
@@ -987,9 +998,47 @@ export default function GitActionsControl({ gitCwd, activeThreadId }) {
                 _jsxs("div", {
                   className: "space-y-1",
                   children: [
-                    _jsx("p", {
-                      className: "text-xs font-medium",
-                      children: "Commit message (optional)",
+                    _jsxs("div", {
+                      className: "flex items-center justify-between",
+                      children: [
+                        _jsx("p", {
+                          className: "text-xs font-medium",
+                          children: "Commit message (optional)",
+                        }),
+                        _jsxs(Button, {
+                          variant: "ghost",
+                          size: "sm",
+                          className: "h-6 gap-1 px-2 text-xs",
+                          disabled: noneSelected || suggestCommitMessageMutation.isPending,
+                          onClick: () => {
+                            const filePaths = selectedFiles.map((f) => f.path);
+                            suggestCommitMessageMutation.mutate(
+                              filePaths.length > 0 ? { filePaths } : {},
+                              {
+                                onSuccess: (result) => {
+                                  const message = result.body
+                                    ? `${result.subject}\n\n${result.body}`
+                                    : result.subject;
+                                  setDialogCommitMessage(message);
+                                },
+                                onError: (error) => {
+                                  toastManager.add({
+                                    title: "Failed to generate commit message",
+                                    description: error.message,
+                                    type: "error",
+                                  });
+                                },
+                              },
+                            );
+                          },
+                          children: [
+                            suggestCommitMessageMutation.isPending
+                              ? _jsx(LoaderIcon, { className: "size-3 animate-spin" })
+                              : _jsx(SparklesIcon, { className: "size-3" }),
+                            suggestCommitMessageMutation.isPending ? "Generating…" : "Generate",
+                          ],
+                        }),
+                      ],
                     }),
                     _jsx(Textarea, {
                       value: dialogCommitMessage,

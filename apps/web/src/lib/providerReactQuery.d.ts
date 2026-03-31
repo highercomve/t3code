@@ -25,16 +25,16 @@ export declare function checkpointDiffQueryOptions(
   import("@tanstack/react-query").UseQueryOptions<
     {
       readonly threadId: string & import("effect/Brand").Brand<"ThreadId">;
-      readonly diff: string;
-      readonly toTurnCount: number;
       readonly fromTurnCount: number;
+      readonly toTurnCount: number;
+      readonly diff: string;
     },
     Error,
     {
       readonly threadId: string & import("effect/Brand").Brand<"ThreadId">;
-      readonly diff: string;
-      readonly toTurnCount: number;
       readonly fromTurnCount: number;
+      readonly toTurnCount: number;
+      readonly diff: string;
     },
     readonly [
       "providers",
@@ -50,9 +50,9 @@ export declare function checkpointDiffQueryOptions(
   queryFn?: import("@tanstack/react-query").QueryFunction<
     {
       readonly threadId: string & import("effect/Brand").Brand<"ThreadId">;
-      readonly diff: string;
-      readonly toTurnCount: number;
       readonly fromTurnCount: number;
+      readonly toTurnCount: number;
+      readonly diff: string;
     },
     readonly [
       "providers",
@@ -75,9 +75,9 @@ export declare function checkpointDiffQueryOptions(
   ] & {
     [dataTagSymbol]: {
       readonly threadId: string & import("effect/Brand").Brand<"ThreadId">;
-      readonly diff: string;
-      readonly toTurnCount: number;
       readonly fromTurnCount: number;
+      readonly toTurnCount: number;
+      readonly diff: string;
     };
     [dataTagErrorSymbol]: Error;
   };

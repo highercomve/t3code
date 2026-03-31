@@ -15,6 +15,7 @@ export const gitMutationKeys = {
   runStackedAction: (cwd) => ["git", "mutation", "run-stacked-action", cwd],
   pull: (cwd) => ["git", "mutation", "pull", cwd],
   preparePullRequestThread: (cwd) => ["git", "mutation", "prepare-pull-request-thread", cwd],
+  suggestCommitMessage: (cwd) => ["git", "mutation", "suggest-commit-message", cwd],
 };
 export function invalidateGitQueries(queryClient) {
   return queryClient.invalidateQueries({ queryKey: gitQueryKeys.all });
@@ -147,6 +148,19 @@ export function gitRemoveWorktreeMutationOptions(input) {
     mutationKey: ["git", "mutation", "remove-worktree"],
     onSettled: async () => {
       await invalidateGitQueries(input.queryClient);
+    },
+  });
+}
+export function gitSuggestCommitMessageMutationOptions(input) {
+  return mutationOptions({
+    mutationKey: gitMutationKeys.suggestCommitMessage(input.cwd),
+    mutationFn: async (vars) => {
+      const api = ensureNativeApi();
+      if (!input.cwd) throw new Error("Commit message suggestion is unavailable.");
+      return api.git.suggestCommitMessage({
+        cwd: input.cwd,
+        ...(vars.filePaths ? { filePaths: vars.filePaths } : {}),
+      });
     },
   });
 }

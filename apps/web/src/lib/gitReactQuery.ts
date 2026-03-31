@@ -20,6 +20,8 @@ export const gitMutationKeys = {
   pull: (cwd: string | null) => ["git", "mutation", "pull", cwd] as const,
   preparePullRequestThread: (cwd: string | null) =>
     ["git", "mutation", "prepare-pull-request-thread", cwd] as const,
+  suggestCommitMessage: (cwd: string | null) =>
+    ["git", "mutation", "suggest-commit-message", cwd] as const,
 };
 
 export function invalidateGitQueries(queryClient: QueryClient) {
@@ -193,6 +195,20 @@ export function gitRemoveWorktreeMutationOptions(input: { queryClient: QueryClie
     mutationKey: ["git", "mutation", "remove-worktree"] as const,
     onSettled: async () => {
       await invalidateGitQueries(input.queryClient);
+    },
+  });
+}
+
+export function gitSuggestCommitMessageMutationOptions(input: { cwd: string | null }) {
+  return mutationOptions({
+    mutationKey: gitMutationKeys.suggestCommitMessage(input.cwd),
+    mutationFn: async (vars: { filePaths?: string[] }) => {
+      const api = ensureNativeApi();
+      if (!input.cwd) throw new Error("Commit message suggestion is unavailable.");
+      return api.git.suggestCommitMessage({
+        cwd: input.cwd,
+        ...(vars.filePaths ? { filePaths: vars.filePaths } : {}),
+      });
     },
   });
 }

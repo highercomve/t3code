@@ -17,7 +17,7 @@ export declare function projectSearchEntriesQueryOptions(input: {
     {
       readonly entries: readonly {
         readonly path: string;
-        readonly kind: "directory" | "file";
+        readonly kind: "file" | "directory";
         readonly parentPath?: string | undefined;
       }[];
       readonly truncated: boolean;
@@ -26,7 +26,7 @@ export declare function projectSearchEntriesQueryOptions(input: {
     {
       readonly entries: readonly {
         readonly path: string;
-        readonly kind: "directory" | "file";
+        readonly kind: "file" | "directory";
         readonly parentPath?: string | undefined;
       }[];
       readonly truncated: boolean;
@@ -39,7 +39,7 @@ export declare function projectSearchEntriesQueryOptions(input: {
     {
       readonly entries: readonly {
         readonly path: string;
-        readonly kind: "directory" | "file";
+        readonly kind: "file" | "directory";
         readonly parentPath?: string | undefined;
       }[];
       readonly truncated: boolean;
@@ -52,7 +52,7 @@ export declare function projectSearchEntriesQueryOptions(input: {
     [dataTagSymbol]: {
       readonly entries: readonly {
         readonly path: string;
-        readonly kind: "directory" | "file";
+        readonly kind: "file" | "directory";
         readonly parentPath?: string | undefined;
       }[];
       readonly truncated: boolean;

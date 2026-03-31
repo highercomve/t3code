@@ -82,6 +82,20 @@ export const GitRunStackedActionInput = Schema.Struct({
 });
 export type GitRunStackedActionInput = typeof GitRunStackedActionInput.Type;
 
+export const GitSuggestCommitMessageInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  filePaths: Schema.optional(
+    Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
+  ),
+});
+export type GitSuggestCommitMessageInput = typeof GitSuggestCommitMessageInput.Type;
+
+export const GitSuggestCommitMessageResult = Schema.Struct({
+  subject: Schema.String,
+  body: Schema.String,
+});
+export type GitSuggestCommitMessageResult = typeof GitSuggestCommitMessageResult.Type;
+
 export const GitListBranchesInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
 });

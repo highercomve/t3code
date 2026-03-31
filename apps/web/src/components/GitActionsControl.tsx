@@ -6,7 +6,14 @@ import type {
 } from "@t3tools/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
-import { ChevronDownIcon, CloudUploadIcon, GitCommitIcon, InfoIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  CloudUploadIcon,
+  GitCommitIcon,
+  InfoIcon,
+  SparklesIcon,
+  LoaderIcon,
+} from "lucide-react";
 import { GitHubIcon } from "./Icons";
 import {
   buildGitActionProgressStages,
@@ -45,6 +52,7 @@ import {
   gitPullMutationOptions,
   gitRunStackedActionMutationOptions,
   gitStatusQueryOptions,
+  gitSuggestCommitMessageMutationOptions,
   invalidateGitQueries,
 } from "~/lib/gitReactQuery";
 import { randomUUID } from "~/lib/utils";
@@ -262,6 +270,9 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
     }),
   );
   const pullMutation = useMutation(gitPullMutationOptions({ cwd: gitCwd, queryClient }));
+  const suggestCommitMessageMutation = useMutation(
+    gitSuggestCommitMessageMutationOptions({ cwd: gitCwd }),
+  );
 
   const isRunStackedActionRunning =
     useIsMutating({ mutationKey: gitMutationKeys.runStackedAction(gitCwd) }) > 0;
@@ -996,7 +1007,40 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-medium">Commit message (optional)</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium">Commit message (optional)</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 px-2 text-xs"
+                  disabled={noneSelected || suggestCommitMessageMutation.isPending}
+                  onClick={() => {
+                    const filePaths = selectedFiles.map((f) => f.path);
+                    suggestCommitMessageMutation.mutate(filePaths.length > 0 ? { filePaths } : {}, {
+                      onSuccess: (result) => {
+                        const message = result.body
+                          ? `${result.subject}\n\n${result.body}`
+                          : result.subject;
+                        setDialogCommitMessage(message);
+                      },
+                      onError: (error) => {
+                        toastManager.add({
+                          title: "Failed to generate commit message",
+                          description: error.message,
+                          type: "error",
+                        });
+                      },
+                    });
+                  }}
+                >
+                  {suggestCommitMessageMutation.isPending ? (
+                    <LoaderIcon className="size-3 animate-spin" />
+                  ) : (
+                    <SparklesIcon className="size-3" />
+                  )}
+                  {suggestCommitMessageMutation.isPending ? "Generating…" : "Generate"}
+                </Button>
+              </div>
               <Textarea
                 value={dialogCommitMessage}
                 onChange={(event) => setDialogCommitMessage(event.target.value)}

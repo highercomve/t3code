@@ -18,6 +18,8 @@ import type {
   GitRunStackedActionResult,
   GitStatusInput,
   GitStatusResult,
+  GitSuggestCommitMessageInput,
+  GitSuggestCommitMessageResult,
 } from "./git";
 import type {
   ProjectSearchEntriesInput,
@@ -162,6 +164,9 @@ export interface NativeApi {
     pull: (input: GitPullInput) => Promise<GitPullResult>;
     status: (input: GitStatusInput) => Promise<GitStatusResult>;
     runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
+    suggestCommitMessage: (
+      input: GitSuggestCommitMessageInput,
+    ) => Promise<GitSuggestCommitMessageResult>;
     onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
   };
   contextMenu: {

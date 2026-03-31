@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
-import { Effect, FileSystem, Layer, Option, Path, Schema, Scope, Stream } from "effect";
+import { Effect, FileSystem, Layer, Option, Path, Schema, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 import { CodexModelSelection } from "@t3tools/contracts";
@@ -64,26 +67,27 @@ const makeCodexTextGeneration = Effect.gen(function* () {
     operation: string,
     prefix: string,
     content: string,
-  ): Effect.Effect<string, TextGenerationError, Scope.Scope> => {
-    return fileSystem
-      .makeTempFileScoped({
-        prefix: `t3code-${prefix}-${process.pid}-${randomUUID()}.tmp`,
-      })
-      .pipe(
-        Effect.tap((filePath) => fileSystem.writeFileString(filePath, content)),
-        Effect.mapError(
-          (cause) =>
-            new TextGenerationError({
-              operation,
-              detail: `Failed to write temp file`,
-              cause,
-            }),
-        ),
-      );
-  };
+  ): Effect.Effect<string, TextGenerationError> =>
+    Effect.try({
+      try: () => {
+        const dir = mkdtempSync(join(tmpdir(), `t3code-${prefix}-`));
+        const filePath = join(dir, `${randomUUID()}.tmp`);
+        writeFileSync(filePath, content, "utf-8");
+        return filePath;
+      },
+      catch: (cause) =>
+        new TextGenerationError({
+          operation,
+          detail: `Failed to write temp file: ${cause instanceof Error ? cause.message : String(cause)}`,
+          cause,
+        }),
+    });
 
   const safeUnlink = (filePath: string): Effect.Effect<void, never> =>
-    fileSystem.remove(filePath).pipe(Effect.catch(() => Effect.void));
+    fileSystem.remove(filePath).pipe(
+      Effect.flatMap(() => fileSystem.remove(dirname(filePath))),
+      Effect.catch(() => Effect.void),
+    );
 
   const materializeImageAttachments = (
     _operation:
