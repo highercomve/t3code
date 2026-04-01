@@ -21,7 +21,7 @@ export declare function buildLegacyServerSettingsMigrationPatch(
   legacySettings: Record<string, unknown>,
 ): {
   enableAssistantStreaming?: boolean;
-  defaultThreadEnvMode?: "worktree" | "local";
+  defaultThreadEnvMode?: "local" | "worktree";
   textGenerationModelSelection?:
     | {
         provider?: "codex";
@@ -57,27 +57,27 @@ export declare function buildLegacyServerSettingsMigrationPatch(
       };
   providers?: {
     codex?: {
-      enabled?: boolean;
-      homePath?: string;
-      customModels?: string[];
       binaryPath?: string;
+      homePath?: string;
+      enabled?: boolean;
+      customModels?: string[];
     };
     gemini?: {
-      enabled?: boolean;
-      homePath?: string;
-      customModels?: string[];
       binaryPath?: string;
+      homePath?: string;
+      enabled?: boolean;
+      customModels?: string[];
     };
     claudeAgent?: {
+      binaryPath?: string;
       enabled?: boolean;
       customModels?: string[];
-      binaryPath?: string;
     };
     opencode?: {
-      enabled?: boolean;
-      customModels?: string[];
       binaryPath?: string;
       apiKey?: string;
+      enabled?: boolean;
+      customModels?: string[];
     };
   };
 };

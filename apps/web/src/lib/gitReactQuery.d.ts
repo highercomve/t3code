@@ -28,20 +28,20 @@ export declare function gitStatusQueryOptions(
       readonly branch: string | null;
       readonly pr: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       } | null;
       readonly workingTree: {
         readonly files: readonly {
           readonly path: string;
-          readonly deletions: number;
           readonly insertions: number;
+          readonly deletions: number;
         }[];
-        readonly deletions: number;
         readonly insertions: number;
+        readonly deletions: number;
       };
       readonly hasWorkingTreeChanges: boolean;
       readonly hasUpstream: boolean;
@@ -53,20 +53,20 @@ export declare function gitStatusQueryOptions(
       readonly branch: string | null;
       readonly pr: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       } | null;
       readonly workingTree: {
         readonly files: readonly {
           readonly path: string;
-          readonly deletions: number;
           readonly insertions: number;
+          readonly deletions: number;
         }[];
-        readonly deletions: number;
         readonly insertions: number;
+        readonly deletions: number;
       };
       readonly hasWorkingTreeChanges: boolean;
       readonly hasUpstream: boolean;
@@ -82,20 +82,20 @@ export declare function gitStatusQueryOptions(
       readonly branch: string | null;
       readonly pr: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       } | null;
       readonly workingTree: {
         readonly files: readonly {
           readonly path: string;
-          readonly deletions: number;
           readonly insertions: number;
+          readonly deletions: number;
         }[];
-        readonly deletions: number;
         readonly insertions: number;
+        readonly deletions: number;
       };
       readonly hasWorkingTreeChanges: boolean;
       readonly hasUpstream: boolean;
@@ -111,20 +111,20 @@ export declare function gitStatusQueryOptions(
       readonly branch: string | null;
       readonly pr: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       } | null;
       readonly workingTree: {
         readonly files: readonly {
           readonly path: string;
-          readonly deletions: number;
           readonly insertions: number;
+          readonly deletions: number;
         }[];
-        readonly deletions: number;
         readonly insertions: number;
+        readonly deletions: number;
       };
       readonly hasWorkingTreeChanges: boolean;
       readonly hasUpstream: boolean;
@@ -140,10 +140,10 @@ export declare function gitBranchesQueryOptions(
   import("@tanstack/react-query").UseQueryOptions<
     {
       readonly branches: readonly {
-        readonly isDefault: boolean;
-        readonly name: string;
         readonly worktreePath: string | null;
+        readonly name: string;
         readonly current: boolean;
+        readonly isDefault: boolean;
         readonly isRemote?: boolean | undefined;
         readonly remoteName?: string | undefined;
       }[];
@@ -153,10 +153,10 @@ export declare function gitBranchesQueryOptions(
     Error,
     {
       readonly branches: readonly {
-        readonly isDefault: boolean;
-        readonly name: string;
         readonly worktreePath: string | null;
+        readonly name: string;
         readonly current: boolean;
+        readonly isDefault: boolean;
         readonly isRemote?: boolean | undefined;
         readonly remoteName?: string | undefined;
       }[];
@@ -170,10 +170,10 @@ export declare function gitBranchesQueryOptions(
   queryFn?: import("@tanstack/react-query").QueryFunction<
     {
       readonly branches: readonly {
-        readonly isDefault: boolean;
-        readonly name: string;
         readonly worktreePath: string | null;
+        readonly name: string;
         readonly current: boolean;
+        readonly isDefault: boolean;
         readonly isRemote?: boolean | undefined;
         readonly remoteName?: string | undefined;
       }[];
@@ -187,10 +187,10 @@ export declare function gitBranchesQueryOptions(
   queryKey: readonly ["git", "branches", string | null] & {
     [dataTagSymbol]: {
       readonly branches: readonly {
-        readonly isDefault: boolean;
-        readonly name: string;
         readonly worktreePath: string | null;
+        readonly name: string;
         readonly current: boolean;
+        readonly isDefault: boolean;
         readonly isRemote?: boolean | undefined;
         readonly remoteName?: string | undefined;
       }[];
@@ -208,10 +208,10 @@ export declare function gitResolvePullRequestQueryOptions(input: {
     {
       readonly pullRequest: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       };
     },
@@ -219,10 +219,10 @@ export declare function gitResolvePullRequestQueryOptions(input: {
     {
       readonly pullRequest: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       };
     },
@@ -234,10 +234,10 @@ export declare function gitResolvePullRequestQueryOptions(input: {
     {
       readonly pullRequest: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       };
     },
@@ -249,10 +249,10 @@ export declare function gitResolvePullRequestQueryOptions(input: {
     [dataTagSymbol]: {
       readonly pullRequest: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       };
     };
@@ -279,30 +279,30 @@ export declare function gitRunStackedActionMutationOptions(input: {
 }): import("@tanstack/react-query").WithRequired<
   import("@tanstack/react-query").UseMutationOptions<
     {
-      readonly push: {
-        readonly status: "skipped_not_requested" | "pushed" | "skipped_up_to_date";
-        readonly branch?: string | undefined;
-        readonly upstreamBranch?: string | undefined;
-        readonly setUpstream?: boolean | undefined;
-      };
       readonly commit: {
         readonly status: "created" | "skipped_no_changes";
-        readonly commitSha?: string | undefined;
         readonly subject?: string | undefined;
+        readonly commitSha?: string | undefined;
       };
-      readonly action: "commit" | "commit_push" | "commit_push_pr";
       readonly branch: {
         readonly status: "created" | "skipped_not_requested";
         readonly name?: string | undefined;
       };
+      readonly push: {
+        readonly status: "pushed" | "skipped_not_requested" | "skipped_up_to_date";
+        readonly branch?: string | undefined;
+        readonly upstreamBranch?: string | undefined;
+        readonly setUpstream?: boolean | undefined;
+      };
       readonly pr: {
         readonly status: "created" | "skipped_not_requested" | "opened_existing";
         readonly number?: number | undefined;
+        readonly title?: string | undefined;
         readonly url?: string | undefined;
         readonly baseBranch?: string | undefined;
         readonly headBranch?: string | undefined;
-        readonly title?: string | undefined;
       };
+      readonly action: "commit" | "commit_push" | "commit_push_pr";
     },
     Error,
     {
@@ -322,8 +322,8 @@ export declare function gitPullMutationOptions(input: {
 }): import("@tanstack/react-query").WithRequired<
   import("@tanstack/react-query").UseMutationOptions<
     {
-      readonly status: "skipped_up_to_date" | "pulled";
       readonly branch: string;
+      readonly status: "skipped_up_to_date" | "pulled";
       readonly upstreamBranch: string | null;
     },
     Error,
@@ -394,10 +394,10 @@ export declare function gitPreparePullRequestThreadMutationOptions(input: {
       readonly worktreePath: string | null;
       readonly pullRequest: {
         readonly number: number;
+        readonly title: string;
         readonly url: string;
         readonly baseBranch: string;
         readonly headBranch: string;
-        readonly title: string;
         readonly state: "open" | "closed" | "merged";
       };
     },

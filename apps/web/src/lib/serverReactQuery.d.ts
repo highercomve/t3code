@@ -13,20 +13,14 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
   import("@tanstack/react-query").UseQueryOptions<
     {
       readonly cwd: string;
-      readonly availableEditors: readonly (
-        | "cursor"
-        | "vscode"
-        | "vscode-insiders"
-        | "vscodium"
-        | "zed"
-        | "antigravity"
-        | "file-manager"
-      )[];
       readonly providers: readonly {
-        readonly status: "disabled" | "error" | "ready" | "warning";
+        readonly status: "error" | "ready" | "warning" | "disabled";
+        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
+        readonly enabled: boolean;
         readonly version: string | null;
         readonly models: readonly {
           readonly name: string;
+          readonly slug: string;
           readonly capabilities: {
             readonly reasoningEffortLevels: readonly {
               readonly label: string;
@@ -42,16 +36,13 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             readonly supportsFastMode: boolean;
             readonly supportsThinkingToggle: boolean;
           } | null;
-          readonly slug: string;
           readonly isCustom: boolean;
         }[];
-        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
-        readonly enabled: boolean;
         readonly installed: boolean;
         readonly auth: {
           readonly status: "authenticated" | "unauthenticated" | "unknown";
-          readonly type?: string | undefined;
           readonly label?: string | undefined;
+          readonly type?: string | undefined;
         };
         readonly checkedAt: string;
         readonly message?: string | undefined;
@@ -62,53 +53,9 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             }[]
           | undefined;
       }[];
-      readonly keybindingsConfigPath: string;
-      readonly keybindings: readonly {
-        readonly command:
-          | "terminal.toggle"
-          | "terminal.split"
-          | "terminal.new"
-          | "terminal.close"
-          | "diff.toggle"
-          | "chat.new"
-          | "chat.newLocal"
-          | "editor.openFavorite"
-          | "thread.previous"
-          | "thread.next"
-          | "thread.jump.1"
-          | "thread.jump.2"
-          | "thread.jump.3"
-          | "thread.jump.4"
-          | "thread.jump.5"
-          | "thread.jump.6"
-          | "thread.jump.7"
-          | "thread.jump.8"
-          | "thread.jump.9"
-          | `script.${string}.run`;
-        readonly shortcut: {
-          readonly key: string;
-          readonly metaKey: boolean;
-          readonly ctrlKey: boolean;
-          readonly shiftKey: boolean;
-          readonly altKey: boolean;
-          readonly modKey: boolean;
-        };
-        readonly whenAst?: import("@t3tools/contracts").KeybindingWhenNode | undefined;
-      }[];
-      readonly issues: readonly (
-        | {
-            readonly message: string;
-            readonly kind: "keybindings.malformed-config";
-          }
-        | {
-            readonly message: string;
-            readonly kind: "keybindings.invalid-entry";
-            readonly index: number;
-          }
-      )[];
       readonly settings: {
         readonly enableAssistantStreaming: boolean;
-        readonly defaultThreadEnvMode: "worktree" | "local";
+        readonly defaultThreadEnvMode: "local" | "worktree";
         readonly textGenerationModelSelection:
           | {
               readonly provider: "codex";
@@ -144,48 +91,95 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             };
         readonly providers: {
           readonly codex: {
-            readonly enabled: boolean;
-            readonly homePath: string;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
+            readonly homePath: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
           readonly gemini: {
-            readonly enabled: boolean;
-            readonly homePath: string;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
+            readonly homePath: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
           readonly claudeAgent: {
+            readonly binaryPath: string;
             readonly enabled: boolean;
             readonly customModels: readonly string[];
-            readonly binaryPath: string;
           };
           readonly opencode: {
-            readonly enabled: boolean;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
             readonly apiKey: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
         };
       };
+      readonly issues: readonly (
+        | {
+            readonly kind: "keybindings.malformed-config";
+            readonly message: string;
+          }
+        | {
+            readonly kind: "keybindings.invalid-entry";
+            readonly message: string;
+            readonly index: number;
+          }
+      )[];
+      readonly availableEditors: readonly (
+        | "cursor"
+        | "vscode"
+        | "vscode-insiders"
+        | "vscodium"
+        | "zed"
+        | "antigravity"
+        | "file-manager"
+      )[];
+      readonly keybindingsConfigPath: string;
+      readonly keybindings: readonly {
+        readonly command:
+          | "terminal.close"
+          | "terminal.toggle"
+          | "terminal.split"
+          | "terminal.new"
+          | "diff.toggle"
+          | "chat.new"
+          | "chat.newLocal"
+          | "editor.openFavorite"
+          | "thread.previous"
+          | "thread.next"
+          | "thread.jump.1"
+          | "thread.jump.2"
+          | "thread.jump.3"
+          | "thread.jump.4"
+          | "thread.jump.5"
+          | "thread.jump.6"
+          | "thread.jump.7"
+          | "thread.jump.8"
+          | "thread.jump.9"
+          | `script.${string}.run`;
+        readonly shortcut: {
+          readonly key: string;
+          readonly metaKey: boolean;
+          readonly ctrlKey: boolean;
+          readonly shiftKey: boolean;
+          readonly altKey: boolean;
+          readonly modKey: boolean;
+        };
+        readonly whenAst?: import("@t3tools/contracts").KeybindingWhenNode | undefined;
+      }[];
     },
     Error,
     {
       readonly cwd: string;
-      readonly availableEditors: readonly (
-        | "cursor"
-        | "vscode"
-        | "vscode-insiders"
-        | "vscodium"
-        | "zed"
-        | "antigravity"
-        | "file-manager"
-      )[];
       readonly providers: readonly {
-        readonly status: "disabled" | "error" | "ready" | "warning";
+        readonly status: "error" | "ready" | "warning" | "disabled";
+        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
+        readonly enabled: boolean;
         readonly version: string | null;
         readonly models: readonly {
           readonly name: string;
+          readonly slug: string;
           readonly capabilities: {
             readonly reasoningEffortLevels: readonly {
               readonly label: string;
@@ -201,16 +195,13 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             readonly supportsFastMode: boolean;
             readonly supportsThinkingToggle: boolean;
           } | null;
-          readonly slug: string;
           readonly isCustom: boolean;
         }[];
-        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
-        readonly enabled: boolean;
         readonly installed: boolean;
         readonly auth: {
           readonly status: "authenticated" | "unauthenticated" | "unknown";
-          readonly type?: string | undefined;
           readonly label?: string | undefined;
+          readonly type?: string | undefined;
         };
         readonly checkedAt: string;
         readonly message?: string | undefined;
@@ -221,53 +212,9 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             }[]
           | undefined;
       }[];
-      readonly keybindingsConfigPath: string;
-      readonly keybindings: readonly {
-        readonly command:
-          | "terminal.toggle"
-          | "terminal.split"
-          | "terminal.new"
-          | "terminal.close"
-          | "diff.toggle"
-          | "chat.new"
-          | "chat.newLocal"
-          | "editor.openFavorite"
-          | "thread.previous"
-          | "thread.next"
-          | "thread.jump.1"
-          | "thread.jump.2"
-          | "thread.jump.3"
-          | "thread.jump.4"
-          | "thread.jump.5"
-          | "thread.jump.6"
-          | "thread.jump.7"
-          | "thread.jump.8"
-          | "thread.jump.9"
-          | `script.${string}.run`;
-        readonly shortcut: {
-          readonly key: string;
-          readonly metaKey: boolean;
-          readonly ctrlKey: boolean;
-          readonly shiftKey: boolean;
-          readonly altKey: boolean;
-          readonly modKey: boolean;
-        };
-        readonly whenAst?: import("@t3tools/contracts").KeybindingWhenNode | undefined;
-      }[];
-      readonly issues: readonly (
-        | {
-            readonly message: string;
-            readonly kind: "keybindings.malformed-config";
-          }
-        | {
-            readonly message: string;
-            readonly kind: "keybindings.invalid-entry";
-            readonly index: number;
-          }
-      )[];
       readonly settings: {
         readonly enableAssistantStreaming: boolean;
-        readonly defaultThreadEnvMode: "worktree" | "local";
+        readonly defaultThreadEnvMode: "local" | "worktree";
         readonly textGenerationModelSelection:
           | {
               readonly provider: "codex";
@@ -303,30 +250,83 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             };
         readonly providers: {
           readonly codex: {
-            readonly enabled: boolean;
-            readonly homePath: string;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
+            readonly homePath: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
           readonly gemini: {
-            readonly enabled: boolean;
-            readonly homePath: string;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
+            readonly homePath: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
           readonly claudeAgent: {
+            readonly binaryPath: string;
             readonly enabled: boolean;
             readonly customModels: readonly string[];
-            readonly binaryPath: string;
           };
           readonly opencode: {
-            readonly enabled: boolean;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
             readonly apiKey: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
         };
       };
+      readonly issues: readonly (
+        | {
+            readonly kind: "keybindings.malformed-config";
+            readonly message: string;
+          }
+        | {
+            readonly kind: "keybindings.invalid-entry";
+            readonly message: string;
+            readonly index: number;
+          }
+      )[];
+      readonly availableEditors: readonly (
+        | "cursor"
+        | "vscode"
+        | "vscode-insiders"
+        | "vscodium"
+        | "zed"
+        | "antigravity"
+        | "file-manager"
+      )[];
+      readonly keybindingsConfigPath: string;
+      readonly keybindings: readonly {
+        readonly command:
+          | "terminal.close"
+          | "terminal.toggle"
+          | "terminal.split"
+          | "terminal.new"
+          | "diff.toggle"
+          | "chat.new"
+          | "chat.newLocal"
+          | "editor.openFavorite"
+          | "thread.previous"
+          | "thread.next"
+          | "thread.jump.1"
+          | "thread.jump.2"
+          | "thread.jump.3"
+          | "thread.jump.4"
+          | "thread.jump.5"
+          | "thread.jump.6"
+          | "thread.jump.7"
+          | "thread.jump.8"
+          | "thread.jump.9"
+          | `script.${string}.run`;
+        readonly shortcut: {
+          readonly key: string;
+          readonly metaKey: boolean;
+          readonly ctrlKey: boolean;
+          readonly shiftKey: boolean;
+          readonly altKey: boolean;
+          readonly modKey: boolean;
+        };
+        readonly whenAst?: import("@t3tools/contracts").KeybindingWhenNode | undefined;
+      }[];
     },
     readonly ["server", "config"]
   >,
@@ -335,20 +335,14 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
   queryFn?: import("@tanstack/react-query").QueryFunction<
     {
       readonly cwd: string;
-      readonly availableEditors: readonly (
-        | "cursor"
-        | "vscode"
-        | "vscode-insiders"
-        | "vscodium"
-        | "zed"
-        | "antigravity"
-        | "file-manager"
-      )[];
       readonly providers: readonly {
-        readonly status: "disabled" | "error" | "ready" | "warning";
+        readonly status: "error" | "ready" | "warning" | "disabled";
+        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
+        readonly enabled: boolean;
         readonly version: string | null;
         readonly models: readonly {
           readonly name: string;
+          readonly slug: string;
           readonly capabilities: {
             readonly reasoningEffortLevels: readonly {
               readonly label: string;
@@ -364,16 +358,13 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             readonly supportsFastMode: boolean;
             readonly supportsThinkingToggle: boolean;
           } | null;
-          readonly slug: string;
           readonly isCustom: boolean;
         }[];
-        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
-        readonly enabled: boolean;
         readonly installed: boolean;
         readonly auth: {
           readonly status: "authenticated" | "unauthenticated" | "unknown";
-          readonly type?: string | undefined;
           readonly label?: string | undefined;
+          readonly type?: string | undefined;
         };
         readonly checkedAt: string;
         readonly message?: string | undefined;
@@ -384,53 +375,9 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             }[]
           | undefined;
       }[];
-      readonly keybindingsConfigPath: string;
-      readonly keybindings: readonly {
-        readonly command:
-          | "terminal.toggle"
-          | "terminal.split"
-          | "terminal.new"
-          | "terminal.close"
-          | "diff.toggle"
-          | "chat.new"
-          | "chat.newLocal"
-          | "editor.openFavorite"
-          | "thread.previous"
-          | "thread.next"
-          | "thread.jump.1"
-          | "thread.jump.2"
-          | "thread.jump.3"
-          | "thread.jump.4"
-          | "thread.jump.5"
-          | "thread.jump.6"
-          | "thread.jump.7"
-          | "thread.jump.8"
-          | "thread.jump.9"
-          | `script.${string}.run`;
-        readonly shortcut: {
-          readonly key: string;
-          readonly metaKey: boolean;
-          readonly ctrlKey: boolean;
-          readonly shiftKey: boolean;
-          readonly altKey: boolean;
-          readonly modKey: boolean;
-        };
-        readonly whenAst?: import("@t3tools/contracts").KeybindingWhenNode | undefined;
-      }[];
-      readonly issues: readonly (
-        | {
-            readonly message: string;
-            readonly kind: "keybindings.malformed-config";
-          }
-        | {
-            readonly message: string;
-            readonly kind: "keybindings.invalid-entry";
-            readonly index: number;
-          }
-      )[];
       readonly settings: {
         readonly enableAssistantStreaming: boolean;
-        readonly defaultThreadEnvMode: "worktree" | "local";
+        readonly defaultThreadEnvMode: "local" | "worktree";
         readonly textGenerationModelSelection:
           | {
               readonly provider: "codex";
@@ -466,30 +413,83 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             };
         readonly providers: {
           readonly codex: {
-            readonly enabled: boolean;
-            readonly homePath: string;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
+            readonly homePath: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
           readonly gemini: {
-            readonly enabled: boolean;
-            readonly homePath: string;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
+            readonly homePath: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
           readonly claudeAgent: {
+            readonly binaryPath: string;
             readonly enabled: boolean;
             readonly customModels: readonly string[];
-            readonly binaryPath: string;
           };
           readonly opencode: {
-            readonly enabled: boolean;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
             readonly apiKey: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
         };
       };
+      readonly issues: readonly (
+        | {
+            readonly kind: "keybindings.malformed-config";
+            readonly message: string;
+          }
+        | {
+            readonly kind: "keybindings.invalid-entry";
+            readonly message: string;
+            readonly index: number;
+          }
+      )[];
+      readonly availableEditors: readonly (
+        | "cursor"
+        | "vscode"
+        | "vscode-insiders"
+        | "vscodium"
+        | "zed"
+        | "antigravity"
+        | "file-manager"
+      )[];
+      readonly keybindingsConfigPath: string;
+      readonly keybindings: readonly {
+        readonly command:
+          | "terminal.close"
+          | "terminal.toggle"
+          | "terminal.split"
+          | "terminal.new"
+          | "diff.toggle"
+          | "chat.new"
+          | "chat.newLocal"
+          | "editor.openFavorite"
+          | "thread.previous"
+          | "thread.next"
+          | "thread.jump.1"
+          | "thread.jump.2"
+          | "thread.jump.3"
+          | "thread.jump.4"
+          | "thread.jump.5"
+          | "thread.jump.6"
+          | "thread.jump.7"
+          | "thread.jump.8"
+          | "thread.jump.9"
+          | `script.${string}.run`;
+        readonly shortcut: {
+          readonly key: string;
+          readonly metaKey: boolean;
+          readonly ctrlKey: boolean;
+          readonly shiftKey: boolean;
+          readonly altKey: boolean;
+          readonly modKey: boolean;
+        };
+        readonly whenAst?: import("@t3tools/contracts").KeybindingWhenNode | undefined;
+      }[];
     },
     readonly ["server", "config"],
     never
@@ -498,20 +498,14 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
   queryKey: readonly ["server", "config"] & {
     [dataTagSymbol]: {
       readonly cwd: string;
-      readonly availableEditors: readonly (
-        | "cursor"
-        | "vscode"
-        | "vscode-insiders"
-        | "vscodium"
-        | "zed"
-        | "antigravity"
-        | "file-manager"
-      )[];
       readonly providers: readonly {
-        readonly status: "disabled" | "error" | "ready" | "warning";
+        readonly status: "error" | "ready" | "warning" | "disabled";
+        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
+        readonly enabled: boolean;
         readonly version: string | null;
         readonly models: readonly {
           readonly name: string;
+          readonly slug: string;
           readonly capabilities: {
             readonly reasoningEffortLevels: readonly {
               readonly label: string;
@@ -527,16 +521,13 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             readonly supportsFastMode: boolean;
             readonly supportsThinkingToggle: boolean;
           } | null;
-          readonly slug: string;
           readonly isCustom: boolean;
         }[];
-        readonly provider: "codex" | "gemini" | "claudeAgent" | "opencode";
-        readonly enabled: boolean;
         readonly installed: boolean;
         readonly auth: {
           readonly status: "authenticated" | "unauthenticated" | "unknown";
-          readonly type?: string | undefined;
           readonly label?: string | undefined;
+          readonly type?: string | undefined;
         };
         readonly checkedAt: string;
         readonly message?: string | undefined;
@@ -547,53 +538,9 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             }[]
           | undefined;
       }[];
-      readonly keybindingsConfigPath: string;
-      readonly keybindings: readonly {
-        readonly command:
-          | "terminal.toggle"
-          | "terminal.split"
-          | "terminal.new"
-          | "terminal.close"
-          | "diff.toggle"
-          | "chat.new"
-          | "chat.newLocal"
-          | "editor.openFavorite"
-          | "thread.previous"
-          | "thread.next"
-          | "thread.jump.1"
-          | "thread.jump.2"
-          | "thread.jump.3"
-          | "thread.jump.4"
-          | "thread.jump.5"
-          | "thread.jump.6"
-          | "thread.jump.7"
-          | "thread.jump.8"
-          | "thread.jump.9"
-          | `script.${string}.run`;
-        readonly shortcut: {
-          readonly key: string;
-          readonly metaKey: boolean;
-          readonly ctrlKey: boolean;
-          readonly shiftKey: boolean;
-          readonly altKey: boolean;
-          readonly modKey: boolean;
-        };
-        readonly whenAst?: import("@t3tools/contracts").KeybindingWhenNode | undefined;
-      }[];
-      readonly issues: readonly (
-        | {
-            readonly message: string;
-            readonly kind: "keybindings.malformed-config";
-          }
-        | {
-            readonly message: string;
-            readonly kind: "keybindings.invalid-entry";
-            readonly index: number;
-          }
-      )[];
       readonly settings: {
         readonly enableAssistantStreaming: boolean;
-        readonly defaultThreadEnvMode: "worktree" | "local";
+        readonly defaultThreadEnvMode: "local" | "worktree";
         readonly textGenerationModelSelection:
           | {
               readonly provider: "codex";
@@ -629,30 +576,83 @@ export declare function serverConfigQueryOptions(): import("@tanstack/react-quer
             };
         readonly providers: {
           readonly codex: {
-            readonly enabled: boolean;
-            readonly homePath: string;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
+            readonly homePath: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
           readonly gemini: {
-            readonly enabled: boolean;
-            readonly homePath: string;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
+            readonly homePath: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
           readonly claudeAgent: {
+            readonly binaryPath: string;
             readonly enabled: boolean;
             readonly customModels: readonly string[];
-            readonly binaryPath: string;
           };
           readonly opencode: {
-            readonly enabled: boolean;
-            readonly customModels: readonly string[];
             readonly binaryPath: string;
             readonly apiKey: string;
+            readonly enabled: boolean;
+            readonly customModels: readonly string[];
           };
         };
       };
+      readonly issues: readonly (
+        | {
+            readonly kind: "keybindings.malformed-config";
+            readonly message: string;
+          }
+        | {
+            readonly kind: "keybindings.invalid-entry";
+            readonly message: string;
+            readonly index: number;
+          }
+      )[];
+      readonly availableEditors: readonly (
+        | "cursor"
+        | "vscode"
+        | "vscode-insiders"
+        | "vscodium"
+        | "zed"
+        | "antigravity"
+        | "file-manager"
+      )[];
+      readonly keybindingsConfigPath: string;
+      readonly keybindings: readonly {
+        readonly command:
+          | "terminal.close"
+          | "terminal.toggle"
+          | "terminal.split"
+          | "terminal.new"
+          | "diff.toggle"
+          | "chat.new"
+          | "chat.newLocal"
+          | "editor.openFavorite"
+          | "thread.previous"
+          | "thread.next"
+          | "thread.jump.1"
+          | "thread.jump.2"
+          | "thread.jump.3"
+          | "thread.jump.4"
+          | "thread.jump.5"
+          | "thread.jump.6"
+          | "thread.jump.7"
+          | "thread.jump.8"
+          | "thread.jump.9"
+          | `script.${string}.run`;
+        readonly shortcut: {
+          readonly key: string;
+          readonly metaKey: boolean;
+          readonly ctrlKey: boolean;
+          readonly shiftKey: boolean;
+          readonly altKey: boolean;
+          readonly modKey: boolean;
+        };
+        readonly whenAst?: import("@t3tools/contracts").KeybindingWhenNode | undefined;
+      }[];
     };
     [dataTagErrorSymbol]: Error;
   };

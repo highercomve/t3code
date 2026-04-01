@@ -872,8 +872,10 @@ export default function Sidebar() {
         return;
       }
       if (clicked !== "delete") return;
-      const projectThreads = threads.filter((thread) => thread.projectId === projectId);
-      if (projectThreads.length > 0) {
+      const activeProjectThreads = threads.filter(
+        (thread) => thread.projectId === projectId && thread.archivedAt === null,
+      );
+      if (activeProjectThreads.length > 0) {
         toastManager.add({
           type: "warning",
           title: "Project is not empty",

@@ -10,7 +10,7 @@ declare function EmptyHeader({
 declare const emptyMediaVariants: (
   props?:
     | ({
-        variant?: "default" | "icon" | null | undefined;
+        variant?: "icon" | "default" | null | undefined;
       } & import("class-variance-authority/types").ClassProp)
     | undefined,
 ) => string;

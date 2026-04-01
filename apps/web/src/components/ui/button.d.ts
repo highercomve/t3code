@@ -5,25 +5,25 @@ declare const buttonVariants: (
   props?:
     | ({
         size?:
-          | "default"
           | "icon"
-          | "lg"
-          | "sm"
-          | "xs"
+          | "default"
           | "icon-lg"
           | "icon-sm"
           | "icon-xl"
           | "icon-xs"
+          | "lg"
+          | "sm"
           | "xl"
+          | "xs"
           | null
           | undefined;
         variant?:
           | "link"
           | "default"
-          | "outline"
           | "destructive"
           | "destructive-outline"
           | "ghost"
+          | "outline"
           | "secondary"
           | null
           | undefined;
