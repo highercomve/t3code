@@ -162,6 +162,7 @@ const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
   gemini: makeCapabilitiesRegistryEntry("gemini"),
   claudeAgent: makeCapabilitiesRegistryEntry("claudeAgent"),
   opencode: makeCapabilitiesRegistryEntry("opencode"),
+  copilotAgent: makeCapabilitiesRegistryEntry("copilotAgent"),
 };
 
 export function getComposerProviderState(input: ComposerProviderStateInput): ComposerProviderState {

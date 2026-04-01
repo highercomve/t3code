@@ -25,35 +25,42 @@ export declare function buildLegacyServerSettingsMigrationPatch(
   textGenerationModelSelection?:
     | {
         provider?: "codex";
+        model?: string;
         options?: {
           reasoningEffort?: "xhigh" | "high" | "medium" | "low" | undefined;
           fastMode?: boolean | undefined;
         };
-        model?: string;
       }
     | {
         provider?: "gemini";
+        model?: string;
         options?: {
           thinkingBudget?: number | undefined;
         };
-        model?: string;
       }
     | {
         provider?: "claudeAgent";
+        model?: string;
         options?: {
+          effort?: "high" | "medium" | "low" | "max" | "ultrathink" | undefined;
           fastMode?: boolean | undefined;
           thinking?: boolean | undefined;
-          effort?: "high" | "medium" | "low" | "max" | "ultrathink" | undefined;
           contextWindow?: string | undefined;
         };
-        model?: string;
       }
     | {
         provider?: "opencode";
+        model?: string;
         options?: {
           reasoningEffort?: "xhigh" | "high" | "medium" | "low" | undefined;
         };
+      }
+    | {
+        provider?: "copilotAgent";
         model?: string;
+        options?: {
+          reasoningEffort?: "xhigh" | "high" | "medium" | "low" | undefined;
+        };
       };
   providers?: {
     codex?: {
@@ -76,6 +83,11 @@ export declare function buildLegacyServerSettingsMigrationPatch(
     opencode?: {
       binaryPath?: string;
       apiKey?: string;
+      enabled?: boolean;
+      customModels?: string[];
+    };
+    copilotAgent?: {
+      binaryPath?: string;
       enabled?: boolean;
       customModels?: string[];
     };

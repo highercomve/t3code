@@ -1058,6 +1058,7 @@ export default function ChatView({ threadId }) {
       gemini: getProviderModels(providerStatuses, "gemini"),
       claudeAgent: getProviderModels(providerStatuses, "claudeAgent"),
       opencode: getProviderModels(providerStatuses, "opencode"),
+      copilotAgent: getProviderModels(providerStatuses, "copilotAgent"),
     }),
     [providerStatuses],
   );
@@ -2101,14 +2102,15 @@ export default function ChatView({ threadId }) {
       ? (draftThread?.envMode ?? "local")
       : "local";
   useEffect(() => {
-    if (phase !== "running") return;
+    if (!isWorking) return;
+    setNowTick(Date.now());
     const timer = window.setInterval(() => {
       setNowTick(Date.now());
     }, 1000);
     return () => {
       window.clearInterval(timer);
     };
-  }, [phase]);
+  }, [isWorking]);
   useEffect(() => {
     if (!activeThreadId) return;
     const previous = terminalOpenByThreadRef.current[activeThreadId] ?? false;

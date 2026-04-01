@@ -7,6 +7,7 @@ import {
   type ServerProvider,
   type ClaudeModelSelection,
   type CodexModelSelection,
+  type CopilotModelSelection,
 } from "@t3tools/contracts";
 import { normalizeModelSlug, resolveSelectableModel } from "@t3tools/shared/model";
 import { getComposerProviderState } from "./components/chat/composerProviderRegistry";
@@ -39,6 +40,7 @@ type ModelSelectionByProvider = {
   gemini: GeminiModelSelection;
   claudeAgent: ClaudeModelSelection;
   opencode: OpencodeModelSelection;
+  copilotAgent: CopilotModelSelection;
 };
 
 export function buildModelSelection<P extends ProviderKind>(
@@ -66,6 +68,12 @@ export function buildModelSelection<P extends ProviderKind>(
         ...(options ? { options } : {}),
       } as ModelSelectionByProvider[P];
     case "opencode":
+      return {
+        provider,
+        model,
+        ...(options ? { options } : {}),
+      } as ModelSelectionByProvider[P];
+    case "copilotAgent":
       return {
         provider,
         model,
@@ -102,6 +110,13 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     description: "Save additional OpenCode model slugs for the picker and `/model` command.",
     placeholder: "your-opencode-model-slug",
     example: "opencode/big-pickle",
+  },
+  copilotAgent: {
+    provider: "copilotAgent",
+    title: "Copilot",
+    description: "Save additional Copilot model slugs for the picker and `/model` command.",
+    placeholder: "your-copilot-model-slug",
+    example: "claude-sonnet-4.7",
   },
 };
 
@@ -234,6 +249,12 @@ export function getCustomModelOptionsByProvider(
       providers,
       "opencode",
       selectedProvider === "opencode" ? selectedModel : undefined,
+    ),
+    copilotAgent: getAppModelOptions(
+      settings,
+      providers,
+      "copilotAgent",
+      selectedProvider === "copilotAgent" ? selectedModel : undefined,
     ),
   };
 }

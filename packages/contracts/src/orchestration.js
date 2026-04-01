@@ -2,6 +2,7 @@ import { Option, Schema, SchemaIssue, Struct } from "effect";
 import {
   ClaudeModelOptions,
   CodexModelOptions,
+  CopilotModelOptions,
   GeminiModelOptions,
   OpencodeModelOptions,
 } from "./model";
@@ -33,11 +34,13 @@ export const PROVIDER_CODEX = "codex";
 export const PROVIDER_GEMINI = "gemini";
 export const PROVIDER_CLAUDE_AGENT = "claudeAgent";
 export const PROVIDER_OPENCODE = "opencode";
+export const PROVIDER_COPILOT = "copilotAgent";
 const PROVIDER_KIND_VALUES = [
   PROVIDER_CODEX,
   PROVIDER_GEMINI,
   PROVIDER_CLAUDE_AGENT,
   PROVIDER_OPENCODE,
+  PROVIDER_COPILOT,
 ];
 export const ProviderKind = Schema.Literals(PROVIDER_KIND_VALUES);
 export const PROVIDER_KIND_SET = new Set(PROVIDER_KIND_VALUES);
@@ -74,11 +77,15 @@ export const OpencodeProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   apiKey: Schema.optional(TrimmedNonEmptyString),
 });
+export const CopilotProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
 export const ProviderStartOptions = Schema.Struct({
   codex: Schema.optional(CodexProviderStartOptions),
   gemini: Schema.optional(GeminiProviderStartOptions),
   claudeAgent: Schema.optional(ClaudeProviderStartOptions),
   opencode: Schema.optional(OpencodeProviderStartOptions),
+  copilotAgent: Schema.optional(CopilotProviderStartOptions),
 });
 export const CodexModelSelection = Schema.Struct({
   provider: Schema.Literal("codex"),
@@ -100,11 +107,17 @@ export const OpencodeModelSelection = Schema.Struct({
   model: TrimmedNonEmptyString,
   options: Schema.optionalKey(OpencodeModelOptions),
 });
+export const CopilotModelSelection = Schema.Struct({
+  provider: Schema.Literal("copilotAgent"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optionalKey(CopilotModelOptions),
+});
 export const ModelSelection = Schema.Union([
   CodexModelSelection,
   GeminiModelSelection,
   ClaudeModelSelection,
   OpencodeModelSelection,
+  CopilotModelSelection,
 ]);
 export const RuntimeMode = Schema.Literals(["approval-required", "full-access"]);
 export const DEFAULT_RUNTIME_MODE = "full-access";

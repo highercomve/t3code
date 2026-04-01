@@ -65,6 +65,7 @@ function createBaseServerConfig(): ServerConfig {
         gemini: { enabled: true, binaryPath: "", homePath: "", customModels: [] },
         claudeAgent: { enabled: true, binaryPath: "", customModels: [] },
         opencode: { enabled: true, binaryPath: "", apiKey: "", customModels: [] },
+        copilotAgent: { enabled: true, binaryPath: "", customModels: [] },
       },
     },
   };

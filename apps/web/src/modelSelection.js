@@ -34,6 +34,12 @@ export function buildModelSelection(provider, model, options) {
         model,
         ...(options ? { options } : {}),
       };
+    case "copilotAgent":
+      return {
+        provider,
+        model,
+        ...(options ? { options } : {}),
+      };
   }
 }
 const PROVIDER_CUSTOM_MODEL_CONFIG = {
@@ -64,6 +70,13 @@ const PROVIDER_CUSTOM_MODEL_CONFIG = {
     description: "Save additional OpenCode model slugs for the picker and `/model` command.",
     placeholder: "your-opencode-model-slug",
     example: "opencode/big-pickle",
+  },
+  copilotAgent: {
+    provider: "copilotAgent",
+    title: "Copilot",
+    description: "Save additional Copilot model slugs for the picker and `/model` command.",
+    placeholder: "your-copilot-model-slug",
+    example: "claude-sonnet-4.7",
   },
 };
 export const MODEL_PROVIDER_SETTINGS = Object.values(PROVIDER_CUSTOM_MODEL_CONFIG);
@@ -168,6 +181,12 @@ export function getCustomModelOptionsByProvider(
       providers,
       "opencode",
       selectedProvider === "opencode" ? selectedModel : undefined,
+    ),
+    copilotAgent: getAppModelOptions(
+      settings,
+      providers,
+      "copilotAgent",
+      selectedProvider === "copilotAgent" ? selectedModel : undefined,
     ),
   };
 }

@@ -1,0 +1,285 @@
+import type { OpencodeSettings, ServerProvider, ServerProviderModel } from "@t3tools/contracts";
+import { Effect, Equal, FileSystem, Layer, Option, Path, Result, Stream } from "effect";
+import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
+
+import {
+  buildServerProvider,
+  DEFAULT_TIMEOUT_MS,
+  detailFromResult,
+  isCommandMissingCause,
+  parseGenericCliVersion,
+  providerModelsFromSettings,
+  spawnAndCollect,
+} from "../providerSnapshot";
+import { makeManagedServerProvider } from "../makeManagedServerProvider";
+import { OpencodeProvider } from "../Services/OpencodeProvider";
+import { ServerSettingsError, ServerSettingsService } from "../../serverSettings";
+
+const PROVIDER = "opencode" as const;
+
+const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
+  { slug: "opencode/big-pickle", name: "Big Pickle", isCustom: false, capabilities: null },
+  { slug: "opencode/glm-5", name: "GLM-5", isCustom: false, capabilities: null },
+  { slug: "opencode/kimi-k2.5", name: "Kimi K2.5", isCustom: false, capabilities: null },
+  {
+    slug: "opencode/mimo-v2-omni-free",
+    name: "MiMo V2 Omni Free",
+    isCustom: false,
+    capabilities: null,
+  },
+  {
+    slug: "opencode/mimo-v2-pro-free",
+    name: "MiMo V2 Pro Free",
+    isCustom: false,
+    capabilities: null,
+  },
+  { slug: "opencode/minimax-m2.5", name: "MiniMax M2.5", isCustom: false, capabilities: null },
+  {
+    slug: "opencode/minimax-m2.5-free",
+    name: "MiniMax M2.5 Free",
+    isCustom: false,
+    capabilities: null,
+  },
+  {
+    slug: "opencode/nemotron-3-super-free",
+    name: "Nemotron 3 Super Free",
+    isCustom: false,
+    capabilities: null,
+  },
+  {
+    slug: "opencode/qwen3.6-plus-free",
+    name: "Qwen 3.6 Plus Free",
+    isCustom: false,
+    capabilities: null,
+  },
+  { slug: "opencode-go/glm-5", name: "GLM-5 (Go)", isCustom: false, capabilities: null },
+  { slug: "opencode-go/kimi-k2.5", name: "Kimi K2.5 (Go)", isCustom: false, capabilities: null },
+  {
+    slug: "opencode-go/minimax-m2.5",
+    name: "MiniMax M2.5 (Go)",
+    isCustom: false,
+    capabilities: null,
+  },
+  {
+    slug: "opencode-go/minimax-m2.7",
+    name: "MiniMax M2.7 (Go)",
+    isCustom: false,
+    capabilities: null,
+  },
+  {
+    slug: "ollama/glm-5:cloud",
+    name: "GLM-5 (Ollama Cloud)",
+    isCustom: false,
+    capabilities: null,
+  },
+  {
+    slug: "ollama/kimi-k2.5:cloud",
+    name: "Kimi K2.5 (Ollama Cloud)",
+    isCustom: false,
+    capabilities: null,
+  },
+  {
+    slug: "ollama/qwen3-coder-next:cloud",
+    name: "Qwen3 Coder Next (Ollama Cloud)",
+    isCustom: false,
+    capabilities: null,
+  },
+];
+
+/**
+ * Count the number of credential lines in the output of `opencode auth list`.
+ * Each credential is marked by a `●` character.
+ */
+function countCredentials(output: string): number {
+  const lines = output.split("\n");
+  return lines.filter((line) => line.includes("\u25CF")).length;
+}
+
+const runOpencodeCommand = (args: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const settingsService = yield* ServerSettingsService;
+    const opencodeSettings = yield* settingsService.getSettings.pipe(
+      Effect.map((settings) => settings.providers.opencode),
+    );
+    const command = ChildProcess.make(opencodeSettings.binaryPath, [...args], {
+      shell: process.platform === "win32",
+      env: process.env,
+    });
+    return yield* spawnAndCollect(opencodeSettings.binaryPath, command);
+  });
+
+export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatus")(
+  function* (): Effect.fn.Return<
+    ServerProvider,
+    ServerSettingsError,
+    | ChildProcessSpawner.ChildProcessSpawner
+    | FileSystem.FileSystem
+    | Path.Path
+    | ServerSettingsService
+  > {
+    const opencodeSettings = yield* Effect.service(ServerSettingsService).pipe(
+      Effect.flatMap((service) => service.getSettings),
+      Effect.map((settings) => settings.providers.opencode),
+    );
+    const checkedAt = new Date().toISOString();
+    const models = providerModelsFromSettings(
+      BUILT_IN_MODELS,
+      PROVIDER,
+      opencodeSettings.customModels,
+    );
+
+    if (!opencodeSettings.enabled) {
+      return buildServerProvider({
+        provider: PROVIDER,
+        enabled: false,
+        checkedAt,
+        models,
+        probe: {
+          installed: false,
+          version: null,
+          status: "warning",
+          auth: { status: "unknown" },
+          message: "OpenCode is disabled in T3 Code settings.",
+        },
+      });
+    }
+
+    // ── Version check ────────────────────────────────────────────────
+
+    const versionProbe = yield* runOpencodeCommand(["--version"]).pipe(
+      Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
+      Effect.result,
+    );
+
+    if (Result.isFailure(versionProbe)) {
+      const error = versionProbe.failure;
+      return buildServerProvider({
+        provider: PROVIDER,
+        enabled: opencodeSettings.enabled,
+        checkedAt,
+        models,
+        probe: {
+          installed: !isCommandMissingCause(error),
+          version: null,
+          status: "error",
+          auth: { status: "unknown" },
+          message: isCommandMissingCause(error)
+            ? "OpenCode CLI (`opencode`) is not installed or not on PATH."
+            : `Failed to execute OpenCode CLI health check: ${error instanceof Error ? error.message : String(error)}.`,
+        },
+      });
+    }
+
+    if (Option.isNone(versionProbe.success)) {
+      return buildServerProvider({
+        provider: PROVIDER,
+        enabled: opencodeSettings.enabled,
+        checkedAt,
+        models,
+        probe: {
+          installed: true,
+          version: null,
+          status: "error",
+          auth: { status: "unknown" },
+          message: "OpenCode CLI is installed but failed to run. Timed out while running command.",
+        },
+      });
+    }
+
+    const version = versionProbe.success.value;
+    const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
+    if (version.code !== 0) {
+      const detail = detailFromResult(version);
+      return buildServerProvider({
+        provider: PROVIDER,
+        enabled: opencodeSettings.enabled,
+        checkedAt,
+        models,
+        probe: {
+          installed: true,
+          version: parsedVersion,
+          status: "error",
+          auth: { status: "unknown" },
+          message: detail
+            ? `OpenCode CLI is installed but failed to run. ${detail}`
+            : "OpenCode CLI is installed but failed to run.",
+        },
+      });
+    }
+
+    // ── Auth check ───────────────────────────────────────────────────
+
+    const authProbe = yield* runOpencodeCommand(["auth", "list"]).pipe(
+      Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
+      Effect.result,
+    );
+
+    let authAuthenticated = false;
+    let authLabel: string | undefined;
+
+    if (Result.isSuccess(authProbe) && Option.isSome(authProbe.success)) {
+      const authResult = authProbe.success.value;
+      if (authResult.code === 0) {
+        const credentialCount = countCredentials(authResult.stdout);
+        if (credentialCount > 0) {
+          authAuthenticated = true;
+          authLabel = `${credentialCount} credential${credentialCount === 1 ? "" : "s"} configured`;
+        }
+      }
+    }
+
+    // Fallback: check if an API key is configured in settings
+    if (!authAuthenticated && opencodeSettings.apiKey.trim().length > 0) {
+      authAuthenticated = true;
+      authLabel = "API Key";
+    }
+
+    return buildServerProvider({
+      provider: PROVIDER,
+      enabled: opencodeSettings.enabled,
+      checkedAt,
+      models,
+      probe: {
+        installed: true,
+        version: parsedVersion,
+        status: authAuthenticated ? "ready" : "error",
+        auth: {
+          status: authAuthenticated ? "authenticated" : "unauthenticated",
+          ...(authLabel ? { label: authLabel } : {}),
+        },
+        message: authAuthenticated
+          ? "OpenCode CLI is installed and ready."
+          : "OpenCode CLI is installed but not authenticated. Run `opencode auth login` or set an API key.",
+      },
+    });
+  },
+);
+
+export const OpencodeProviderLive = Layer.effect(
+  OpencodeProvider,
+  Effect.gen(function* () {
+    const serverSettings = yield* ServerSettingsService;
+    const fileSystem = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+
+    const checkProvider = checkOpencodeProviderStatus().pipe(
+      Effect.provideService(ServerSettingsService, serverSettings),
+      Effect.provideService(FileSystem.FileSystem, fileSystem),
+      Effect.provideService(Path.Path, path),
+      Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+    );
+
+    return yield* makeManagedServerProvider<OpencodeSettings>({
+      getSettings: serverSettings.getSettings.pipe(
+        Effect.map((settings) => settings.providers.opencode),
+        Effect.orDie,
+      ),
+      streamSettings: serverSettings.streamChanges.pipe(
+        Stream.map((settings) => settings.providers.opencode),
+      ),
+      haveSettingsChanged: (previous, next) => !Equal.equals(previous, next),
+      checkProvider,
+    });
+  }),
+);

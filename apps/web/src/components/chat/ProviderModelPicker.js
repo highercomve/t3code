@@ -17,7 +17,7 @@ import {
   MenuSubTrigger,
   MenuTrigger,
 } from "../ui/menu";
-import { ClaudeAI, CursorIcon, Gemini, OpenAI, OpenCodeIcon } from "../Icons";
+import { ClaudeAI, CopilotIcon, CursorIcon, Gemini, OpenAI, OpenCodeIcon } from "../Icons";
 import { cn } from "~/lib/utils";
 import { getProviderSnapshot } from "../../providerModels";
 function isAvailableProviderOption(option) {
@@ -28,6 +28,7 @@ const PROVIDER_ICON_BY_PROVIDER = {
   gemini: Gemini,
   claudeAgent: ClaudeAI,
   opencode: OpenCodeIcon,
+  copilotAgent: CopilotIcon,
   cursor: CursorIcon,
 };
 export const AVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter(isAvailableProviderOption);

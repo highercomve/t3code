@@ -122,6 +122,12 @@ const PROVIDER_SETTINGS: readonly InstallProviderSettings[] = [
     binaryPlaceholder: "OpenCode binary path",
     binaryDescription: "Path to the OpenCode binary",
   },
+  {
+    provider: "copilotAgent",
+    title: "Copilot",
+    binaryPlaceholder: "Copilot binary path",
+    binaryDescription: "Path to the Copilot binary",
+  },
 ] as const;
 
 const PROVIDER_STATUS_STYLES = {
@@ -553,6 +559,11 @@ export function GeneralSettingsPanel() {
         DEFAULT_UNIFIED_SETTINGS.providers.opencode.binaryPath ||
       settings.providers.opencode.customModels.length > 0,
     ),
+    copilotAgent: Boolean(
+      settings.providers.copilotAgent.binaryPath !==
+        DEFAULT_UNIFIED_SETTINGS.providers.copilotAgent.binaryPath ||
+      settings.providers.copilotAgent.customModels.length > 0,
+    ),
   });
   const [customModelInputByProvider, setCustomModelInputByProvider] = useState<
     Record<ProviderKind, string>
@@ -561,6 +572,7 @@ export function GeneralSettingsPanel() {
     claudeAgent: "",
     gemini: "",
     opencode: "",
+    copilotAgent: "",
   });
   const [customModelErrorByProvider, setCustomModelErrorByProvider] = useState<
     Partial<Record<ProviderKind, string | null>>

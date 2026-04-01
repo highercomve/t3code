@@ -2,6 +2,7 @@ import { Option, Schema, SchemaIssue, Struct } from "effect";
 import {
   ClaudeModelOptions,
   CodexModelOptions,
+  CopilotModelOptions,
   GeminiModelOptions,
   OpencodeModelOptions,
 } from "./model";
@@ -36,12 +37,14 @@ export const PROVIDER_CODEX = "codex" as const;
 export const PROVIDER_GEMINI = "gemini" as const;
 export const PROVIDER_CLAUDE_AGENT = "claudeAgent" as const;
 export const PROVIDER_OPENCODE = "opencode" as const;
+export const PROVIDER_COPILOT = "copilotAgent" as const;
 
 const PROVIDER_KIND_VALUES = [
   PROVIDER_CODEX,
   PROVIDER_GEMINI,
   PROVIDER_CLAUDE_AGENT,
   PROVIDER_OPENCODE,
+  PROVIDER_COPILOT,
 ] as const;
 export const ProviderKind = Schema.Literals(PROVIDER_KIND_VALUES);
 export type ProviderKind = typeof ProviderKind.Type;
@@ -90,11 +93,16 @@ export const OpencodeProviderStartOptions = Schema.Struct({
   apiKey: Schema.optional(TrimmedNonEmptyString),
 });
 
+export const CopilotProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+});
+
 export const ProviderStartOptions = Schema.Struct({
   codex: Schema.optional(CodexProviderStartOptions),
   gemini: Schema.optional(GeminiProviderStartOptions),
   claudeAgent: Schema.optional(ClaudeProviderStartOptions),
   opencode: Schema.optional(OpencodeProviderStartOptions),
+  copilotAgent: Schema.optional(CopilotProviderStartOptions),
 });
 export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 
@@ -126,11 +134,19 @@ export const OpencodeModelSelection = Schema.Struct({
 });
 export type OpencodeModelSelection = typeof OpencodeModelSelection.Type;
 
+export const CopilotModelSelection = Schema.Struct({
+  provider: Schema.Literal("copilotAgent"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optionalKey(CopilotModelOptions),
+});
+export type CopilotModelSelection = typeof CopilotModelSelection.Type;
+
 export const ModelSelection = Schema.Union([
   CodexModelSelection,
   GeminiModelSelection,
   ClaudeModelSelection,
   OpencodeModelSelection,
+  CopilotModelSelection,
 ]);
 export type ModelSelection = typeof ModelSelection.Type;
 

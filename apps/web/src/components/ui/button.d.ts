@@ -5,8 +5,8 @@ declare const buttonVariants: (
   props?:
     | ({
         size?:
-          | "icon"
           | "default"
+          | "icon"
           | "icon-lg"
           | "icon-sm"
           | "icon-xl"

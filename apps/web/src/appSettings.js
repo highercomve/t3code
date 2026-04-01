@@ -19,6 +19,7 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER = {
   gemini: new Set(getModelOptions("gemini").map((option) => option.slug)),
   claudeAgent: new Set(getModelOptions("claudeAgent").map((option) => option.slug)),
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
+  copilotAgent: new Set(getModelOptions("copilotAgent").map((option) => option.slug)),
 };
 const withDefaults = (fallback) => (schema) =>
   schema.pipe(
@@ -29,6 +30,7 @@ export const AppSettingsSchema = Schema.Struct({
   claudeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   codexBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   codexHomePath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  copilotBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   defaultThreadEnvMode: EnvMode.pipe(withDefaults(() => "local")),
   confirmThreadDelete: Schema.Boolean.pipe(withDefaults(() => true)),
   diffWordWrap: Schema.Boolean.pipe(withDefaults(() => false)),
@@ -38,6 +40,7 @@ export const AppSettingsSchema = Schema.Struct({
   customClaudeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customGeminiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customOpencodeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customCopilotModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   geminiApiKey: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
 });
@@ -79,6 +82,15 @@ const PROVIDER_CUSTOM_MODEL_CONFIG = {
     placeholder: "provider/model-name",
     example: "anthropic/claude-sonnet-4-6",
   },
+  copilotAgent: {
+    provider: "copilotAgent",
+    settingsKey: "customCopilotModels",
+    defaultSettingsKey: "customCopilotModels",
+    title: "Copilot",
+    description: "Save additional Copilot model slugs for the picker and `/model` command.",
+    placeholder: "your-copilot-model-slug",
+    example: "claude-sonnet-4.7",
+  },
 };
 export const MODEL_PROVIDER_SETTINGS = Object.values(PROVIDER_CUSTOM_MODEL_CONFIG);
 export function normalizeCustomModelSlugs(models, provider = "codex") {
@@ -110,6 +122,7 @@ function normalizeAppSettings(settings) {
     customClaudeModels: normalizeCustomModelSlugs(settings.customClaudeModels, "claudeAgent"),
     customGeminiModels: normalizeCustomModelSlugs(settings.customGeminiModels, "gemini"),
     customOpencodeModels: normalizeCustomModelSlugs(settings.customOpencodeModels, "opencode"),
+    customCopilotModels: normalizeCustomModelSlugs(settings.customCopilotModels, "copilotAgent"),
   };
 }
 export function getCustomModelsForProvider(settings, provider) {
@@ -129,6 +142,7 @@ export function getCustomModelsByProvider(settings) {
     gemini: getCustomModelsForProvider(settings, "gemini"),
     claudeAgent: getCustomModelsForProvider(settings, "claudeAgent"),
     opencode: getCustomModelsForProvider(settings, "opencode"),
+    copilotAgent: getCustomModelsForProvider(settings, "copilotAgent"),
   };
 }
 export function getAppModelOptions(provider, customModels, selectedModel, dynamicModels) {
@@ -209,6 +223,12 @@ export function getCustomModelOptionsByProvider(settings, dynamicModelsByProvide
       undefined,
       dynamicModelsByProvider?.opencode,
     ),
+    copilotAgent: getAppModelOptions(
+      "copilotAgent",
+      customModelsByProvider.copilotAgent,
+      undefined,
+      dynamicModelsByProvider?.copilotAgent,
+    ),
   };
 }
 export function getProviderStartOptions(settings) {
@@ -225,6 +245,13 @@ export function getProviderStartOptions(settings) {
       ? {
           claudeAgent: {
             binaryPath: settings.claudeBinaryPath,
+          },
+        }
+      : {}),
+    ...(settings.copilotBinaryPath
+      ? {
+          copilotAgent: {
+            binaryPath: settings.copilotBinaryPath,
           },
         }
       : {}),

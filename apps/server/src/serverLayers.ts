@@ -21,6 +21,7 @@ import { makeClaudeAdapterLive } from "./provider/Layers/ClaudeAdapter";
 import { makeCodexAdapterLive } from "./provider/Layers/CodexAdapter";
 import { GeminiAdapterLive } from "./provider/Layers/GeminiAdapter";
 import { OpencodeAdapterLive } from "./provider/Layers/OpencodeAdapter";
+import { makeCopilotAdapterLive } from "./provider/Layers/CopilotAdapter";
 import { ProviderAdapterRegistryLive } from "./provider/Layers/ProviderAdapterRegistry";
 import { makeProviderServiceLive } from "./provider/Layers/ProviderService";
 import { ProviderSessionDirectoryLive } from "./provider/Layers/ProviderSessionDirectory";
@@ -85,6 +86,7 @@ export function makeServerProviderLayer(): Layer.Layer<
       Layer.provide(GeminiAdapterLive),
       Layer.provide(claudeAdapterLayer),
       Layer.provide(OpencodeAdapterLive),
+      Layer.provide(makeCopilotAdapterLive()),
       Layer.provideMerge(providerSessionDirectoryLayer),
     );
     return makeProviderServiceLive(

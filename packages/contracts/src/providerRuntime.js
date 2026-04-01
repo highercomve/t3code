@@ -30,6 +30,8 @@ const RuntimeEventRawSource = Schema.Literals([
   "claudeCode.acp.request",
   "opencode.acp.notification",
   "opencode.acp.request",
+  "copilot.acp.notification",
+  "copilot.acp.request",
 ]);
 export const RuntimeEventRaw = Schema.Struct({
   source: RuntimeEventRawSource,

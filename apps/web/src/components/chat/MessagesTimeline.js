@@ -873,20 +873,18 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props) {
         _jsxs("div", {
           className: "mt-1 flex flex-wrap gap-1 pl-6",
           children: [
-            workEntry.changedFiles
-              ?.slice(0, 4)
-              .map((filePath) =>
-                _jsx(
-                  "span",
-                  {
-                    className:
-                      "rounded-md border border-border/55 bg-background/75 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/75",
-                    title: filePath,
-                    children: filePath,
-                  },
-                  `${workEntry.id}:${filePath}`,
-                ),
+            workEntry.changedFiles?.slice(0, 4).map((filePath) =>
+              _jsx(
+                "span",
+                {
+                  className:
+                    "rounded-md border border-border/55 bg-background/75 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/75",
+                  title: filePath,
+                  children: filePath,
+                },
+                `${workEntry.id}:${filePath}`,
               ),
+            ),
             (workEntry.changedFiles?.length ?? 0) > 4 &&
               _jsxs("span", {
                 className: "px-1 text-[10px] text-muted-foreground/55",

@@ -531,6 +531,9 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest()))(
                 if (joined === "login status") {
                   return { stdout: "Logged in\n", stderr: "", code: 0 };
                 }
+                if (joined === "auth list") {
+                  return { stdout: "", stderr: "", code: 1 };
+                }
                 throw new Error(`Unexpected args: ${joined}`);
               }),
             ),

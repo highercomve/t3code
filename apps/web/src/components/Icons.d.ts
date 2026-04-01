@@ -9,3 +9,4 @@ export declare const ClaudeAI: Icon;
 export declare const Gemini: Icon;
 export declare const AntigravityIcon: Icon;
 export declare const OpenCodeIcon: Icon;
+export declare const CopilotIcon: Icon;

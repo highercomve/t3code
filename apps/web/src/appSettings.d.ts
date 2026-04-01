@@ -8,7 +8,8 @@ type CustomModelSettingsKey =
   | "customCodexModels"
   | "customClaudeModels"
   | "customGeminiModels"
-  | "customOpencodeModels";
+  | "customOpencodeModels"
+  | "customCopilotModels";
 export type ProviderCustomModelConfig = {
   provider: ProviderKind;
   settingsKey: CustomModelSettingsKey;
@@ -26,6 +27,9 @@ export declare const AppSettingsSchema: Schema.Struct<{
     Schema.withConstructorDefault<Schema.String>
   >;
   readonly codexHomePath: Schema.withDecodingDefault<Schema.withConstructorDefault<Schema.String>>;
+  readonly copilotBinaryPath: Schema.withDecodingDefault<
+    Schema.withConstructorDefault<Schema.String>
+  >;
   readonly defaultThreadEnvMode: Schema.withDecodingDefault<
     Schema.withConstructorDefault<Schema.Literals<readonly ["local", "worktree"]>>
   >;
@@ -49,6 +53,9 @@ export declare const AppSettingsSchema: Schema.Struct<{
     Schema.withConstructorDefault<Schema.$Array<Schema.String>>
   >;
   readonly customOpencodeModels: Schema.withDecodingDefault<
+    Schema.withConstructorDefault<Schema.$Array<Schema.String>>
+  >;
+  readonly customCopilotModels: Schema.withDecodingDefault<
     Schema.withConstructorDefault<Schema.$Array<Schema.String>>
   >;
   readonly geminiApiKey: Schema.withDecodingDefault<Schema.withConstructorDefault<Schema.String>>;
@@ -113,40 +120,47 @@ export declare function getCustomModelOptionsByProvider(
   }>
 >;
 export declare function getProviderStartOptions(
-  settings: Pick<AppSettings, "claudeBinaryPath" | "codexBinaryPath" | "codexHomePath">,
+  settings: Pick<
+    AppSettings,
+    "claudeBinaryPath" | "codexBinaryPath" | "codexHomePath" | "copilotBinaryPath"
+  >,
 ): ProviderStartOptions | undefined;
 export declare function useAppSettings(): {
   readonly settings: {
-    readonly enableAssistantStreaming: boolean;
+    readonly claudeBinaryPath: string;
+    readonly codexBinaryPath: string;
+    readonly codexHomePath: string;
+    readonly copilotBinaryPath: string;
     readonly defaultThreadEnvMode: "local" | "worktree";
-    readonly timestampFormat: "locale" | "12-hour" | "24-hour";
     readonly confirmThreadDelete: boolean;
     readonly diffWordWrap: boolean;
-    readonly codexHomePath: string;
-    readonly codexBinaryPath: string;
+    readonly enableAssistantStreaming: boolean;
+    readonly timestampFormat: "locale" | "12-hour" | "24-hour";
     readonly customCodexModels: readonly string[];
-    readonly claudeBinaryPath: string;
     readonly customClaudeModels: readonly string[];
     readonly customGeminiModels: readonly string[];
     readonly customOpencodeModels: readonly string[];
+    readonly customCopilotModels: readonly string[];
     readonly geminiApiKey: string;
     readonly textGenerationModel?: string | undefined;
   };
   readonly updateSettings: (patch: Partial<AppSettings>) => void;
   readonly resetSettings: () => void;
   readonly defaults: {
-    readonly enableAssistantStreaming: boolean;
+    readonly claudeBinaryPath: string;
+    readonly codexBinaryPath: string;
+    readonly codexHomePath: string;
+    readonly copilotBinaryPath: string;
     readonly defaultThreadEnvMode: "local" | "worktree";
-    readonly timestampFormat: "locale" | "12-hour" | "24-hour";
     readonly confirmThreadDelete: boolean;
     readonly diffWordWrap: boolean;
-    readonly codexHomePath: string;
-    readonly codexBinaryPath: string;
+    readonly enableAssistantStreaming: boolean;
+    readonly timestampFormat: "locale" | "12-hour" | "24-hour";
     readonly customCodexModels: readonly string[];
-    readonly claudeBinaryPath: string;
     readonly customClaudeModels: readonly string[];
     readonly customGeminiModels: readonly string[];
     readonly customOpencodeModels: readonly string[];
+    readonly customCopilotModels: readonly string[];
     readonly geminiApiKey: string;
     readonly textGenerationModel?: string | undefined;
   };

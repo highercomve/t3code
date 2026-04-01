@@ -103,6 +103,12 @@ const PROVIDER_SETTINGS = [
     binaryPlaceholder: "OpenCode binary path",
     binaryDescription: "Path to the OpenCode binary",
   },
+  {
+    provider: "copilotAgent",
+    title: "Copilot",
+    binaryPlaceholder: "Copilot binary path",
+    binaryDescription: "Path to the Copilot binary",
+  },
 ];
 const PROVIDER_STATUS_STYLES = {
   disabled: {
@@ -507,12 +513,18 @@ export function GeneralSettingsPanel() {
         DEFAULT_UNIFIED_SETTINGS.providers.opencode.binaryPath ||
       settings.providers.opencode.customModels.length > 0,
     ),
+    copilotAgent: Boolean(
+      settings.providers.copilotAgent.binaryPath !==
+        DEFAULT_UNIFIED_SETTINGS.providers.copilotAgent.binaryPath ||
+      settings.providers.copilotAgent.customModels.length > 0,
+    ),
   });
   const [customModelInputByProvider, setCustomModelInputByProvider] = useState({
     codex: "",
     claudeAgent: "",
     gemini: "",
     opencode: "",
+    copilotAgent: "",
   });
   const [customModelErrorByProvider, setCustomModelErrorByProvider] = useState({});
   const [isRefreshingProviders, setIsRefreshingProviders] = useState(false);

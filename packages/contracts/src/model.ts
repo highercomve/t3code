@@ -32,11 +32,17 @@ export const OpencodeModelOptions = Schema.Struct({
 });
 export type OpencodeModelOptions = typeof OpencodeModelOptions.Type;
 
+export const CopilotModelOptions = Schema.Struct({
+  reasoningEffort: Schema.optional(Schema.Literals(CODEX_REASONING_EFFORT_OPTIONS)),
+});
+export type CopilotModelOptions = typeof CopilotModelOptions.Type;
+
 export const ProviderModelOptions = Schema.Struct({
   codex: Schema.optional(CodexModelOptions),
   gemini: Schema.optional(GeminiModelOptions),
   claudeAgent: Schema.optional(ClaudeModelOptions),
   opencode: Schema.optional(OpencodeModelOptions),
+  copilotAgent: Schema.optional(CopilotModelOptions),
 });
 export type ProviderModelOptions = typeof ProviderModelOptions.Type;
 
@@ -98,6 +104,27 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     { slug: "ollama/kimi-k2.5:cloud", name: "Kimi K2.5 (Ollama Cloud)" },
     { slug: "ollama/qwen3-coder-next:cloud", name: "Qwen3 Coder Next (Ollama Cloud)" },
   ],
+  copilotAgent: [
+    { slug: "claude-sonnet-4.6", name: "Claude Sonnet 4.6" },
+    { slug: "claude-sonnet-4.5", name: "Claude Sonnet 4.5" },
+    { slug: "claude-haiku-4.5", name: "Claude Haiku 4.5" },
+    { slug: "claude-opus-4.6", name: "Claude Opus 4.6" },
+    { slug: "claude-opus-4.6-fast", name: "Claude Opus 4.6 Fast" },
+    { slug: "claude-opus-4.5", name: "Claude Opus 4.5" },
+    { slug: "claude-sonnet-4", name: "Claude Sonnet 4" },
+    { slug: "gemini-3-pro-preview", name: "Gemini 3 Pro Preview" },
+    { slug: "gpt-5.4", name: "GPT-5.4" },
+    { slug: "gpt-5.3-codex", name: "GPT-5.3 Codex" },
+    { slug: "gpt-5.2-codex", name: "GPT-5.2 Codex" },
+    { slug: "gpt-5.2", name: "GPT-5.2" },
+    { slug: "gpt-5.1-codex-max", name: "GPT-5.1 Codex Max" },
+    { slug: "gpt-5.1-codex", name: "GPT-5.1 Codex" },
+    { slug: "gpt-5.1", name: "GPT-5.1" },
+    { slug: "gpt-5.4-mini", name: "GPT-5.4 Mini" },
+    { slug: "gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini" },
+    { slug: "gpt-5-mini", name: "GPT-5 Mini" },
+    { slug: "gpt-4.1", name: "GPT-4.1" },
+  ],
 } as const satisfies Record<ProviderKind, readonly ModelOption[]>;
 export type ModelOptionsByProvider = typeof MODEL_OPTIONS_BY_PROVIDER;
 
@@ -118,6 +145,7 @@ export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderKind, ModelSlug> = {
   gemini: "gemini-3.1-pro-preview",
   claudeAgent: "claude-sonnet-4-6",
   opencode: "opencode/big-pickle",
+  copilotAgent: "claude-sonnet-4.6",
 } as const satisfies Record<ProviderKind, ModelSlug>;
 
 export const MODEL_OPTIONS = MODEL_OPTIONS_BY_PROVIDER.codex;
@@ -129,6 +157,7 @@ export const DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER: Record<ProviderKind,
   gemini: "gemini-2.5-flash",
   claudeAgent: "claude-haiku-4-5",
   opencode: "opencode/big-pickle",
+  copilotAgent: "claude-haiku-4.5",
 };
 
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL =
@@ -180,6 +209,20 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "qwen3.6-plus-free": "opencode/qwen3.6-plus-free",
     nemotron: "opencode/nemotron-3-super-free",
   },
+  copilotAgent: {
+    "claude-sonnet-4.6": "claude-sonnet-4.6",
+    "claude-sonnet-4.5": "claude-sonnet-4.5",
+    "claude-haiku-4.5": "claude-haiku-4.5",
+    "claude-opus-4.6": "claude-opus-4.6",
+    "claude-opus-4.6-fast": "claude-opus-4.6-fast",
+    opus: "claude-opus-4.6",
+    sonnet: "claude-sonnet-4.6",
+    haiku: "claude-haiku-4.5",
+    "gpt-5.4": "gpt-5.4",
+    "gpt-5.3": "gpt-5.3-codex",
+    "gpt-5.2": "gpt-5.2",
+    "gpt-5.1": "gpt-5.1",
+  },
 };
 
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
@@ -187,6 +230,7 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   gemini: "Gemini",
   claudeAgent: "Claude",
   opencode: "OpenCode",
+  copilotAgent: "Copilot",
 };
 
 export const REASONING_EFFORT_OPTIONS_BY_PROVIDER = {
@@ -194,6 +238,7 @@ export const REASONING_EFFORT_OPTIONS_BY_PROVIDER = {
   gemini: CODEX_REASONING_EFFORT_OPTIONS,
   claudeAgent: CLAUDE_CODE_EFFORT_OPTIONS,
   opencode: CODEX_REASONING_EFFORT_OPTIONS,
+  copilotAgent: CODEX_REASONING_EFFORT_OPTIONS,
 } as const satisfies Record<ProviderKind, readonly ProviderReasoningEffort[]>;
 
 export const DEFAULT_REASONING_EFFORT_BY_PROVIDER = {
@@ -201,4 +246,5 @@ export const DEFAULT_REASONING_EFFORT_BY_PROVIDER = {
   gemini: "high",
   claudeAgent: "high",
   opencode: "high",
+  copilotAgent: "high",
 } as const satisfies Record<ProviderKind, ProviderReasoningEffort>;

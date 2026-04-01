@@ -25,7 +25,8 @@ type CustomModelSettingsKey =
   | "customCodexModels"
   | "customClaudeModels"
   | "customGeminiModels"
-  | "customOpencodeModels";
+  | "customOpencodeModels"
+  | "customCopilotModels";
 export type ProviderCustomModelConfig = {
   provider: ProviderKind;
   settingsKey: CustomModelSettingsKey;
@@ -41,6 +42,7 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
   gemini: new Set(getModelOptions("gemini").map((option) => option.slug)),
   claudeAgent: new Set(getModelOptions("claudeAgent").map((option) => option.slug)),
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
+  copilotAgent: new Set(getModelOptions("copilotAgent").map((option) => option.slug)),
 };
 
 const withDefaults =
@@ -60,6 +62,7 @@ export const AppSettingsSchema = Schema.Struct({
   claudeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   codexBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   codexHomePath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
+  copilotBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   defaultThreadEnvMode: EnvMode.pipe(withDefaults(() => "local" as const satisfies EnvMode)),
   confirmThreadDelete: Schema.Boolean.pipe(withDefaults(() => true)),
   diffWordWrap: Schema.Boolean.pipe(withDefaults(() => false)),
@@ -69,6 +72,7 @@ export const AppSettingsSchema = Schema.Struct({
   customClaudeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customGeminiModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customOpencodeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
+  customCopilotModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   geminiApiKey: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
 });
@@ -117,6 +121,15 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     placeholder: "provider/model-name",
     example: "anthropic/claude-sonnet-4-6",
   },
+  copilotAgent: {
+    provider: "copilotAgent",
+    settingsKey: "customCopilotModels",
+    defaultSettingsKey: "customCopilotModels",
+    title: "Copilot",
+    description: "Save additional Copilot model slugs for the picker and `/model` command.",
+    placeholder: "your-copilot-model-slug",
+    example: "claude-sonnet-4.7",
+  },
 };
 export const MODEL_PROVIDER_SETTINGS = Object.values(PROVIDER_CUSTOM_MODEL_CONFIG);
 
@@ -156,6 +169,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customClaudeModels: normalizeCustomModelSlugs(settings.customClaudeModels, "claudeAgent"),
     customGeminiModels: normalizeCustomModelSlugs(settings.customGeminiModels, "gemini"),
     customOpencodeModels: normalizeCustomModelSlugs(settings.customOpencodeModels, "opencode"),
+    customCopilotModels: normalizeCustomModelSlugs(settings.customCopilotModels, "copilotAgent"),
   };
 }
 
@@ -190,6 +204,7 @@ export function getCustomModelsByProvider(
     gemini: getCustomModelsForProvider(settings, "gemini"),
     claudeAgent: getCustomModelsForProvider(settings, "claudeAgent"),
     opencode: getCustomModelsForProvider(settings, "opencode"),
+    copilotAgent: getCustomModelsForProvider(settings, "copilotAgent"),
   };
 }
 
@@ -291,11 +306,20 @@ export function getCustomModelOptionsByProvider(
       undefined,
       dynamicModelsByProvider?.opencode,
     ),
+    copilotAgent: getAppModelOptions(
+      "copilotAgent",
+      customModelsByProvider.copilotAgent,
+      undefined,
+      dynamicModelsByProvider?.copilotAgent,
+    ),
   };
 }
 
 export function getProviderStartOptions(
-  settings: Pick<AppSettings, "claudeBinaryPath" | "codexBinaryPath" | "codexHomePath">,
+  settings: Pick<
+    AppSettings,
+    "claudeBinaryPath" | "codexBinaryPath" | "codexHomePath" | "copilotBinaryPath"
+  >,
 ): ProviderStartOptions | undefined {
   const providerOptions: ProviderStartOptions = {
     ...(settings.codexBinaryPath || settings.codexHomePath
@@ -310,6 +334,13 @@ export function getProviderStartOptions(
       ? {
           claudeAgent: {
             binaryPath: settings.claudeBinaryPath,
+          },
+        }
+      : {}),
+    ...(settings.copilotBinaryPath
+      ? {
+          copilotAgent: {
+            binaryPath: settings.copilotBinaryPath,
           },
         }
       : {}),
