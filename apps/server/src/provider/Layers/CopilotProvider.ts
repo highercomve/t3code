@@ -20,7 +20,8 @@ import {
 } from "../providerSnapshot";
 import { makeManagedServerProvider } from "../makeManagedServerProvider";
 import { CopilotProvider } from "../Services/CopilotProvider";
-import { ServerSettingsError, ServerSettingsService } from "../../serverSettings";
+import { ServerSettingsError } from "@t3tools/contracts";
+import { ServerSettingsService } from "../../serverSettings";
 
 const PROVIDER = "copilotAgent" as const;
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [

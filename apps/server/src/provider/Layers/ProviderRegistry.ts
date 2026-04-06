@@ -72,24 +72,25 @@ export const ProviderRegistryLive = Layer.effect(
       ),
     );
 
-    const syncProviders = (options?: { readonly publish?: boolean }) =>
-      Effect.gen(function* () {
-        const previousProviders = yield* Ref.get(providersRef);
-        const providers = yield* loadProviders(
-          codexProvider,
-          claudeProvider,
-          copilotProvider,
-          geminiProvider,
-          opencodeProvider,
-        );
-        yield* Ref.set(providersRef, providers);
+    const syncProviders = Effect.fn("syncProviders")(function* (options?: {
+      readonly publish?: boolean;
+    }) {
+      const previousProviders = yield* Ref.get(providersRef);
+      const providers = yield* loadProviders(
+        codexProvider,
+        claudeProvider,
+        copilotProvider,
+        geminiProvider,
+        opencodeProvider,
+      );
+      yield* Ref.set(providersRef, providers);
 
-        if (options?.publish !== false && haveProvidersChanged(previousProviders, providers)) {
-          yield* PubSub.publish(changesPubSub, providers);
-        }
+      if (options?.publish !== false && haveProvidersChanged(previousProviders, providers)) {
+        yield* PubSub.publish(changesPubSub, providers);
+      }
 
-        return providers;
-      });
+      return providers;
+    });
 
     yield* Stream.runForEach(codexProvider.streamChanges, () => syncProviders()).pipe(
       Effect.forkScoped,
@@ -107,46 +108,48 @@ export const ProviderRegistryLive = Layer.effect(
       Effect.forkScoped,
     );
 
+    const refresh = Effect.fn("refresh")(function* (provider?: ProviderKind) {
+      switch (provider) {
+        case "codex":
+          yield* codexProvider.refresh;
+          break;
+        case "claudeAgent":
+          yield* claudeProvider.refresh;
+          break;
+        case "copilotAgent":
+          yield* copilotProvider.refresh;
+          break;
+        case "gemini":
+          yield* geminiProvider.refresh;
+          break;
+        case "opencode":
+          yield* opencodeProvider.refresh;
+          break;
+        default:
+          yield* Effect.all(
+            [
+              codexProvider.refresh,
+              claudeProvider.refresh,
+              copilotProvider.refresh,
+              geminiProvider.refresh,
+              opencodeProvider.refresh,
+            ],
+            {
+              concurrency: "unbounded",
+            },
+          );
+          break;
+      }
+      return yield* syncProviders();
+    });
+
     return {
       getProviders: syncProviders({ publish: false }).pipe(
         Effect.tapError(Effect.logError),
         Effect.orElseSucceed(() => []),
       ),
       refresh: (provider?: ProviderKind) =>
-        Effect.gen(function* () {
-          switch (provider) {
-            case "codex":
-              yield* codexProvider.refresh;
-              break;
-            case "claudeAgent":
-              yield* claudeProvider.refresh;
-              break;
-            case "copilotAgent":
-              yield* copilotProvider.refresh;
-              break;
-            case "gemini":
-              yield* geminiProvider.refresh;
-              break;
-            case "opencode":
-              yield* opencodeProvider.refresh;
-              break;
-            default:
-              yield* Effect.all(
-                [
-                  codexProvider.refresh,
-                  claudeProvider.refresh,
-                  copilotProvider.refresh,
-                  geminiProvider.refresh,
-                  opencodeProvider.refresh,
-                ],
-                {
-                  concurrency: "unbounded",
-                },
-              );
-              break;
-          }
-          return yield* syncProviders();
-        }).pipe(
+        refresh(provider).pipe(
           Effect.tapError(Effect.logError),
           Effect.orElseSucceed(() => []),
         ),
