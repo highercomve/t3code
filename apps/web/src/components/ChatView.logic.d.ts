@@ -4,6 +4,7 @@ import { type ComposerImageAttachment, type DraftThreadState } from "../composer
 import { Schema } from "effect";
 import { type TerminalContextDraft } from "../lib/terminalContext";
 export declare const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "t3code:last-invoked-script-by-project";
+export declare const MAX_HIDDEN_MOUNTED_TERMINAL_THREADS = 10;
 export declare const LastInvokedScriptByProjectSchema: Schema.$Record<
   Schema.brand<Schema.Trim, "ProjectId">,
   Schema.String
@@ -14,6 +15,13 @@ export declare function buildLocalDraftThread(
   fallbackModelSelection: ModelSelection,
   error: string | null,
 ): Thread;
+export declare function reconcileMountedTerminalThreadIds(input: {
+  currentThreadIds: ReadonlyArray<ThreadId>;
+  openThreadIds: ReadonlyArray<ThreadId>;
+  activeThreadId: ThreadId | null;
+  activeThreadTerminalOpen: boolean;
+  maxHiddenThreadCount?: number;
+}): ThreadId[];
 export declare function revokeBlobPreviewUrl(previewUrl: string | undefined): void;
 export declare function revokeUserMessagePreviewUrls(message: ChatMessage): void;
 export declare function collectUserMessageBlobPreviewUrls(message: ChatMessage): string[];

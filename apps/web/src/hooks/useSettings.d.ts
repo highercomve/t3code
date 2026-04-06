@@ -10,7 +10,7 @@ export declare function useSettings<T extends UnifiedSettings = UnifiedSettings>
 /**
  * Returns an updater that routes each key to the correct backing store.
  *
- * Server keys are optimistically patched in the React Query cache, then
+ * Server keys are optimistically patched in atom-backed server state, then
  * persisted via RPC. Client keys go straight to localStorage.
  */
 export declare function useUpdateSettings(): {
@@ -25,72 +25,76 @@ export declare function buildLegacyServerSettingsMigrationPatch(
   textGenerationModelSelection?:
     | {
         provider?: "codex";
-        model?: string;
         options?: {
           reasoningEffort?: "xhigh" | "high" | "medium" | "low" | undefined;
           fastMode?: boolean | undefined;
         };
+        model?: string;
       }
     | {
         provider?: "gemini";
-        model?: string;
         options?: {
           thinkingBudget?: number | undefined;
         };
+        model?: string;
       }
     | {
         provider?: "claudeAgent";
-        model?: string;
         options?: {
-          effort?: "high" | "medium" | "low" | "max" | "ultrathink" | undefined;
           fastMode?: boolean | undefined;
           thinking?: boolean | undefined;
+          effort?: "high" | "medium" | "low" | "max" | "ultrathink" | undefined;
           contextWindow?: string | undefined;
         };
+        model?: string;
       }
     | {
         provider?: "opencode";
-        model?: string;
         options?: {
           reasoningEffort?: "xhigh" | "high" | "medium" | "low" | undefined;
         };
+        model?: string;
       }
     | {
         provider?: "copilotAgent";
-        model?: string;
         options?: {
           reasoningEffort?: "xhigh" | "high" | "medium" | "low" | undefined;
         };
+        model?: string;
       };
   providers?: {
     codex?: {
-      binaryPath?: string;
-      homePath?: string;
       enabled?: boolean;
+      homePath?: string;
       customModels?: string[];
+      binaryPath?: string;
     };
     gemini?: {
-      binaryPath?: string;
-      homePath?: string;
       enabled?: boolean;
+      homePath?: string;
       customModels?: string[];
+      binaryPath?: string;
     };
     claudeAgent?: {
-      binaryPath?: string;
       enabled?: boolean;
       customModels?: string[];
+      binaryPath?: string;
     };
     opencode?: {
+      enabled?: boolean;
+      customModels?: string[];
       binaryPath?: string;
       apiKey?: string;
-      enabled?: boolean;
-      customModels?: string[];
     };
     copilotAgent?: {
-      binaryPath?: string;
       enabled?: boolean;
       customModels?: string[];
+      binaryPath?: string;
     };
+  };
+  observability?: {
+    otlpTracesUrl?: string;
+    otlpMetricsUrl?: string;
   };
 };
 export declare function buildLegacyClientSettingsMigrationPatch(

@@ -9,3 +9,9 @@ export declare const newCommandId: () => CommandId;
 export declare const newProjectId: () => ProjectId;
 export declare const newThreadId: () => ThreadId;
 export declare const newMessageId: () => MessageId;
+export declare const resolveServerUrl: (options?: {
+  url?: string | undefined;
+  protocol?: "http" | "https" | "ws" | "wss" | undefined;
+  pathname?: string | undefined;
+  searchParams?: Record<string, string> | undefined;
+}) => string;

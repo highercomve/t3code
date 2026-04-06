@@ -1,5 +1,5 @@
 import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t3tools/contracts/settings";
-import type { Thread } from "../types";
+import type { SidebarThreadSummary, Thread } from "../types";
 export declare const THREAD_SELECTION_SAFE_SELECTOR =
   "[data-thread-item], [data-thread-selection-safe]";
 export declare const THREAD_JUMP_HINT_SHOW_DELAY_MS = 100;
@@ -28,8 +28,13 @@ export interface ThreadStatusPill {
   pulse: boolean;
 }
 type ThreadStatusInput = Pick<
-  Thread,
-  "interactionMode" | "latestTurn" | "proposedPlans" | "session"
+  SidebarThreadSummary,
+  | "hasActionableProposedPlan"
+  | "hasPendingApprovals"
+  | "hasPendingUserInput"
+  | "interactionMode"
+  | "latestTurn"
+  | "session"
 > & {
   lastVisitedAt?: string | undefined;
 };
@@ -53,6 +58,25 @@ export declare function resolveSidebarNewThreadEnvMode(input: {
   requestedEnvMode?: SidebarNewThreadEnvMode;
   defaultEnvMode: SidebarNewThreadEnvMode;
 }): SidebarNewThreadEnvMode;
+export declare function resolveSidebarNewThreadSeedContext(input: {
+  projectId: string;
+  defaultEnvMode: SidebarNewThreadEnvMode;
+  activeThread?: {
+    projectId: string;
+    branch: string | null;
+    worktreePath: string | null;
+  } | null;
+  activeDraftThread?: {
+    projectId: string;
+    branch: string | null;
+    worktreePath: string | null;
+    envMode: SidebarNewThreadEnvMode;
+  } | null;
+}): {
+  branch?: string | null;
+  worktreePath?: string | null;
+  envMode: SidebarNewThreadEnvMode;
+};
 export declare function orderItemsByPreferredIds<TItem, TId>(input: {
   items: readonly TItem[];
   preferredIds: readonly TId[];
@@ -61,9 +85,7 @@ export declare function orderItemsByPreferredIds<TItem, TId>(input: {
 export declare function getVisibleSidebarThreadIds<TThreadId>(
   renderedProjects: readonly {
     shouldShowThreadPanel?: boolean;
-    renderedThreads: readonly {
-      id: TThreadId;
-    }[];
+    renderedThreadIds: readonly TThreadId[];
   }[],
 ): TThreadId[];
 export declare function resolveAdjacentThreadId<T>(input: {
@@ -82,8 +104,6 @@ export declare function resolveThreadRowClassName(input: {
 }): string;
 export declare function resolveThreadStatusPill(input: {
   thread: ThreadStatusInput;
-  hasPendingApprovals: boolean;
-  hasPendingUserInput: boolean;
 }): ThreadStatusPill | null;
 export declare function resolveProjectStatusIndicator(
   statuses: ReadonlyArray<ThreadStatusPill | null>,

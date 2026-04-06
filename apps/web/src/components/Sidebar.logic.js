@@ -1,10 +1,6 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
-import {
-  findLatestProposedPlan,
-  hasActionableProposedPlan,
-  isLatestTurnSettled,
-} from "../session-logic";
+import { isLatestTurnSettled } from "../session-logic";
 export const THREAD_SELECTION_SAFE_SELECTOR = "[data-thread-item], [data-thread-selection-safe]";
 export const THREAD_JUMP_HINT_SHOW_DELAY_MS = 100;
 const THREAD_STATUS_PRIORITY = {
@@ -93,6 +89,25 @@ export function shouldClearThreadSelectionOnMouseDown(target) {
 export function resolveSidebarNewThreadEnvMode(input) {
   return input.requestedEnvMode ?? input.defaultEnvMode;
 }
+export function resolveSidebarNewThreadSeedContext(input) {
+  if (input.activeDraftThread?.projectId === input.projectId) {
+    return {
+      branch: input.activeDraftThread.branch,
+      worktreePath: input.activeDraftThread.worktreePath,
+      envMode: input.activeDraftThread.envMode,
+    };
+  }
+  if (input.activeThread?.projectId === input.projectId) {
+    return {
+      branch: input.activeThread.branch,
+      worktreePath: input.activeThread.worktreePath,
+      envMode: input.activeThread.worktreePath ? "worktree" : "local",
+    };
+  }
+  return {
+    envMode: input.defaultEnvMode,
+  };
+}
 export function orderItemsByPreferredIds(input) {
   const { getId, items, preferredIds } = input;
   if (preferredIds.length === 0) {
@@ -117,9 +132,7 @@ export function orderItemsByPreferredIds(input) {
 }
 export function getVisibleSidebarThreadIds(renderedProjects) {
   return renderedProjects.flatMap((renderedProject) =>
-    renderedProject.shouldShowThreadPanel === false
-      ? []
-      : renderedProject.renderedThreads.map((thread) => thread.id),
+    renderedProject.shouldShowThreadPanel === false ? [] : renderedProject.renderedThreadIds,
   );
 }
 export function resolveAdjacentThreadId(input) {
@@ -167,8 +180,8 @@ export function resolveThreadRowClassName(input) {
   return cn(baseClassName, "text-muted-foreground hover:bg-accent hover:text-foreground");
 }
 export function resolveThreadStatusPill(input) {
-  const { hasPendingApprovals, hasPendingUserInput, thread } = input;
-  if (hasPendingApprovals) {
+  const { thread } = input;
+  if (thread.hasPendingApprovals) {
     return {
       label: "Pending Approval",
       colorClass: "text-amber-600 dark:text-amber-300/90",
@@ -176,7 +189,7 @@ export function resolveThreadStatusPill(input) {
       pulse: false,
     };
   }
-  if (hasPendingUserInput) {
+  if (thread.hasPendingUserInput) {
     return {
       label: "Awaiting Input",
       colorClass: "text-indigo-600 dark:text-indigo-300/90",
@@ -201,12 +214,10 @@ export function resolveThreadStatusPill(input) {
     };
   }
   const hasPlanReadyPrompt =
-    !hasPendingUserInput &&
+    !thread.hasPendingUserInput &&
     thread.interactionMode === "plan" &&
     isLatestTurnSettled(thread.latestTurn, thread.session) &&
-    hasActionableProposedPlan(
-      findLatestProposedPlan(thread.proposedPlans, thread.latestTurn?.turnId ?? null),
-    );
+    thread.hasActionableProposedPlan;
   if (hasPlanReadyPrompt) {
     return {
       label: "Plan Ready",

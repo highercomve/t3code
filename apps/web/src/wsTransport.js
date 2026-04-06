@@ -1,230 +1,188 @@
-import { WebSocketResponse, WsResponse as WsResponseSchema } from "@t3tools/contracts";
-import { decodeUnknownJsonResult, formatSchemaError } from "@t3tools/shared/schemaJson";
-import { Result, Schema } from "effect";
-const REQUEST_TIMEOUT_MS = 60_000;
-const RECONNECT_DELAYS_MS = [500, 1_000, 2_000, 4_000, 8_000];
-const decodeWsResponse = decodeUnknownJsonResult(WsResponseSchema);
-const isWebSocketResponseEnvelope = Schema.is(WebSocketResponse);
-const isWsPushMessage = (value) => "type" in value && value.type === "push";
-function asError(value, fallback) {
-  if (value instanceof Error) {
-    return value;
+import { Cause, Duration, Effect, Exit, Layer, ManagedRuntime, Scope, Stream } from "effect";
+import { ClientTracingLive, configureClientTracing } from "./observability/clientTracing";
+import { createWsRpcProtocolLayer, makeWsRpcProtocolClient } from "./rpc/protocol";
+const DEFAULT_SUBSCRIPTION_RETRY_DELAY_MS = Duration.millis(250);
+const NOOP = () => undefined;
+function formatErrorMessage(error) {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
   }
-  return new Error(fallback);
+  return String(error);
 }
 export class WsTransport {
-  ws = null;
-  nextId = 1;
-  pending = new Map();
-  listeners = new Map();
-  latestPushByChannel = new Map();
-  outboundQueue = [];
-  reconnectAttempt = 0;
-  reconnectTimer = null;
-  disposed = false;
-  state = "connecting";
+  tracingReady;
   url;
+  disposed = false;
+  reconnectChain = Promise.resolve();
+  session;
   constructor(url) {
-    const bridgeUrl = window.desktopBridge?.getWsUrl();
-    const envUrl = import.meta.env.VITE_WS_URL;
-    this.url =
-      url ??
-      (bridgeUrl && bridgeUrl.length > 0
-        ? bridgeUrl
-        : envUrl && envUrl.length > 0
-          ? envUrl
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}:${window.location.port}`);
-    this.connect();
+    this.url = url;
+    this.tracingReady = configureClientTracing();
+    this.session = this.createSession();
   }
-  async request(method, params, options) {
-    if (typeof method !== "string" || method.length === 0) {
-      throw new Error("Request method is required");
-    }
-    const id = String(this.nextId++);
-    const body = params != null ? { ...params, _tag: method } : { _tag: method };
-    const message = { id, body };
-    const encoded = JSON.stringify(message);
-    return new Promise((resolve, reject) => {
-      const timeoutMs = options?.timeoutMs === undefined ? REQUEST_TIMEOUT_MS : options.timeoutMs;
-      const timeout =
-        timeoutMs === null
-          ? null
-          : setTimeout(() => {
-              this.pending.delete(id);
-              reject(new Error(`Request timed out: ${method}`));
-            }, timeoutMs);
-      this.pending.set(id, {
-        resolve: resolve,
-        reject,
-        timeout,
-      });
-      this.send(encoded);
-    });
-  }
-  subscribe(channel, listener, options) {
-    let channelListeners = this.listeners.get(channel);
-    if (!channelListeners) {
-      channelListeners = new Set();
-      this.listeners.set(channel, channelListeners);
-    }
-    const wrappedListener = (message) => {
-      listener(message);
-    };
-    channelListeners.add(wrappedListener);
-    if (options?.replayLatest) {
-      const latest = this.latestPushByChannel.get(channel);
-      if (latest) {
-        wrappedListener(latest);
-      }
-    }
-    return () => {
-      channelListeners?.delete(wrappedListener);
-      if (channelListeners?.size === 0) {
-        this.listeners.delete(channel);
-      }
-    };
-  }
-  getLatestPush(channel) {
-    const latest = this.latestPushByChannel.get(channel);
-    return latest ? latest : null;
-  }
-  getState() {
-    return this.state;
-  }
-  dispose() {
-    this.disposed = true;
-    this.state = "disposed";
-    if (this.reconnectTimer !== null) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    for (const pending of this.pending.values()) {
-      if (pending.timeout !== null) {
-        clearTimeout(pending.timeout);
-      }
-      pending.reject(new Error("Transport disposed"));
-    }
-    this.pending.clear();
-    this.outboundQueue.length = 0;
-    this.ws?.close();
-    this.ws = null;
-  }
-  connect() {
+  async request(execute, _options) {
     if (this.disposed) {
-      return;
+      throw new Error("Transport disposed");
     }
-    this.state = this.reconnectAttempt > 0 ? "reconnecting" : "connecting";
-    const ws = new WebSocket(this.url);
-    ws.addEventListener("open", () => {
-      this.ws = ws;
-      this.state = "open";
-      this.reconnectAttempt = 0;
-      this.flushQueue();
-    });
-    ws.addEventListener("message", (event) => {
-      this.handleMessage(event.data);
-    });
-    ws.addEventListener("close", () => {
-      if (this.ws === ws) {
-        this.ws = null;
-        this.outboundQueue.length = 0;
-        for (const [id, pending] of this.pending.entries()) {
-          if (pending.timeout !== null) {
-            clearTimeout(pending.timeout);
-          }
-          this.pending.delete(id);
-          pending.reject(new Error("WebSocket connection closed."));
-        }
-      }
-      if (this.disposed) {
-        this.state = "disposed";
-        return;
-      }
-      this.state = "closed";
-      this.scheduleReconnect();
-    });
-    ws.addEventListener("error", (event) => {
-      // Log WebSocket errors for debugging (close event will follow)
-      console.warn("WebSocket connection error", { type: event.type, url: this.url });
-    });
+    await this.tracingReady;
+    const session = this.session;
+    const client = await session.clientPromise;
+    return await session.runtime.runPromise(Effect.suspend(() => execute(client)));
   }
-  handleMessage(raw) {
-    const result = decodeWsResponse(raw);
-    if (Result.isFailure(result)) {
-      console.warn("Dropped inbound WebSocket envelope", formatSchemaError(result.failure));
-      return;
+  async requestStream(connect, listener) {
+    if (this.disposed) {
+      throw new Error("Transport disposed");
     }
-    const message = result.success;
-    if (isWsPushMessage(message)) {
-      this.latestPushByChannel.set(message.channel, message);
-      const channelListeners = this.listeners.get(message.channel);
-      if (channelListeners) {
-        for (const listener of channelListeners) {
+    await this.tracingReady;
+    const session = this.session;
+    const client = await session.clientPromise;
+    await session.runtime.runPromise(
+      Stream.runForEach(connect(client), (value) =>
+        Effect.sync(() => {
           try {
-            listener(message);
+            listener(value);
           } catch {
-            // Swallow listener errors
+            // Swallow listener errors so the stream can finish cleanly.
           }
+        }),
+      ),
+    );
+  }
+  subscribe(connect, listener, options) {
+    if (this.disposed) {
+      return () => undefined;
+    }
+    let active = true;
+    let hasReceivedValue = false;
+    const retryDelayMs = Duration.toMillis(
+      Duration.fromInputUnsafe(options?.retryDelay ?? DEFAULT_SUBSCRIPTION_RETRY_DELAY_MS),
+    );
+    let cancelCurrentStream = NOOP;
+    void (async () => {
+      for (;;) {
+        if (!active || this.disposed) {
+          return;
+        }
+        try {
+          if (hasReceivedValue) {
+            try {
+              options?.onResubscribe?.();
+            } catch {
+              // Swallow reconnect hook errors so the stream can recover.
+            }
+          }
+          const session = this.session;
+          const runningStream = this.runStreamOnSession(
+            session,
+            connect,
+            listener,
+            () => active,
+            () => {
+              hasReceivedValue = true;
+            },
+          );
+          cancelCurrentStream = runningStream.cancel;
+          await runningStream.completed;
+          cancelCurrentStream = NOOP;
+        } catch (error) {
+          cancelCurrentStream = NOOP;
+          if (!active || this.disposed) {
+            return;
+          }
+          console.warn("WebSocket RPC subscription disconnected", {
+            error: formatErrorMessage(error),
+          });
+          await sleep(retryDelayMs);
         }
       }
-      return;
-    }
-    if (!isWebSocketResponseEnvelope(message)) {
-      return;
-    }
-    const pending = this.pending.get(message.id);
-    if (!pending) {
-      return;
-    }
-    if (pending.timeout !== null) {
-      clearTimeout(pending.timeout);
-    }
-    this.pending.delete(message.id);
-    if (message.error) {
-      pending.reject(new Error(message.error.message));
-      return;
-    }
-    pending.resolve(message.result);
+    })();
+    return () => {
+      active = false;
+      cancelCurrentStream();
+    };
   }
-  send(encodedMessage) {
+  async reconnect() {
+    if (this.disposed) {
+      throw new Error("Transport disposed");
+    }
+    const reconnectOperation = this.reconnectChain.then(async () => {
+      if (this.disposed) {
+        throw new Error("Transport disposed");
+      }
+      const previousSession = this.session;
+      this.session = this.createSession();
+      await this.closeSession(previousSession);
+    });
+    this.reconnectChain = reconnectOperation.catch(() => undefined);
+    await reconnectOperation;
+  }
+  async dispose() {
     if (this.disposed) {
       return;
     }
-    this.outboundQueue.push(encodedMessage);
-    try {
-      this.flushQueue();
-    } catch {
-      // Swallow: flushQueue has queued the message for retry on reconnect
-    }
+    this.disposed = true;
+    await this.closeSession(this.session);
   }
-  flushQueue() {
-    if (this.ws?.readyState !== WebSocket.OPEN) {
-      return;
-    }
-    while (this.outboundQueue.length > 0) {
-      const message = this.outboundQueue.shift();
-      if (!message) {
-        continue;
-      }
-      try {
-        this.ws.send(message);
-      } catch (error) {
-        this.outboundQueue.unshift(message);
-        throw asError(error, "Failed to send WebSocket request.");
-      }
-    }
+  closeSession(session) {
+    return session.runtime.runPromise(Scope.close(session.clientScope, Exit.void)).finally(() => {
+      session.runtime.dispose();
+    });
   }
-  scheduleReconnect() {
-    if (this.disposed || this.reconnectTimer !== null) {
-      return;
-    }
-    const delay =
-      RECONNECT_DELAYS_MS[Math.min(this.reconnectAttempt, RECONNECT_DELAYS_MS.length - 1)] ??
-      RECONNECT_DELAYS_MS[0];
-    this.reconnectAttempt += 1;
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      this.connect();
-    }, delay);
+  createSession() {
+    const runtime = ManagedRuntime.make(
+      Layer.mergeAll(createWsRpcProtocolLayer(this.url), ClientTracingLive),
+    );
+    const clientScope = runtime.runSync(Scope.make());
+    return {
+      runtime,
+      clientScope,
+      clientPromise: runtime.runPromise(Scope.provide(clientScope)(makeWsRpcProtocolClient)),
+    };
   }
+  runStreamOnSession(session, connect, listener, isActive, markValueReceived) {
+    let resolveCompleted;
+    let rejectCompleted;
+    const completed = new Promise((resolve, reject) => {
+      resolveCompleted = resolve;
+      rejectCompleted = reject;
+    });
+    const cancel = session.runtime.runCallback(
+      Effect.promise(() => this.tracingReady).pipe(
+        Effect.flatMap(() => Effect.promise(() => session.clientPromise)),
+        Effect.flatMap((client) =>
+          Stream.runForEach(connect(client), (value) =>
+            Effect.sync(() => {
+              if (!isActive()) {
+                return;
+              }
+              markValueReceived();
+              try {
+                listener(value);
+              } catch {
+                // Swallow listener errors so the stream stays live.
+              }
+            }),
+          ),
+        ),
+      ),
+      {
+        onExit: (exit) => {
+          if (Exit.isSuccess(exit)) {
+            resolveCompleted();
+            return;
+          }
+          rejectCompleted(Cause.squash(exit.cause));
+        },
+      },
+    );
+    return {
+      cancel,
+      completed,
+    };
+  }
+}
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }

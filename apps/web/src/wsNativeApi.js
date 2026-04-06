@@ -1,112 +1,21 @@
-import {
-  ORCHESTRATION_WS_CHANNELS,
-  ORCHESTRATION_WS_METHODS,
-  WS_CHANNELS,
-  WS_METHODS,
-} from "@t3tools/contracts";
 import { showContextMenuFallback } from "./contextMenuFallback";
-import { WsTransport } from "./wsTransport";
+import { resetRequestLatencyStateForTests } from "./rpc/requestLatencyState";
+import { resetServerStateForTests } from "./rpc/serverState";
+import { resetWsConnectionStateForTests } from "./rpc/wsConnectionState";
+import { __resetWsRpcClientForTests, getWsRpcClient } from "./wsRpcClient";
 let instance = null;
-const welcomeListeners = new Set();
-const serverConfigUpdatedListeners = new Set();
-const providersUpdatedListeners = new Set();
-const gitActionProgressListeners = new Set();
-/**
- * Subscribe to the server welcome message. If a welcome was already received
- * before this call, the listener fires synchronously with the cached payload.
- * This avoids the race between WebSocket connect and React effect registration.
- */
-export function onServerWelcome(listener) {
-  welcomeListeners.add(listener);
-  const latestWelcome = instance?.transport.getLatestPush(WS_CHANNELS.serverWelcome)?.data ?? null;
-  if (latestWelcome) {
-    try {
-      listener(latestWelcome);
-    } catch {
-      // Swallow listener errors
-    }
-  }
-  return () => {
-    welcomeListeners.delete(listener);
-  };
-}
-/**
- * Subscribe to server config update events. Replays the latest update for
- * late subscribers to avoid missing config validation feedback.
- */
-export function onServerConfigUpdated(listener) {
-  serverConfigUpdatedListeners.add(listener);
-  const latestConfig =
-    instance?.transport.getLatestPush(WS_CHANNELS.serverConfigUpdated)?.data ?? null;
-  if (latestConfig) {
-    try {
-      listener(latestConfig);
-    } catch {
-      // Swallow listener errors
-    }
-  }
-  return () => {
-    serverConfigUpdatedListeners.delete(listener);
-  };
-}
-export function onServerProvidersUpdated(listener) {
-  providersUpdatedListeners.add(listener);
-  const latestProviders =
-    instance?.transport.getLatestPush(WS_CHANNELS.serverProvidersUpdated)?.data ?? null;
-  if (latestProviders) {
-    try {
-      listener(latestProviders);
-    } catch {
-      // Swallow listener errors
-    }
-  }
-  return () => {
-    providersUpdatedListeners.delete(listener);
-  };
+export function __resetWsNativeApiForTests() {
+  instance = null;
+  __resetWsRpcClientForTests();
+  resetRequestLatencyStateForTests();
+  resetServerStateForTests();
+  resetWsConnectionStateForTests();
 }
 export function createWsNativeApi() {
-  if (instance) return instance.api;
-  const transport = new WsTransport();
-  transport.subscribe(WS_CHANNELS.serverWelcome, (message) => {
-    const payload = message.data;
-    for (const listener of welcomeListeners) {
-      try {
-        listener(payload);
-      } catch {
-        // Swallow listener errors
-      }
-    }
-  });
-  transport.subscribe(WS_CHANNELS.serverConfigUpdated, (message) => {
-    const payload = message.data;
-    for (const listener of serverConfigUpdatedListeners) {
-      try {
-        listener(payload);
-      } catch {
-        // Swallow listener errors
-      }
-    }
-  });
-  transport.subscribe(WS_CHANNELS.serverProvidersUpdated, (message) => {
-    const payload = message.data;
-    for (const listener of providersUpdatedListeners) {
-      try {
-        listener(payload);
-      } catch {
-        // Swallow listener errors
-      }
-    }
-  });
-  transport.subscribe(WS_CHANNELS.gitActionProgress, (message) => {
-    const payload = message.data;
-    for (const listener of gitActionProgressListeners) {
-      try {
-        listener(payload);
-      } catch {
-        // Swallow listener errors
-      }
-    }
-  });
+  if (instance) {
+    return instance.api;
+  }
+  const rpcClient = getWsRpcClient();
   const api = {
     dialogs: {
       pickFolder: async () => {
@@ -121,22 +30,20 @@ export function createWsNativeApi() {
       },
     },
     terminal: {
-      open: (input) => transport.request(WS_METHODS.terminalOpen, input),
-      write: (input) => transport.request(WS_METHODS.terminalWrite, input),
-      resize: (input) => transport.request(WS_METHODS.terminalResize, input),
-      clear: (input) => transport.request(WS_METHODS.terminalClear, input),
-      restart: (input) => transport.request(WS_METHODS.terminalRestart, input),
-      close: (input) => transport.request(WS_METHODS.terminalClose, input),
-      onEvent: (callback) =>
-        transport.subscribe(WS_CHANNELS.terminalEvent, (message) => callback(message.data)),
+      open: (input) => rpcClient.terminal.open(input),
+      write: (input) => rpcClient.terminal.write(input),
+      resize: (input) => rpcClient.terminal.resize(input),
+      clear: (input) => rpcClient.terminal.clear(input),
+      restart: (input) => rpcClient.terminal.restart(input),
+      close: (input) => rpcClient.terminal.close(input),
+      onEvent: (callback) => rpcClient.terminal.onEvent(callback),
     },
     projects: {
-      searchEntries: (input) => transport.request(WS_METHODS.projectsSearchEntries, input),
-      writeFile: (input) => transport.request(WS_METHODS.projectsWriteFile, input),
+      searchEntries: rpcClient.projects.searchEntries,
+      writeFile: rpcClient.projects.writeFile,
     },
     shell: {
-      openInEditor: (cwd, editor) =>
-        transport.request(WS_METHODS.shellOpenInEditor, { cwd, editor }),
+      openInEditor: (cwd, editor) => rpcClient.shell.openInEditor({ cwd, editor }),
       openExternal: async (url) => {
         if (window.desktopBridge) {
           const opened = await window.desktopBridge.openExternal(url);
@@ -145,32 +52,23 @@ export function createWsNativeApi() {
           }
           return;
         }
-        // Some mobile browsers can return null here even when the tab opens.
-        // Avoid false negatives and let the browser handle popup policy.
         window.open(url, "_blank", "noopener,noreferrer");
       },
     },
     git: {
-      pull: (input) => transport.request(WS_METHODS.gitPull, input),
-      status: (input) => transport.request(WS_METHODS.gitStatus, input),
-      runStackedAction: (input) =>
-        transport.request(WS_METHODS.gitRunStackedAction, input, { timeoutMs: null }),
-      listBranches: (input) => transport.request(WS_METHODS.gitListBranches, input),
-      createWorktree: (input) => transport.request(WS_METHODS.gitCreateWorktree, input),
-      removeWorktree: (input) => transport.request(WS_METHODS.gitRemoveWorktree, input),
-      createBranch: (input) => transport.request(WS_METHODS.gitCreateBranch, input),
-      checkout: (input) => transport.request(WS_METHODS.gitCheckout, input),
-      init: (input) => transport.request(WS_METHODS.gitInit, input),
-      resolvePullRequest: (input) => transport.request(WS_METHODS.gitResolvePullRequest, input),
-      preparePullRequestThread: (input) =>
-        transport.request(WS_METHODS.gitPreparePullRequestThread, input),
-      suggestCommitMessage: (input) => transport.request(WS_METHODS.gitSuggestCommitMessage, input),
-      onActionProgress: (callback) => {
-        gitActionProgressListeners.add(callback);
-        return () => {
-          gitActionProgressListeners.delete(callback);
-        };
-      },
+      pull: rpcClient.git.pull,
+      status: rpcClient.git.status,
+      runStackedAction: rpcClient.git.runStackedAction,
+      listBranches: rpcClient.git.listBranches,
+      createWorktree: rpcClient.git.createWorktree,
+      removeWorktree: rpcClient.git.removeWorktree,
+      createBranch: rpcClient.git.createBranch,
+      checkout: rpcClient.git.checkout,
+      init: rpcClient.git.init,
+      resolvePullRequest: rpcClient.git.resolvePullRequest,
+      preparePullRequestThread: rpcClient.git.preparePullRequestThread,
+      suggestCommitMessage: rpcClient.git.suggestCommitMessage,
+      onActionProgress: rpcClient.git.onActionProgress ?? (() => () => {}),
     },
     contextMenu: {
       show: async (items, position) => {
@@ -181,27 +79,25 @@ export function createWsNativeApi() {
       },
     },
     server: {
-      getConfig: () => transport.request(WS_METHODS.serverGetConfig),
-      refreshProviders: () => transport.request(WS_METHODS.serverRefreshProviders),
-      upsertKeybinding: (input) => transport.request(WS_METHODS.serverUpsertKeybinding, input),
-      getSettings: () => transport.request(WS_METHODS.serverGetSettings),
-      updateSettings: (patch) => transport.request(WS_METHODS.serverUpdateSettings, { patch }),
+      getConfig: rpcClient.server.getConfig,
+      refreshProviders: rpcClient.server.refreshProviders,
+      upsertKeybinding: rpcClient.server.upsertKeybinding,
+      getSettings: rpcClient.server.getSettings,
+      updateSettings: rpcClient.server.updateSettings,
     },
     orchestration: {
-      getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
-      dispatchCommand: (command) =>
-        transport.request(ORCHESTRATION_WS_METHODS.dispatchCommand, { command }),
-      getTurnDiff: (input) => transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input),
-      getFullThreadDiff: (input) =>
-        transport.request(ORCHESTRATION_WS_METHODS.getFullThreadDiff, input),
+      getSnapshot: rpcClient.orchestration.getSnapshot,
+      dispatchCommand: rpcClient.orchestration.dispatchCommand,
+      getTurnDiff: rpcClient.orchestration.getTurnDiff,
+      getFullThreadDiff: rpcClient.orchestration.getFullThreadDiff,
       replayEvents: (fromSequenceExclusive) =>
-        transport.request(ORCHESTRATION_WS_METHODS.replayEvents, { fromSequenceExclusive }),
-      onDomainEvent: (callback) =>
-        transport.subscribe(ORCHESTRATION_WS_CHANNELS.domainEvent, (message) =>
-          callback(message.data),
-        ),
+        rpcClient.orchestration
+          .replayEvents({ fromSequenceExclusive })
+          .then((events) => [...events]),
+      onDomainEvent: (callback, options) =>
+        rpcClient.orchestration.onDomainEvent(callback, options),
     },
   };
-  instance = { api, transport };
+  instance = { api };
   return api;
 }

@@ -180,7 +180,7 @@ function ChatThreadRouteView() {
         _jsx(SidebarInset, {
           className:
             "h-dvh  min-h-0 overflow-hidden overscroll-y-none bg-background text-foreground",
-          children: _jsx(ChatView, { threadId: threadId }, threadId),
+          children: _jsx(ChatView, { threadId: threadId }),
         }),
         _jsx(DiffPanelInlineSidebar, {
           diffOpen: diffOpen,
@@ -195,7 +195,7 @@ function ChatThreadRouteView() {
     children: [
       _jsx(SidebarInset, {
         className: "h-dvh min-h-0 overflow-hidden overscroll-y-none bg-background text-foreground",
-        children: _jsx(ChatView, { threadId: threadId }, threadId),
+        children: _jsx(ChatView, { threadId: threadId }),
       }),
       _jsx(DiffPanelSheet, {
         diffOpen: diffOpen,

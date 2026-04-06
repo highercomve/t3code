@@ -26,6 +26,7 @@ import {
 } from "../ui/dialog";
 import { toastManager } from "../ui/toast";
 import { readNativeApi } from "~/nativeApi";
+import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 export const ProposedPlanCard = memo(function ProposedPlanCard({
   planMarkdown,
   cwd,
@@ -35,6 +36,15 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [savePath, setSavePath] = useState("");
   const [isSavingToWorkspace, setIsSavingToWorkspace] = useState(false);
+  const { copyToClipboard, isCopied } = useCopyToClipboard({
+    onError: (error) => {
+      toastManager.add({
+        type: "error",
+        title: "Could not copy plan",
+        description: error instanceof Error ? error.message : "An error occurred while copying.",
+      });
+    },
+  });
   const savePathInputId = useId();
   const title = proposedPlanTitle(planMarkdown) ?? "Proposed plan";
   const lineCount = planMarkdown.split("\n").length;
@@ -47,6 +57,9 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
   const saveContents = normalizePlanMarkdownForExport(planMarkdown);
   const handleDownload = () => {
     downloadPlanAsTextFile(downloadFilename, saveContents);
+  };
+  const handleCopyPlan = () => {
+    copyToClipboard(saveContents);
   };
   const openSaveDialog = () => {
     if (!workspaceRoot) {
@@ -133,6 +146,10 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
               _jsxs(MenuPopup, {
                 align: "end",
                 children: [
+                  _jsx(MenuItem, {
+                    onClick: handleCopyPlan,
+                    children: isCopied ? "Copied!" : "Copy to clipboard",
+                  }),
                   _jsx(MenuItem, { onClick: handleDownload, children: "Download as markdown" }),
                   _jsx(MenuItem, {
                     onClick: openSaveDialog,

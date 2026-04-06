@@ -1,4 +1,4 @@
-import { createWsNativeApi } from "./wsNativeApi";
+import { __resetWsNativeApiForTests, createWsNativeApi } from "./wsNativeApi";
 let cachedApi;
 export function readNativeApi() {
   if (typeof window === "undefined") return undefined;
@@ -16,4 +16,8 @@ export function ensureNativeApi() {
     throw new Error("Native API not found");
   }
   return api;
+}
+export function __resetNativeApiForTests() {
+  cachedApi = undefined;
+  __resetWsNativeApiForTests();
 }

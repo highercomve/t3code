@@ -20,7 +20,14 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Spinner } from "./ui/spinner";
-export function PullRequestThreadDialog({ open, cwd, initialReference, onOpenChange, onPrepared }) {
+export function PullRequestThreadDialog({
+  open,
+  threadId,
+  cwd,
+  initialReference,
+  onOpenChange,
+  onPrepared,
+}) {
   const queryClient = useQueryClient();
   const referenceInputRef = useRef(null);
   const [reference, setReference] = useState(initialReference ?? "");
@@ -104,6 +111,7 @@ export function PullRequestThreadDialog({ open, cwd, initialReference, onOpenCha
         const result = await preparePullRequestThreadMutation.mutateAsync({
           reference: parsedReference,
           mode,
+          ...(mode === "worktree" ? { threadId } : {}),
         });
         await onPrepared({
           branch: result.branch,
@@ -121,6 +129,7 @@ export function PullRequestThreadDialog({ open, cwd, initialReference, onOpenCha
       parsedReference,
       preparePullRequestThreadMutation,
       resolvedPullRequest,
+      threadId,
     ],
   );
   const validationMessage = !referenceDirty

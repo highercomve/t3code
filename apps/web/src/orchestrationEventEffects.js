@@ -24,6 +24,22 @@ export function deriveOrchestrationBatchEffects(events) {
         });
         break;
       }
+      case "thread.archived": {
+        threadLifecycleEffects.set(event.payload.threadId, {
+          clearPromotedDraft: false,
+          clearDeletedThread: false,
+          removeTerminalState: true,
+        });
+        break;
+      }
+      case "thread.unarchived": {
+        threadLifecycleEffects.set(event.payload.threadId, {
+          clearPromotedDraft: false,
+          clearDeletedThread: false,
+          removeTerminalState: false,
+        });
+        break;
+      }
       default: {
         break;
       }

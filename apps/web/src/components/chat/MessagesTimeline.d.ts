@@ -2,6 +2,7 @@ import { type MessageId, type TurnId } from "@t3tools/contracts";
 import { deriveTimelineEntries } from "../../session-logic";
 import { type TurnDiffSummary } from "../../types";
 import { ExpandedImagePreview } from "./ExpandedImagePreview";
+import { type MessagesTimelineRow } from "./MessagesTimeline.logic";
 import { type TimestampFormat } from "@t3tools/contracts/settings";
 interface MessagesTimelineProps {
   hasMessages: boolean;
@@ -25,6 +26,17 @@ interface MessagesTimelineProps {
   resolvedTheme: "light" | "dark";
   timestampFormat: TimestampFormat;
   workspaceRoot: string | undefined;
+  onVirtualizerSnapshot?: (snapshot: {
+    totalSize: number;
+    measurements: ReadonlyArray<{
+      id: string;
+      kind: MessagesTimelineRow["kind"];
+      index: number;
+      size: number;
+      start: number;
+      end: number;
+    }>;
+  }) => void;
 }
 export declare const MessagesTimeline: import("react").NamedExoticComponent<MessagesTimelineProps>;
 export {};

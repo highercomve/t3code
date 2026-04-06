@@ -25,19 +25,19 @@ export interface DefaultBranchActionDialogCopy {
   description: string;
   continueLabel: string;
 }
-export type DefaultBranchConfirmableAction = "commit_push" | "commit_push_pr";
+export type DefaultBranchConfirmableAction =
+  | "push"
+  | "create_pr"
+  | "commit_push"
+  | "commit_push_pr";
 export declare function buildGitActionProgressStages(input: {
   action: GitStackedAction;
   hasCustomCommitMessage: boolean;
   hasWorkingTreeChanges: boolean;
-  forcePushOnly?: boolean;
   pushTarget?: string;
   featureBranch?: boolean;
+  shouldPushBeforePr?: boolean;
 }): string[];
-export declare function summarizeGitResult(result: GitRunStackedActionResult): {
-  title: string;
-  description?: string;
-};
 export declare function buildMenuItems(
   gitStatus: GitStatusResult | null,
   isBusy: boolean,
@@ -58,4 +58,13 @@ export declare function resolveDefaultBranchActionDialogCopy(input: {
   branchName: string;
   includesCommit: boolean;
 }): DefaultBranchActionDialogCopy;
+export declare function resolveThreadBranchUpdate(result: GitRunStackedActionResult): {
+  branch: string;
+} | null;
+export declare function resolveLiveThreadBranchUpdate(input: {
+  threadBranch: string | null;
+  gitStatus: GitStatusResult | null;
+}): {
+  branch: string | null;
+} | null;
 export { resolveAutoFeatureBranchName } from "@t3tools/shared/git";

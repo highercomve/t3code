@@ -43,25 +43,7 @@ export function nextProjectScriptId(name, existingIds) {
   // This last-resort fallback only triggers after exhausting thousands of suffixes.
   return `${baseId}-${Date.now()}`.slice(0, MAX_SCRIPT_ID_LENGTH);
 }
-export function projectScriptCwd(input) {
-  return input.worktreePath ?? input.project.cwd;
-}
-export function projectScriptRuntimeEnv(input) {
-  const env = {
-    T3CODE_PROJECT_ROOT: input.project.cwd,
-  };
-  if (input.worktreePath) {
-    env.T3CODE_WORKTREE_PATH = input.worktreePath;
-  }
-  if (input.extraEnv) {
-    return { ...env, ...input.extraEnv };
-  }
-  return env;
-}
 export function primaryProjectScript(scripts) {
   const regular = scripts.find((script) => !script.runOnWorktreeCreate);
   return regular ?? scripts[0] ?? null;
-}
-export function setupProjectScript(scripts) {
-  return scripts.find((script) => script.runOnWorktreeCreate) ?? null;
 }

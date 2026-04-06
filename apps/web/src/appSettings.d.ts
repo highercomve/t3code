@@ -127,15 +127,15 @@ export declare function getProviderStartOptions(
 ): ProviderStartOptions | undefined;
 export declare function useAppSettings(): {
   readonly settings: {
+    readonly enableAssistantStreaming: boolean;
+    readonly defaultThreadEnvMode: "local" | "worktree";
+    readonly confirmThreadDelete: boolean;
+    readonly diffWordWrap: boolean;
+    readonly timestampFormat: "locale" | "12-hour" | "24-hour";
     readonly claudeBinaryPath: string;
     readonly codexBinaryPath: string;
     readonly codexHomePath: string;
     readonly copilotBinaryPath: string;
-    readonly defaultThreadEnvMode: "local" | "worktree";
-    readonly confirmThreadDelete: boolean;
-    readonly diffWordWrap: boolean;
-    readonly enableAssistantStreaming: boolean;
-    readonly timestampFormat: "locale" | "12-hour" | "24-hour";
     readonly customCodexModels: readonly string[];
     readonly customClaudeModels: readonly string[];
     readonly customGeminiModels: readonly string[];
@@ -147,15 +147,15 @@ export declare function useAppSettings(): {
   readonly updateSettings: (patch: Partial<AppSettings>) => void;
   readonly resetSettings: () => void;
   readonly defaults: {
+    readonly enableAssistantStreaming: boolean;
+    readonly defaultThreadEnvMode: "local" | "worktree";
+    readonly confirmThreadDelete: boolean;
+    readonly diffWordWrap: boolean;
+    readonly timestampFormat: "locale" | "12-hour" | "24-hour";
     readonly claudeBinaryPath: string;
     readonly codexBinaryPath: string;
     readonly codexHomePath: string;
     readonly copilotBinaryPath: string;
-    readonly defaultThreadEnvMode: "local" | "worktree";
-    readonly confirmThreadDelete: boolean;
-    readonly diffWordWrap: boolean;
-    readonly enableAssistantStreaming: boolean;
-    readonly timestampFormat: "locale" | "12-hour" | "24-hour";
     readonly customCodexModels: readonly string[];
     readonly customClaudeModels: readonly string[];
     readonly customGeminiModels: readonly string[];

@@ -1,8 +1,15 @@
-import { type OrchestrationEvent, ThreadId, type OrchestrationReadModel } from "@t3tools/contracts";
-import { type Project, type Thread } from "./types";
+import {
+  type OrchestrationEvent,
+  type ProjectId,
+  ThreadId,
+  type OrchestrationReadModel,
+} from "@t3tools/contracts";
+import { type Project, type SidebarThreadSummary, type Thread } from "./types";
 export interface AppState {
   projects: Project[];
   threads: Thread[];
+  sidebarThreadsById: Record<string, SidebarThreadSummary>;
+  threadIdsByProjectId: Record<string, ThreadId[]>;
   bootstrapComplete: boolean;
 }
 export declare function syncServerReadModel(
@@ -23,6 +30,12 @@ export declare const selectProjectById: (
 export declare const selectThreadById: (
   threadId: ThreadId | null | undefined,
 ) => (state: AppState) => Thread | undefined;
+export declare const selectSidebarThreadSummaryById: (
+  threadId: ThreadId | null | undefined,
+) => (state: AppState) => SidebarThreadSummary | undefined;
+export declare const selectThreadIdsByProjectId: (
+  projectId: ProjectId | null | undefined,
+) => (state: AppState) => ThreadId[];
 export declare function setError(
   state: AppState,
   threadId: ThreadId,

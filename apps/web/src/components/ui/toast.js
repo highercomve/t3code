@@ -253,16 +253,17 @@ function Toasts({ position = "top-right" }) {
                             className: "flex items-center justify-between gap-1",
                             children: [
                               _jsx(Toast.Title, {
-                                className: "min-w-0 break-words font-medium",
+                                className: "min-w-0 wrap-break-word font-medium",
                                 "data-slot": "toast-title",
                               }),
                               toast.type === "error" &&
                                 typeof toast.description === "string" &&
+                                !toast.data?.hideCopyButton &&
                                 _jsx(CopyErrorButton, { text: toast.description }),
                             ],
                           }),
                           _jsx(Toast.Description, {
-                            className: "min-w-0 select-text break-words text-muted-foreground",
+                            className: "min-w-0 select-text wrap-break-word text-muted-foreground",
                             "data-slot": "toast-description",
                           }),
                         ],
@@ -354,17 +355,18 @@ function AnchoredToasts() {
                                   className: "flex items-center gap-1",
                                   children: [
                                     _jsx(Toast.Title, {
-                                      className: "min-w-0 break-words font-medium",
+                                      className: "min-w-0 wrap-break-word font-medium",
                                       "data-slot": "toast-title",
                                     }),
                                     toast.type === "error" &&
                                       typeof toast.description === "string" &&
+                                      !toast.data?.hideCopyButton &&
                                       _jsx(CopyErrorButton, { text: toast.description }),
                                   ],
                                 }),
                                 _jsx(Toast.Description, {
                                   className:
-                                    "min-w-0 select-text break-words text-muted-foreground",
+                                    "min-w-0 select-text wrap-break-word text-muted-foreground",
                                   "data-slot": "toast-description",
                                 }),
                               ],

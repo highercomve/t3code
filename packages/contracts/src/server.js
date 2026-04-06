@@ -1,5 +1,11 @@
 import { Schema } from "effect";
-import { IsoDateTime, TrimmedNonEmptyString } from "./baseSchemas";
+import {
+  IsoDateTime,
+  NonNegativeInt,
+  ProjectId,
+  ThreadId,
+  TrimmedNonEmptyString,
+} from "./baseSchemas";
 import { KeybindingRule, ResolvedKeybindingsConfig } from "./keybindings";
 import { EditorId } from "./editor";
 import { ModelCapabilities } from "./model";
@@ -52,7 +58,15 @@ export const ServerProvider = Schema.Struct({
   models: Schema.Array(ServerProviderModel),
   dynamicModels: Schema.optional(Schema.Array(ProviderDynamicModel)),
 });
-const ServerProviders = Schema.Array(ServerProvider);
+export const ServerProviders = Schema.Array(ServerProvider);
+export const ServerObservability = Schema.Struct({
+  logsDirectoryPath: TrimmedNonEmptyString,
+  localTracingEnabled: Schema.Boolean,
+  otlpTracesUrl: Schema.optional(TrimmedNonEmptyString),
+  otlpTracesEnabled: Schema.Boolean,
+  otlpMetricsUrl: Schema.optional(TrimmedNonEmptyString),
+  otlpMetricsEnabled: Schema.Boolean,
+});
 export const ServerConfig = Schema.Struct({
   cwd: TrimmedNonEmptyString,
   keybindingsConfigPath: TrimmedNonEmptyString,
@@ -60,6 +74,7 @@ export const ServerConfig = Schema.Struct({
   issues: ServerConfigIssues,
   providers: ServerProviders,
   availableEditors: Schema.Array(EditorId),
+  observability: ServerObservability,
   settings: ServerSettings,
 });
 export const ServerUpsertKeybindingInput = KeybindingRule;
@@ -69,8 +84,69 @@ export const ServerUpsertKeybindingResult = Schema.Struct({
 });
 export const ServerConfigUpdatedPayload = Schema.Struct({
   issues: ServerConfigIssues,
+  providers: ServerProviders,
   settings: Schema.optional(ServerSettings),
 });
+export const ServerConfigKeybindingsUpdatedPayload = Schema.Struct({
+  issues: ServerConfigIssues,
+});
+export const ServerConfigProviderStatusesPayload = Schema.Struct({
+  providers: ServerProviders,
+});
+export const ServerConfigSettingsUpdatedPayload = Schema.Struct({
+  settings: ServerSettings,
+});
+export const ServerConfigStreamSnapshotEvent = Schema.Struct({
+  version: Schema.Literal(1),
+  type: Schema.Literal("snapshot"),
+  config: ServerConfig,
+});
+export const ServerConfigStreamKeybindingsUpdatedEvent = Schema.Struct({
+  version: Schema.Literal(1),
+  type: Schema.Literal("keybindingsUpdated"),
+  payload: ServerConfigKeybindingsUpdatedPayload,
+});
+export const ServerConfigStreamProviderStatusesEvent = Schema.Struct({
+  version: Schema.Literal(1),
+  type: Schema.Literal("providerStatuses"),
+  payload: ServerConfigProviderStatusesPayload,
+});
+export const ServerConfigStreamSettingsUpdatedEvent = Schema.Struct({
+  version: Schema.Literal(1),
+  type: Schema.Literal("settingsUpdated"),
+  payload: ServerConfigSettingsUpdatedPayload,
+});
+export const ServerConfigStreamEvent = Schema.Union([
+  ServerConfigStreamSnapshotEvent,
+  ServerConfigStreamKeybindingsUpdatedEvent,
+  ServerConfigStreamProviderStatusesEvent,
+  ServerConfigStreamSettingsUpdatedEvent,
+]);
+export const ServerLifecycleReadyPayload = Schema.Struct({
+  at: IsoDateTime,
+});
+export const ServerLifecycleWelcomePayload = Schema.Struct({
+  cwd: TrimmedNonEmptyString,
+  projectName: TrimmedNonEmptyString,
+  bootstrapProjectId: Schema.optional(ProjectId),
+  bootstrapThreadId: Schema.optional(ThreadId),
+});
+export const ServerLifecycleStreamWelcomeEvent = Schema.Struct({
+  version: Schema.Literal(1),
+  sequence: NonNegativeInt,
+  type: Schema.Literal("welcome"),
+  payload: ServerLifecycleWelcomePayload,
+});
+export const ServerLifecycleStreamReadyEvent = Schema.Struct({
+  version: Schema.Literal(1),
+  sequence: NonNegativeInt,
+  type: Schema.Literal("ready"),
+  payload: ServerLifecycleReadyPayload,
+});
+export const ServerLifecycleStreamEvent = Schema.Union([
+  ServerLifecycleStreamWelcomeEvent,
+  ServerLifecycleStreamReadyEvent,
+]);
 export const ServerProviderUpdatedPayload = Schema.Struct({
   providers: ServerProviders,
 });

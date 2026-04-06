@@ -68,6 +68,7 @@ export const KeybindingShortcut = Schema.Struct({
   altKey: Schema.Boolean,
   modKey: Schema.Boolean,
 });
+const KeybindingWhenNodeRef = Schema.suspend(() => KeybindingWhenNode);
 export const KeybindingWhenNode = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("identifier"),
@@ -75,17 +76,17 @@ export const KeybindingWhenNode = Schema.Union([
   }),
   Schema.Struct({
     type: Schema.Literal("not"),
-    node: Schema.suspend(() => KeybindingWhenNode),
+    node: KeybindingWhenNodeRef,
   }),
   Schema.Struct({
     type: Schema.Literal("and"),
-    left: Schema.suspend(() => KeybindingWhenNode),
-    right: Schema.suspend(() => KeybindingWhenNode),
+    left: KeybindingWhenNodeRef,
+    right: KeybindingWhenNodeRef,
   }),
   Schema.Struct({
     type: Schema.Literal("or"),
-    left: Schema.suspend(() => KeybindingWhenNode),
-    right: Schema.suspend(() => KeybindingWhenNode),
+    left: KeybindingWhenNodeRef,
+    right: KeybindingWhenNodeRef,
   }),
 ]);
 export const ResolvedKeybindingRule = Schema.Struct({
@@ -96,3 +97,15 @@ export const ResolvedKeybindingRule = Schema.Struct({
 export const ResolvedKeybindingsConfig = Schema.Array(ResolvedKeybindingRule).check(
   Schema.isMaxLength(MAX_KEYBINDINGS_COUNT),
 );
+export class KeybindingsConfigError extends Schema.TaggedErrorClass()(
+  "KeybindingsConfigParseError",
+  {
+    configPath: Schema.String,
+    detail: Schema.String,
+    cause: Schema.optional(Schema.Defect),
+  },
+) {
+  get message() {
+    return `Unable to parse keybindings config at ${this.configPath}: ${this.detail}`;
+  }
+}

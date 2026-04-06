@@ -9,7 +9,7 @@ declare function InputGroup({
 declare const inputGroupAddonVariants: (
   props?:
     | ({
-        align?: "inline-end" | "inline-start" | "block-end" | "block-start" | null | undefined;
+        align?: "inline-start" | "block-end" | "block-start" | "inline-end" | null | undefined;
       } & import("class-variance-authority/types").ClassProp)
     | undefined,
 ) => string;

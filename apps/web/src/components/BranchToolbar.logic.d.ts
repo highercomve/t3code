@@ -1,5 +1,9 @@
 import type { GitBranch } from "@t3tools/contracts";
 import { Schema } from "effect";
+export {
+  dedupeRemoteBranchesWithLocalMatches,
+  deriveLocalBranchNameFromRemoteRef,
+} from "@t3tools/shared/git";
 export declare const EnvMode: Schema.Literals<readonly ["local", "worktree"]>;
 export type EnvMode = typeof EnvMode.Type;
 export declare function resolveEffectiveEnvMode(input: {
@@ -18,10 +22,6 @@ export declare function resolveBranchToolbarValue(input: {
   activeThreadBranch: string | null;
   currentGitBranch: string | null;
 }): string | null;
-export declare function deriveLocalBranchNameFromRemoteRef(branchName: string): string;
-export declare function dedupeRemoteBranchesWithLocalMatches(
-  branches: ReadonlyArray<GitBranch>,
-): ReadonlyArray<GitBranch>;
 export declare function resolveBranchSelectionTarget(input: {
   activeProjectCwd: string;
   activeWorktreePath: string | null;

@@ -4,40 +4,48 @@ export declare function usePreferredEditor(
 ): readonly [
   (
     | "cursor"
+    | "trae"
     | "vscode"
     | "vscode-insiders"
     | "vscodium"
     | "zed"
     | "antigravity"
+    | "idea"
     | "file-manager"
     | null
   ),
   (
     value:
       | "cursor"
+      | "trae"
       | "vscode"
       | "vscode-insiders"
       | "vscodium"
       | "zed"
       | "antigravity"
+      | "idea"
       | "file-manager"
       | ((
           val:
             | "cursor"
+            | "trae"
             | "vscode"
             | "vscode-insiders"
             | "vscodium"
             | "zed"
             | "antigravity"
+            | "idea"
             | "file-manager"
             | null,
         ) =>
           | "cursor"
+          | "trae"
           | "vscode"
           | "vscode-insiders"
           | "vscodium"
           | "zed"
           | "antigravity"
+          | "idea"
           | "file-manager"
           | null)
       | null,

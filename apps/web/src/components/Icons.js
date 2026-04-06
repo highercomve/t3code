@@ -22,6 +22,20 @@ export const CursorIcon = (props) =>
       d: "M457.43,125.94L244.42,2.96c-6.84-3.95-15.28-3.95-22.12,0L9.3,125.94c-5.75,3.32-9.3,9.46-9.3,16.11v247.99c0,6.65,3.55,12.79,9.3,16.11l213.01,122.98c6.84,3.95,15.28,3.95,22.12,0l213.01-122.98c5.75-3.32,9.3-9.46,9.3-16.11v-247.99c0-6.65-3.55-12.79-9.3-16.11h-.01ZM444.05,151.99l-205.63,356.16c-1.39,2.4-5.06,1.42-5.06-1.36v-233.21c0-4.66-2.49-8.97-6.53-11.31L24.87,145.67c-2.4-1.39-1.42-5.06,1.36-5.06h411.26c5.84,0,9.49,6.33,6.57,11.39h-.01Z",
     }),
   });
+export const TraeIcon = (props) =>
+  _jsxs("svg", {
+    ...props,
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: [
+      _jsx("rect", { x: "1", y: "4", width: "3", height: "14" }),
+      _jsx("rect", { x: "4", y: "18", width: "18", height: "3" }),
+      _jsx("rect", { x: "4", y: "4", width: "18", height: "3" }),
+      _jsx("rect", { x: "19", y: "7", width: "3", height: "11" }),
+      _jsx("path", { d: "M11 10L13 12L11 14L9 12Z" }),
+      _jsx("path", { d: "M16 10L18 12L16 14L14 12Z" }),
+    ],
+  });
 export const VisualStudioCode = (props) => {
   const id = useId();
   const maskId = `${id}-vscode-a`;
@@ -409,6 +423,123 @@ export const AntigravityIcon = (props) =>
     fill: "none",
     children: _jsx("image", { href: ANTIGRAVITY_ICON_DATA_URL, width: "128", height: "128" }),
   });
+export const IntelliJIdeaIcon = (props) => {
+  const id = useId();
+  const gradientAId = `${id}-idea-a`;
+  const gradientBId = `${id}-idea-b`;
+  const gradientCId = `${id}-idea-c`;
+  const gradientDId = `${id}-idea-d`;
+  return _jsxs("svg", {
+    ...props,
+    viewBox: "0 0 70 70",
+    fill: "none",
+    children: [
+      _jsxs("defs", {
+        children: [
+          _jsxs("linearGradient", {
+            id: gradientAId,
+            x1: "0.7898",
+            y1: "40.0893",
+            x2: "33.3172",
+            y2: "40.0893",
+            gradientUnits: "userSpaceOnUse",
+            children: [
+              _jsx("stop", { offset: "0.2581", stopColor: "#F97A12" }),
+              _jsx("stop", { offset: "0.4591", stopColor: "#B07B58" }),
+              _jsx("stop", { offset: "0.7241", stopColor: "#577BAE" }),
+              _jsx("stop", { offset: "0.9105", stopColor: "#1E7CE5" }),
+              _jsx("stop", { offset: "1", stopColor: "#087CFA" }),
+            ],
+          }),
+          _jsxs("linearGradient", {
+            id: gradientBId,
+            x1: "25.7674",
+            y1: "24.88",
+            x2: "79.424",
+            y2: "54.57",
+            gradientUnits: "userSpaceOnUse",
+            children: [
+              _jsx("stop", { stopColor: "#F97A12" }),
+              _jsx("stop", { offset: "0.07179946", stopColor: "#CB7A3E" }),
+              _jsx("stop", { offset: "0.1541", stopColor: "#9E7B6A" }),
+              _jsx("stop", { offset: "0.242", stopColor: "#757B91" }),
+              _jsx("stop", { offset: "0.3344", stopColor: "#537BB1" }),
+              _jsx("stop", { offset: "0.4324", stopColor: "#387CCC" }),
+              _jsx("stop", { offset: "0.5381", stopColor: "#237CE0" }),
+              _jsx("stop", { offset: "0.6552", stopColor: "#147CEF" }),
+              _jsx("stop", { offset: "0.7925", stopColor: "#0B7CF7" }),
+              _jsx("stop", { offset: "1", stopColor: "#087CFA" }),
+            ],
+          }),
+          _jsxs("linearGradient", {
+            id: gradientCId,
+            x1: "63.2277",
+            y1: "42.9153",
+            x2: "48.2903",
+            y2: "-1.7191",
+            gradientUnits: "userSpaceOnUse",
+            children: [
+              _jsx("stop", { stopColor: "#FE315D" }),
+              _jsx("stop", { offset: "0.07840246", stopColor: "#CB417E" }),
+              _jsx("stop", { offset: "0.1601", stopColor: "#9E4E9B" }),
+              _jsx("stop", { offset: "0.2474", stopColor: "#755BB4" }),
+              _jsx("stop", { offset: "0.3392", stopColor: "#5365CA" }),
+              _jsx("stop", { offset: "0.4365", stopColor: "#386DDB" }),
+              _jsx("stop", { offset: "0.5414", stopColor: "#2374E9" }),
+              _jsx("stop", { offset: "0.6576", stopColor: "#1478F3" }),
+              _jsx("stop", { offset: "0.794", stopColor: "#0B7BF8" }),
+              _jsx("stop", { offset: "1", stopColor: "#087CFA" }),
+            ],
+          }),
+          _jsxs("linearGradient", {
+            id: gradientDId,
+            x1: "10.7204",
+            y1: "16.473",
+            x2: "55.5237",
+            y2: "90.58",
+            gradientUnits: "userSpaceOnUse",
+            children: [
+              _jsx("stop", { stopColor: "#FE315D" }),
+              _jsx("stop", { offset: "0.04023279", stopColor: "#F63462" }),
+              _jsx("stop", { offset: "0.1037", stopColor: "#DF3A71" }),
+              _jsx("stop", { offset: "0.1667", stopColor: "#C24383" }),
+              _jsx("stop", { offset: "0.2912", stopColor: "#AD4A91" }),
+              _jsx("stop", { offset: "0.5498", stopColor: "#755BB4" }),
+              _jsx("stop", { offset: "0.9175", stopColor: "#1D76ED" }),
+              _jsx("stop", { offset: "1", stopColor: "#087CFA" }),
+            ],
+          }),
+        ],
+      }),
+      _jsx("polygon", {
+        points: "17.7,54.6 0.8,41.2 9.2,25.6 33.3,35",
+        fill: `url(#${gradientAId})`,
+      }),
+      _jsx("path", {
+        d: "M70 18.7 68.7 59.2 41.8 70 25.6 59.6 49.3 35 38.9 12.3 48.2 1.1Z",
+        fill: `url(#${gradientBId})`,
+      }),
+      _jsx("polygon", {
+        points: "70,18.7 48.7,43.9 38.9,12.3 48.2,1.1",
+        fill: `url(#${gradientCId})`,
+      }),
+      _jsx("path", {
+        d: "M33.7 58.1 5.6 68.3 10.1 52.5 16 33.1 0 27.7 10.1 0 32.1 2.7 53.7 27.4Z",
+        fill: `url(#${gradientDId})`,
+      }),
+      _jsx("rect", { x: "13.7", y: "13.5", width: "43.2", height: "43.2", fill: "#000" }),
+      _jsx("rect", { x: "17.7", y: "48.6", width: "16.2", height: "2.7", fill: "#fff" }),
+      _jsx("path", {
+        d: "M29.4 22.4v-3.3h-9v3.3h2.6v11.3h-2.6V37h9v-3.3h-2.5V22.4h2.5Z",
+        fill: "#fff",
+      }),
+      _jsx("path", {
+        d: "M38 37.3c-1.4 0-2.6-.3-3.5-.8-.9-.5-1.7-1.2-2.3-1.9l2.5-2.8c.5.6 1 1 1.5 1.3.5.3 1.1.5 1.7.5.7 0 1.3-.2 1.8-.7.4-.5.6-1.2.6-2.3V19.1h4v11.7c0 1.1-.1 2-.4 2.8-.3.8-.7 1.4-1.3 2-.5.5-1.2 1-2 1.2-.8.3-1.6.5-2.6.5Z",
+        fill: "#fff",
+      }),
+    ],
+  });
+};
 export const OpenCodeIcon = (props) =>
   _jsxs("svg", {
     ...props,

@@ -1,6 +1,26 @@
-import { type ThreadId } from "@t3tools/contracts";
+import { type TerminalEvent, type ThreadId } from "@t3tools/contracts";
 import { type TerminalContextSelection } from "~/lib/terminalContext";
 import { type ThreadTerminalGroup } from "../types";
+export declare function selectTerminalEventEntriesAfterSnapshot(
+  entries: ReadonlyArray<{
+    id: number;
+    event: TerminalEvent;
+  }>,
+  snapshotUpdatedAt: string,
+): ReadonlyArray<{
+  id: number;
+  event: TerminalEvent;
+}>;
+export declare function selectPendingTerminalEventEntries(
+  entries: ReadonlyArray<{
+    id: number;
+    event: TerminalEvent;
+  }>,
+  lastAppliedTerminalEventId: number,
+): ReadonlyArray<{
+  id: number;
+  event: TerminalEvent;
+}>;
 export declare function resolveTerminalSelectionActionPosition(options: {
   bounds: {
     left: number;
@@ -32,7 +52,9 @@ export declare function shouldHandleTerminalSelectionMouseUp(
 interface ThreadTerminalDrawerProps {
   threadId: ThreadId;
   cwd: string;
+  worktreePath?: string | null;
   runtimeEnv?: Record<string, string>;
+  visible?: boolean;
   height: number;
   terminalIds: string[];
   activeTerminalId: string;
@@ -52,7 +74,9 @@ interface ThreadTerminalDrawerProps {
 export default function ThreadTerminalDrawer({
   threadId,
   cwd,
+  worktreePath,
   runtimeEnv,
+  visible,
   height,
   terminalIds,
   activeTerminalId,

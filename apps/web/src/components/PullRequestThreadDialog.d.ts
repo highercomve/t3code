@@ -1,5 +1,7 @@
+import type { ThreadId } from "@t3tools/contracts";
 interface PullRequestThreadDialogProps {
   open: boolean;
+  threadId: ThreadId;
   cwd: string | null;
   initialReference: string | null;
   onOpenChange: (open: boolean) => void;
@@ -7,6 +9,7 @@ interface PullRequestThreadDialogProps {
 }
 export declare function PullRequestThreadDialog({
   open,
+  threadId,
   cwd,
   initialReference,
   onOpenChange,

@@ -1,9 +1,10 @@
 import { Toast } from "@base-ui/react/toast";
 import { ThreadId } from "@t3tools/contracts";
-type ThreadToastData = {
+export type ThreadToastData = {
   threadId?: ThreadId | null;
   tooltipStyle?: boolean;
   dismissAfterVisibleMs?: number;
+  hideCopyButton?: boolean;
 };
 declare const toastManager: import("@base-ui/react").ToastManager<ThreadToastData>;
 declare const anchoredToastManager: import("@base-ui/react").ToastManager<ThreadToastData>;

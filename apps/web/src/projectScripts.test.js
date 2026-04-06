@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  projectScriptCwd,
+  projectScriptRuntimeEnv,
+  setupProjectScript,
+} from "@t3tools/shared/projectScripts";
+import {
   commandForProjectScript,
   nextProjectScriptId,
   primaryProjectScript,
-  projectScriptCwd,
-  projectScriptRuntimeEnv,
   projectScriptIdFromCommand,
-  setupProjectScript,
 } from "./projectScripts";
 describe("projectScripts helpers", () => {
   it("builds and parses script run commands", () => {

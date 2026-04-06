@@ -10,7 +10,7 @@ import {
   Undo2Icon,
   XIcon,
 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PROVIDER_DISPLAY_NAMES } from "@t3tools/contracts";
 import { DEFAULT_UNIFIED_SETTINGS } from "@t3tools/contracts/settings";
@@ -35,7 +35,6 @@ import {
   setDesktopUpdateStateQueryData,
   useDesktopUpdateState,
 } from "../../lib/desktopUpdateReactQuery";
-import { serverConfigQueryOptions, serverQueryKeys } from "../../lib/serverReactQuery";
 import {
   MAX_CUSTOM_MODEL_LENGTH,
   buildModelSelection,
@@ -55,6 +54,12 @@ import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { ProjectFavicon } from "../ProjectFavicon";
+import {
+  useServerAvailableEditors,
+  useServerKeybindingsConfigPath,
+  useServerObservability,
+  useServerProviders,
+} from "../../rpc/serverState";
 const THEME_OPTIONS = [
   {
     value: "system",
@@ -74,7 +79,6 @@ const TIMESTAMP_FORMAT_LABELS = {
   "12-hour": "12-hour",
   "24-hour": "24-hour",
 };
-const EMPTY_SERVER_PROVIDERS = [];
 const PROVIDER_SETTINGS = [
   {
     provider: "codex",
@@ -489,9 +493,11 @@ export function GeneralSettingsPanel() {
   const { theme, setTheme } = useTheme();
   const settings = useSettings();
   const { updateSettings } = useUpdateSettings();
-  const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const [isOpeningKeybindings, setIsOpeningKeybindings] = useState(false);
-  const [openKeybindingsError, setOpenKeybindingsError] = useState(null);
+  const [openingPathByTarget, setOpeningPathByTarget] = useState({
+    keybindings: false,
+    logsDirectory: false,
+  });
+  const [openPathErrorByTarget, setOpenPathErrorByTarget] = useState({});
   const [openProviderDetails, setOpenProviderDetails] = useState({
     codex: Boolean(
       settings.providers.codex.binaryPath !== DEFAULT_UNIFIED_SETTINGS.providers.codex.binaryPath ||
@@ -529,7 +535,6 @@ export function GeneralSettingsPanel() {
   const [customModelErrorByProvider, setCustomModelErrorByProvider] = useState({});
   const [isRefreshingProviders, setIsRefreshingProviders] = useState(false);
   const refreshingRef = useRef(false);
-  const queryClient = useQueryClient();
   const modelListRefs = useRef({});
   const refreshProviders = useCallback(() => {
     if (refreshingRef.current) return;
@@ -537,7 +542,6 @@ export function GeneralSettingsPanel() {
     setIsRefreshingProviders(true);
     void ensureNativeApi()
       .server.refreshProviders()
-      .then(() => queryClient.invalidateQueries({ queryKey: serverQueryKeys.config() }))
       .catch((error) => {
         console.warn("Failed to refresh providers", error);
       })
@@ -545,11 +549,24 @@ export function GeneralSettingsPanel() {
         refreshingRef.current = false;
         setIsRefreshingProviders(false);
       });
-  }, [queryClient]);
-  const keybindingsConfigPath = serverConfigQuery.data?.keybindingsConfigPath ?? null;
-  const availableEditors = serverConfigQuery.data?.availableEditors;
-  const serverProviders = serverConfigQuery.data?.providers ?? EMPTY_SERVER_PROVIDERS;
+  }, []);
+  const keybindingsConfigPath = useServerKeybindingsConfigPath();
+  const availableEditors = useServerAvailableEditors();
+  const observability = useServerObservability();
+  const serverProviders = useServerProviders();
   const codexHomePath = settings.providers.codex.homePath;
+  const logsDirectoryPath = observability?.logsDirectoryPath ?? null;
+  const diagnosticsDescription = (() => {
+    const exports = [];
+    if (observability?.otlpTracesEnabled && observability.otlpTracesUrl) {
+      exports.push(`traces to ${observability.otlpTracesUrl}`);
+    }
+    if (observability?.otlpMetricsEnabled && observability.otlpMetricsUrl) {
+      exports.push(`metrics to ${observability.otlpMetricsUrl}`);
+    }
+    const mode = observability?.localTracingEnabled ? "Local trace file" : "Terminal logs only";
+    return exports.length > 0 ? `${mode}. OTLP exporting ${exports.join(" and ")}.` : `${mode}.`;
+  })();
   const textGenerationModelSelection = resolveAppModelSelectionState(settings, serverProviders);
   const textGenProvider = textGenerationModelSelection.provider;
   const textGenModel = textGenerationModelSelection.model;
@@ -564,27 +581,44 @@ export function GeneralSettingsPanel() {
     settings.textGenerationModelSelection ?? null,
     DEFAULT_UNIFIED_SETTINGS.textGenerationModelSelection ?? null,
   );
+  const openInPreferredEditor = useCallback(
+    (target, path, failureMessage) => {
+      if (!path) return;
+      setOpenPathErrorByTarget((existing) => ({ ...existing, [target]: null }));
+      setOpeningPathByTarget((existing) => ({ ...existing, [target]: true }));
+      const editor = resolveAndPersistPreferredEditor(availableEditors ?? []);
+      if (!editor) {
+        setOpenPathErrorByTarget((existing) => ({
+          ...existing,
+          [target]: "No available editors found.",
+        }));
+        setOpeningPathByTarget((existing) => ({ ...existing, [target]: false }));
+        return;
+      }
+      void ensureNativeApi()
+        .shell.openInEditor(path, editor)
+        .catch((error) => {
+          setOpenPathErrorByTarget((existing) => ({
+            ...existing,
+            [target]: error instanceof Error ? error.message : failureMessage,
+          }));
+        })
+        .finally(() => {
+          setOpeningPathByTarget((existing) => ({ ...existing, [target]: false }));
+        });
+    },
+    [availableEditors],
+  );
   const openKeybindingsFile = useCallback(() => {
-    if (!keybindingsConfigPath) return;
-    setOpenKeybindingsError(null);
-    setIsOpeningKeybindings(true);
-    const editor = resolveAndPersistPreferredEditor(availableEditors ?? []);
-    if (!editor) {
-      setOpenKeybindingsError("No available editors found.");
-      setIsOpeningKeybindings(false);
-      return;
-    }
-    void ensureNativeApi()
-      .shell.openInEditor(keybindingsConfigPath, editor)
-      .catch((error) => {
-        setOpenKeybindingsError(
-          error instanceof Error ? error.message : "Unable to open keybindings file.",
-        );
-      })
-      .finally(() => {
-        setIsOpeningKeybindings(false);
-      });
-  }, [availableEditors, keybindingsConfigPath]);
+    openInPreferredEditor("keybindings", keybindingsConfigPath, "Unable to open keybindings file.");
+  }, [keybindingsConfigPath, openInPreferredEditor]);
+  const openLogsDirectory = useCallback(() => {
+    openInPreferredEditor("logsDirectory", logsDirectoryPath, "Unable to open logs folder.");
+  }, [logsDirectoryPath, openInPreferredEditor]);
+  const openKeybindingsError = openPathErrorByTarget.keybindings ?? null;
+  const openDiagnosticsError = openPathErrorByTarget.logsDirectory ?? null;
+  const isOpeningKeybindings = openingPathByTarget.keybindings;
+  const isOpeningLogsDirectory = openingPathByTarget.logsDirectory;
   const addCustomModel = useCallback(
     (provider) => {
       const customModelInput = customModelInputByProvider[provider];
@@ -1444,14 +1478,41 @@ export function GeneralSettingsPanel() {
           }),
         }),
       }),
-      _jsx(SettingsSection, {
+      _jsxs(SettingsSection, {
         title: "About",
-        children: isElectron
-          ? _jsx(AboutVersionSection, {})
-          : _jsx(SettingsRow, {
-              title: _jsx(AboutVersionTitle, {}),
-              description: "Current version of the application.",
+        children: [
+          isElectron
+            ? _jsx(AboutVersionSection, {})
+            : _jsx(SettingsRow, {
+                title: _jsx(AboutVersionTitle, {}),
+                description: "Current version of the application.",
+              }),
+          _jsx(SettingsRow, {
+            title: "Diagnostics",
+            description: diagnosticsDescription,
+            status: _jsxs(_Fragment, {
+              children: [
+                _jsx("span", {
+                  className: "block break-all font-mono text-[11px] text-foreground",
+                  children: logsDirectoryPath ?? "Resolving logs directory...",
+                }),
+                openDiagnosticsError
+                  ? _jsx("span", {
+                      className: "mt-1 block text-destructive",
+                      children: openDiagnosticsError,
+                    })
+                  : null,
+              ],
             }),
+            control: _jsx(Button, {
+              size: "xs",
+              variant: "outline",
+              disabled: !logsDirectoryPath || isOpeningLogsDirectory,
+              onClick: openLogsDirectory,
+              children: isOpeningLogsDirectory ? "Opening..." : "Open logs folder",
+            }),
+          }),
+        ],
       }),
     ],
   });

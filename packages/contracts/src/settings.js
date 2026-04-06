@@ -72,6 +72,10 @@ export const CopilotSettings = Schema.Struct({
   binaryPath: makeBinaryPathSetting("copilot"),
   customModels: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(() => [])),
 });
+export const ObservabilitySettings = Schema.Struct({
+  otlpTracesUrl: TrimmedString.pipe(Schema.withDecodingDefault(() => "")),
+  otlpMetricsUrl: TrimmedString.pipe(Schema.withDecodingDefault(() => "")),
+});
 export const ServerSettings = Schema.Struct({
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   defaultThreadEnvMode: ThreadEnvMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -89,8 +93,18 @@ export const ServerSettings = Schema.Struct({
     opencode: OpencodeSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     copilotAgent: CopilotSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
+  observability: ObservabilitySettings.pipe(Schema.withDecodingDefault(() => ({}))),
 });
 export const DEFAULT_SERVER_SETTINGS = Schema.decodeSync(ServerSettings)({});
+export class ServerSettingsError extends Schema.TaggedErrorClass()("ServerSettingsError", {
+  settingsPath: Schema.String,
+  detail: Schema.String,
+  cause: Schema.optional(Schema.Defect),
+}) {
+  get message() {
+    return `Server settings error at ${this.settingsPath}: ${this.detail}`;
+  }
+}
 export const DEFAULT_UNIFIED_SETTINGS = {
   ...DEFAULT_SERVER_SETTINGS,
   ...DEFAULT_CLIENT_SETTINGS,
@@ -174,6 +188,12 @@ export const ServerSettingsPatch = Schema.Struct({
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   defaultThreadEnvMode: Schema.optionalKey(ThreadEnvMode),
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
+  observability: Schema.optionalKey(
+    Schema.Struct({
+      otlpTracesUrl: Schema.optionalKey(Schema.String),
+      otlpMetricsUrl: Schema.optionalKey(Schema.String),
+    }),
+  ),
   providers: Schema.optionalKey(
     Schema.Struct({
       codex: Schema.optionalKey(CodexSettingsPatch),

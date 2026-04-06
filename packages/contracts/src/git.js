@@ -1,8 +1,15 @@
 import { Schema } from "effect";
-import { NonNegativeInt, PositiveInt, TrimmedNonEmptyString } from "./baseSchemas";
+import { NonNegativeInt, PositiveInt, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
+const GIT_LIST_BRANCHES_MAX_LIMIT = 200;
 // Domain Types
-export const GitStackedAction = Schema.Literals(["commit", "commit_push", "commit_push_pr"]);
+export const GitStackedAction = Schema.Literals([
+  "commit",
+  "push",
+  "create_pr",
+  "commit_push",
+  "commit_push_pr",
+]);
 export const GitActionProgressPhase = Schema.Literals(["branch", "commit", "push", "pr"]);
 export const GitActionProgressKind = Schema.Literals([
   "action_started",
@@ -14,7 +21,11 @@ export const GitActionProgressKind = Schema.Literals([
   "action_failed",
 ]);
 export const GitActionProgressStream = Schema.Literals(["stdout", "stderr"]);
-const GitCommitStepStatus = Schema.Literals(["created", "skipped_no_changes"]);
+const GitCommitStepStatus = Schema.Literals([
+  "created",
+  "skipped_no_changes",
+  "skipped_not_requested",
+]);
 const GitPushStepStatus = Schema.Literals([
   "pushed",
   "skipped_not_requested",
@@ -26,6 +37,29 @@ const GitStatusPrState = Schema.Literals(["open", "closed", "merged"]);
 const GitPullRequestReference = TrimmedNonEmptyStringSchema;
 const GitPullRequestState = Schema.Literals(["open", "closed", "merged"]);
 const GitPreparePullRequestThreadMode = Schema.Literals(["local", "worktree"]);
+export const GitRunStackedActionToastRunAction = Schema.Struct({
+  kind: GitStackedAction,
+});
+const GitRunStackedActionToastCta = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("none"),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("open_pr"),
+    label: TrimmedNonEmptyStringSchema,
+    url: Schema.String,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("run_action"),
+    label: TrimmedNonEmptyStringSchema,
+    action: GitRunStackedActionToastRunAction,
+  }),
+]);
+const GitRunStackedActionToast = Schema.Struct({
+  title: TrimmedNonEmptyStringSchema,
+  description: Schema.optional(TrimmedNonEmptyStringSchema),
+  cta: GitRunStackedActionToastCta,
+});
 export const GitBranch = Schema.Struct({
   name: TrimmedNonEmptyStringSchema,
   isRemote: Schema.optional(Schema.Boolean),
@@ -75,6 +109,11 @@ export const GitSuggestCommitMessageResult = Schema.Struct({
 });
 export const GitListBranchesInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
+  query: Schema.optional(TrimmedNonEmptyStringSchema.check(Schema.isMaxLength(256))),
+  cursor: Schema.optional(NonNegativeInt),
+  limit: Schema.optional(
+    PositiveInt.check(Schema.isLessThanOrEqualTo(GIT_LIST_BRANCHES_MAX_LIMIT)),
+  ),
 });
 export const GitCreateWorktreeInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
@@ -90,6 +129,7 @@ export const GitPreparePullRequestThreadInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   reference: GitPullRequestReference,
   mode: GitPreparePullRequestThreadMode,
+  threadId: Schema.optional(ThreadId),
 });
 export const GitRemoveWorktreeInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
@@ -117,7 +157,10 @@ const GitStatusPr = Schema.Struct({
   state: GitStatusPrState,
 });
 export const GitStatusResult = Schema.Struct({
-  branch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  isRepo: Schema.Boolean,
+  hasOriginRemote: Schema.Boolean,
+  isDefaultBranch: Schema.Boolean,
+  branch: Schema.NullOr(TrimmedNonEmptyStringSchema),
   hasWorkingTreeChanges: Schema.Boolean,
   workingTree: Schema.Struct({
     files: Schema.Array(
@@ -139,6 +182,8 @@ export const GitListBranchesResult = Schema.Struct({
   branches: Schema.Array(GitBranch),
   isRepo: Schema.Boolean,
   hasOriginRemote: Schema.Boolean,
+  nextCursor: NonNegativeInt.pipe(Schema.NullOr),
+  totalCount: NonNegativeInt,
 });
 export const GitCreateWorktreeResult = Schema.Struct({
   worktree: GitWorktree,
@@ -176,12 +221,58 @@ export const GitRunStackedActionResult = Schema.Struct({
     headBranch: Schema.optional(TrimmedNonEmptyStringSchema),
     title: Schema.optional(TrimmedNonEmptyStringSchema),
   }),
+  toast: GitRunStackedActionToast,
 });
 export const GitPullResult = Schema.Struct({
   status: Schema.Literals(["pulled", "skipped_up_to_date"]),
   branch: TrimmedNonEmptyStringSchema,
   upstreamBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
 });
+// RPC / domain errors
+export class GitCommandError extends Schema.TaggedErrorClass()("GitCommandError", {
+  operation: Schema.String,
+  command: Schema.String,
+  cwd: Schema.String,
+  detail: Schema.String,
+  cause: Schema.optional(Schema.Defect),
+}) {
+  get message() {
+    return `Git command failed in ${this.operation}: ${this.command} (${this.cwd}) - ${this.detail}`;
+  }
+}
+export class GitHubCliError extends Schema.TaggedErrorClass()("GitHubCliError", {
+  operation: Schema.String,
+  detail: Schema.String,
+  cause: Schema.optional(Schema.Defect),
+}) {
+  get message() {
+    return `GitHub CLI failed in ${this.operation}: ${this.detail}`;
+  }
+}
+export class TextGenerationError extends Schema.TaggedErrorClass()("TextGenerationError", {
+  operation: Schema.String,
+  detail: Schema.String,
+  cause: Schema.optional(Schema.Defect),
+}) {
+  get message() {
+    return `Text generation failed in ${this.operation}: ${this.detail}`;
+  }
+}
+export class GitManagerError extends Schema.TaggedErrorClass()("GitManagerError", {
+  operation: Schema.String,
+  detail: Schema.String,
+  cause: Schema.optional(Schema.Defect),
+}) {
+  get message() {
+    return `Git manager failed in ${this.operation}: ${this.detail}`;
+  }
+}
+export const GitManagerServiceError = Schema.Union([
+  GitManagerError,
+  GitCommandError,
+  GitHubCliError,
+  TextGenerationError,
+]);
 const GitActionProgressBase = Schema.Struct({
   actionId: TrimmedNonEmptyStringSchema,
   cwd: TrimmedNonEmptyStringSchema,

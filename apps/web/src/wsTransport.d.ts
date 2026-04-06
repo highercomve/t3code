@@ -1,38 +1,36 @@
-import { type WsPushChannel, type WsPushMessage } from "@t3tools/contracts";
-type PushListener<C extends WsPushChannel> = (message: WsPushMessage<C>) => void;
+import { Duration, Effect, Option, Stream } from "effect";
+import { type WsRpcProtocolClient } from "./rpc/protocol";
 interface SubscribeOptions {
-  readonly replayLatest?: boolean;
+  readonly retryDelay?: Duration.Input;
+  readonly onResubscribe?: () => void;
 }
 interface RequestOptions {
-  readonly timeoutMs?: number | null;
+  readonly timeout?: Option.Option<Duration.Input>;
 }
-type TransportState = "connecting" | "open" | "reconnecting" | "closed" | "disposed";
 export declare class WsTransport {
-  private ws;
-  private nextId;
-  private readonly pending;
-  private readonly listeners;
-  private readonly latestPushByChannel;
-  private readonly outboundQueue;
-  private reconnectAttempt;
-  private reconnectTimer;
-  private disposed;
-  private state;
+  private readonly tracingReady;
   private readonly url;
+  private disposed;
+  private reconnectChain;
+  private session;
   constructor(url?: string);
-  request<T = unknown>(method: string, params?: unknown, options?: RequestOptions): Promise<T>;
-  subscribe<C extends WsPushChannel>(
-    channel: C,
-    listener: PushListener<C>,
+  request<TSuccess>(
+    execute: (client: WsRpcProtocolClient) => Effect.Effect<TSuccess, Error, never>,
+    _options?: RequestOptions,
+  ): Promise<TSuccess>;
+  requestStream<TValue>(
+    connect: (client: WsRpcProtocolClient) => Stream.Stream<TValue, Error, never>,
+    listener: (value: TValue) => void,
+  ): Promise<void>;
+  subscribe<TValue>(
+    connect: (client: WsRpcProtocolClient) => Stream.Stream<TValue, Error, never>,
+    listener: (value: TValue) => void,
     options?: SubscribeOptions,
   ): () => void;
-  getLatestPush<C extends WsPushChannel>(channel: C): WsPushMessage<C> | null;
-  getState(): TransportState;
-  dispose(): void;
-  private connect;
-  private handleMessage;
-  private send;
-  private flushQueue;
-  private scheduleReconnect;
+  reconnect(): Promise<void>;
+  dispose(): Promise<void>;
+  private closeSession;
+  private createSession;
+  private runStreamOnSession;
 }
 export {};

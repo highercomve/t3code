@@ -29,6 +29,7 @@ const TerminalSessionInput = Schema.Struct({
 export const TerminalOpenInput = Schema.Struct({
   ...TerminalSessionInput.fields,
   cwd: TrimmedNonEmptyStringSchema,
+  worktreePath: Schema.optional(Schema.NullOr(TrimmedNonEmptyStringSchema)),
   cols: Schema.optional(TerminalColsSchema),
   rows: Schema.optional(TerminalRowsSchema),
   env: Schema.optional(TerminalEnvSchema),
@@ -46,6 +47,7 @@ export const TerminalClearInput = TerminalSessionInput;
 export const TerminalRestartInput = Schema.Struct({
   ...TerminalSessionInput.fields,
   cwd: TrimmedNonEmptyStringSchema,
+  worktreePath: Schema.optional(Schema.NullOr(TrimmedNonEmptyStringSchema)),
   cols: TerminalColsSchema,
   rows: TerminalRowsSchema,
   env: Schema.optional(TerminalEnvSchema),
@@ -60,6 +62,7 @@ export const TerminalSessionSnapshot = Schema.Struct({
   threadId: Schema.String.check(Schema.isNonEmpty()),
   terminalId: Schema.String.check(Schema.isNonEmpty()),
   cwd: Schema.String.check(Schema.isNonEmpty()),
+  worktreePath: Schema.NullOr(TrimmedNonEmptyStringSchema),
   status: TerminalSessionStatus,
   pid: Schema.NullOr(Schema.Int.check(Schema.isGreaterThan(0))),
   history: Schema.String,
@@ -115,4 +118,60 @@ export const TerminalEvent = Schema.Union([
   TerminalClearedEvent,
   TerminalRestartedEvent,
   TerminalActivityEvent,
+]);
+export class TerminalCwdError extends Schema.TaggedErrorClass()("TerminalCwdError", {
+  cwd: Schema.String,
+  reason: Schema.Literals(["notFound", "notDirectory", "statFailed"]),
+  cause: Schema.optional(Schema.Defect),
+}) {
+  get message() {
+    if (this.reason === "notDirectory") {
+      return `Terminal cwd is not a directory: ${this.cwd}`;
+    }
+    if (this.reason === "notFound") {
+      return `Terminal cwd does not exist: ${this.cwd}`;
+    }
+    const causeMessage =
+      this.cause && typeof this.cause === "object" && "message" in this.cause
+        ? this.cause.message
+        : undefined;
+    return causeMessage
+      ? `Failed to access terminal cwd: ${this.cwd} (${causeMessage})`
+      : `Failed to access terminal cwd: ${this.cwd}`;
+  }
+}
+export class TerminalHistoryError extends Schema.TaggedErrorClass()("TerminalHistoryError", {
+  operation: Schema.Literals(["read", "truncate", "migrate"]),
+  threadId: Schema.String,
+  terminalId: Schema.String,
+  cause: Schema.optional(Schema.Defect),
+}) {
+  get message() {
+    return `Failed to ${this.operation} terminal history for thread: ${this.threadId}, terminal: ${this.terminalId}`;
+  }
+}
+export class TerminalSessionLookupError extends Schema.TaggedErrorClass()(
+  "TerminalSessionLookupError",
+  {
+    threadId: Schema.String,
+    terminalId: Schema.String,
+  },
+) {
+  get message() {
+    return `Unknown terminal thread: ${this.threadId}, terminal: ${this.terminalId}`;
+  }
+}
+export class TerminalNotRunningError extends Schema.TaggedErrorClass()("TerminalNotRunningError", {
+  threadId: Schema.String,
+  terminalId: Schema.String,
+}) {
+  get message() {
+    return `Terminal is not running for thread: ${this.threadId}, terminal: ${this.terminalId}`;
+  }
+}
+export const TerminalError = Schema.Union([
+  TerminalCwdError,
+  TerminalHistoryError,
+  TerminalSessionLookupError,
+  TerminalNotRunningError,
 ]);

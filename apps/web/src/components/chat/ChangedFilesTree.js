@@ -1,10 +1,11 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { buildTurnDiffTree } from "../../lib/turnDiffTree";
 import { ChevronRightIcon, FolderIcon, FolderClosedIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { DiffStatLabel, hasNonZeroStat } from "./DiffStatLabel";
 import { VscodeEntryIcon } from "./VscodeEntryIcon";
+const EMPTY_DIRECTORY_OVERRIDES = {};
 export const ChangedFilesTree = memo(function ChangedFilesTree(props) {
   const { files, allDirectoriesExpanded, onOpenTurnDiff, resolvedTheme, turnId } = props;
   const treeNodes = useMemo(() => buildTurnDiffTree(files), [files]);
@@ -12,30 +13,34 @@ export const ChangedFilesTree = memo(function ChangedFilesTree(props) {
     () => collectDirectoryPaths(treeNodes).join("\u0000"),
     [treeNodes],
   );
-  const allDirectoryExpansionState = useMemo(
-    () =>
-      buildDirectoryExpansionState(
-        directoryPathsKey ? directoryPathsKey.split("\u0000") : [],
-        allDirectoriesExpanded,
-      ),
-    [allDirectoriesExpanded, directoryPathsKey],
+  const expansionStateKey = `${allDirectoriesExpanded ? "expanded" : "collapsed"}\u0000${directoryPathsKey}`;
+  const [directoryExpansionState, setDirectoryExpansionState] = useState(() => ({
+    key: expansionStateKey,
+    overrides: {},
+  }));
+  const expandedDirectories =
+    directoryExpansionState.key === expansionStateKey
+      ? directoryExpansionState.overrides
+      : EMPTY_DIRECTORY_OVERRIDES;
+  const toggleDirectory = useCallback(
+    (pathValue) => {
+      setDirectoryExpansionState((current) => {
+        const nextOverrides = current.key === expansionStateKey ? current.overrides : {};
+        return {
+          key: expansionStateKey,
+          overrides: {
+            ...nextOverrides,
+            [pathValue]: !(nextOverrides[pathValue] ?? allDirectoriesExpanded),
+          },
+        };
+      });
+    },
+    [allDirectoriesExpanded, expansionStateKey],
   );
-  const [expandedDirectories, setExpandedDirectories] = useState(() =>
-    buildDirectoryExpansionState(directoryPathsKey ? directoryPathsKey.split("\u0000") : [], true),
-  );
-  useEffect(() => {
-    setExpandedDirectories(allDirectoryExpansionState);
-  }, [allDirectoryExpansionState]);
-  const toggleDirectory = useCallback((pathValue, fallbackExpanded) => {
-    setExpandedDirectories((current) => ({
-      ...current,
-      [pathValue]: !(current[pathValue] ?? fallbackExpanded),
-    }));
-  }, []);
   const renderTreeNode = (node, depth) => {
     const leftPadding = 8 + depth * 14;
     if (node.kind === "directory") {
-      const isExpanded = expandedDirectories[node.path] ?? depth === 0;
+      const isExpanded = expandedDirectories[node.path] ?? allDirectoriesExpanded;
       return _jsxs(
         "div",
         {
@@ -46,7 +51,7 @@ export const ChangedFilesTree = memo(function ChangedFilesTree(props) {
               className:
                 "group flex w-full items-center gap-1.5 rounded-md py-1 pr-2 text-left hover:bg-background/80",
               style: { paddingLeft: `${leftPadding}px` },
-              onClick: () => toggleDirectory(node.path, depth === 0),
+              onClick: () => toggleDirectory(node.path),
               children: [
                 _jsx(ChevronRightIcon, {
                   "aria-hidden": "true",
@@ -132,11 +137,4 @@ function collectDirectoryPaths(nodes) {
     paths.push(...collectDirectoryPaths(node.children));
   }
   return paths;
-}
-function buildDirectoryExpansionState(directoryPaths, expanded) {
-  const expandedState = {};
-  for (const directoryPath of directoryPaths) {
-    expandedState[directoryPath] = expanded;
-  }
-  return expandedState;
 }

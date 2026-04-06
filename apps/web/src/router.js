@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+import { AppAtomRegistryProvider } from "./rpc/atomRegistry";
 import { routeTree } from "./routeTree.gen";
 export function getRouter(history) {
   const queryClient = new QueryClient();
@@ -10,6 +11,11 @@ export function getRouter(history) {
     context: {
       queryClient,
     },
-    Wrap: ({ children }) => createElement(QueryClientProvider, { client: queryClient }, children),
+    Wrap: ({ children }) =>
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(AppAtomRegistryProvider, undefined, children),
+      ),
   });
 }
