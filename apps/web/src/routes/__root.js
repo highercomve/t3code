@@ -1,36 +1,17 @@
 import { jsxs as _jsxs, jsx as _jsx } from "react/jsx-runtime";
-import {
-  Outlet,
-  createRootRouteWithContext,
-  useNavigate,
-  useLocation,
-} from "@tanstack/react-router";
+import { Outlet, createRootRouteWithContext, useNavigate, useLocation, } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Throttler } from "@tanstack/react-pacer";
 import { APP_DISPLAY_NAME } from "../branding";
 import { AppSidebarLayout } from "../components/AppSidebarLayout";
-import {
-  SlowRpcAckToastCoordinator,
-  WebSocketConnectionCoordinator,
-  WebSocketConnectionSurface,
-} from "../components/WebSocketConnectionSurface";
+import { SlowRpcAckToastCoordinator, WebSocketConnectionCoordinator, WebSocketConnectionSurface, } from "../components/WebSocketConnectionSurface";
 import { Button } from "../components/ui/button";
 import { AnchoredToastProvider, ToastProvider, toastManager } from "../components/ui/toast";
 import { resolveAndPersistPreferredEditor } from "../editorPreferences";
 import { readNativeApi } from "../nativeApi";
-import {
-  getServerConfigUpdatedNotification,
-  startServerStateSync,
-  useServerConfig,
-  useServerConfigUpdatedSubscription,
-  useServerWelcomeSubscription,
-} from "../rpc/serverState";
-import {
-  clearPromotedDraftThread,
-  clearPromotedDraftThreads,
-  useComposerDraftStore,
-} from "../composerDraftStore";
+import { getServerConfigUpdatedNotification, startServerStateSync, useServerConfig, useServerConfigUpdatedSubscription, useServerWelcomeSubscription, } from "../rpc/serverState";
+import { clearPromotedDraftThread, clearPromotedDraftThreads, useComposerDraftStore, } from "../composerDraftStore";
 import { useStore } from "../store";
 import { useUiStateStore } from "../uiStateStore";
 import { useTerminalStateStore } from "../terminalStateStore";
@@ -43,521 +24,412 @@ import { createOrchestrationRecoveryCoordinator } from "../orchestrationRecovery
 import { deriveReplayRetryDecision } from "../orchestrationRecovery";
 import { getWsRpcClient } from "~/wsRpcClient";
 export const Route = createRootRouteWithContext()({
-  component: RootRouteView,
-  errorComponent: RootRouteErrorView,
-  head: () => ({
-    meta: [{ name: "title", content: APP_DISPLAY_NAME }],
-  }),
+    component: RootRouteView,
+    errorComponent: RootRouteErrorView,
+    head: () => ({
+        meta: [{ name: "title", content: APP_DISPLAY_NAME }],
+    }),
 });
 function RootRouteView() {
-  if (!readNativeApi()) {
-    return _jsx("div", {
-      className: "flex h-screen flex-col bg-background text-foreground",
-      children: _jsx("div", {
-        className: "flex flex-1 items-center justify-center",
-        children: _jsxs("p", {
-          className: "text-sm text-muted-foreground",
-          children: ["Connecting to ", APP_DISPLAY_NAME, " server..."],
-        }),
-      }),
-    });
-  }
-  return _jsx(ToastProvider, {
-    children: _jsxs(AnchoredToastProvider, {
-      children: [
-        _jsx(ServerStateBootstrap, {}),
-        _jsx(EventRouter, {}),
-        _jsx(WebSocketConnectionCoordinator, {}),
-        _jsx(SlowRpcAckToastCoordinator, {}),
-        _jsx(WebSocketConnectionSurface, {
-          children: _jsx(AppSidebarLayout, { children: _jsx(Outlet, {}) }),
-        }),
-      ],
-    }),
-  });
+    if (!readNativeApi()) {
+        return (_jsx("div", { className: "flex h-screen flex-col bg-background text-foreground", children: _jsx("div", { className: "flex flex-1 items-center justify-center", children: _jsxs("p", { className: "text-sm text-muted-foreground", children: ["Connecting to ", APP_DISPLAY_NAME, " server..."] }) }) }));
+    }
+    return (_jsx(ToastProvider, { children: _jsxs(AnchoredToastProvider, { children: [_jsx(ServerStateBootstrap, {}), _jsx(EventRouter, {}), _jsx(WebSocketConnectionCoordinator, {}), _jsx(SlowRpcAckToastCoordinator, {}), _jsx(WebSocketConnectionSurface, { children: _jsx(AppSidebarLayout, { children: _jsx(Outlet, {}) }) })] }) }));
 }
 function RootRouteErrorView({ error, reset }) {
-  const message = errorMessage(error);
-  const details = errorDetails(error);
-  return _jsxs("div", {
-    className:
-      "relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground sm:px-6",
-    children: [
-      _jsxs("div", {
-        className: "pointer-events-none absolute inset-0 opacity-80",
-        children: [
-          _jsx("div", {
-            className:
-              "absolute inset-x-0 top-0 h-44 bg-[radial-gradient(44rem_16rem_at_top,color-mix(in_srgb,var(--color-red-500)_16%,transparent),transparent)]",
-          }),
-          _jsx("div", {
-            className:
-              "absolute inset-0 bg-[linear-gradient(145deg,color-mix(in_srgb,var(--background)_90%,var(--color-black))_0%,var(--background)_55%)]",
-          }),
-        ],
-      }),
-      _jsxs("section", {
-        className:
-          "relative w-full max-w-xl rounded-2xl border border-border/80 bg-card/90 p-6 shadow-2xl shadow-black/20 backdrop-blur-md sm:p-8",
-        children: [
-          _jsx("p", {
-            className:
-              "text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase",
-            children: APP_DISPLAY_NAME,
-          }),
-          _jsx("h1", {
-            className: "mt-3 text-2xl font-semibold tracking-tight sm:text-3xl",
-            children: "Something went wrong.",
-          }),
-          _jsx("p", {
-            className: "mt-2 text-sm leading-relaxed text-muted-foreground",
-            children: message,
-          }),
-          _jsxs("div", {
-            className: "mt-5 flex flex-wrap gap-2",
-            children: [
-              _jsx(Button, { size: "sm", onClick: () => reset(), children: "Try again" }),
-              _jsx(Button, {
-                size: "sm",
-                variant: "outline",
-                onClick: () => window.location.reload(),
-                children: "Reload app",
-              }),
-            ],
-          }),
-          _jsxs("details", {
-            className:
-              "group mt-5 overflow-hidden rounded-lg border border-border/70 bg-background/55",
-            children: [
-              _jsxs("summary", {
-                className:
-                  "cursor-pointer list-none px-3 py-2 text-xs font-medium text-muted-foreground",
-                children: [
-                  _jsx("span", { className: "group-open:hidden", children: "Show error details" }),
-                  _jsx("span", {
-                    className: "hidden group-open:inline",
-                    children: "Hide error details",
-                  }),
-                ],
-              }),
-              _jsx("pre", {
-                className:
-                  "max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85",
-                children: details,
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
+    const message = errorMessage(error);
+    const details = errorDetails(error);
+    return (_jsxs("div", { className: "relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground sm:px-6", children: [_jsxs("div", { className: "pointer-events-none absolute inset-0 opacity-80", children: [_jsx("div", { className: "absolute inset-x-0 top-0 h-44 bg-[radial-gradient(44rem_16rem_at_top,color-mix(in_srgb,var(--color-red-500)_16%,transparent),transparent)]" }), _jsx("div", { className: "absolute inset-0 bg-[linear-gradient(145deg,color-mix(in_srgb,var(--background)_90%,var(--color-black))_0%,var(--background)_55%)]" })] }), _jsxs("section", { className: "relative w-full max-w-xl rounded-2xl border border-border/80 bg-card/90 p-6 shadow-2xl shadow-black/20 backdrop-blur-md sm:p-8", children: [_jsx("p", { className: "text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase", children: APP_DISPLAY_NAME }), _jsx("h1", { className: "mt-3 text-2xl font-semibold tracking-tight sm:text-3xl", children: "Something went wrong." }), _jsx("p", { className: "mt-2 text-sm leading-relaxed text-muted-foreground", children: message }), _jsxs("div", { className: "mt-5 flex flex-wrap gap-2", children: [_jsx(Button, { size: "sm", onClick: () => reset(), children: "Try again" }), _jsx(Button, { size: "sm", variant: "outline", onClick: () => window.location.reload(), children: "Reload app" })] }), _jsxs("details", { className: "group mt-5 overflow-hidden rounded-lg border border-border/70 bg-background/55", children: [_jsxs("summary", { className: "cursor-pointer list-none px-3 py-2 text-xs font-medium text-muted-foreground", children: [_jsx("span", { className: "group-open:hidden", children: "Show error details" }), _jsx("span", { className: "hidden group-open:inline", children: "Hide error details" })] }), _jsx("pre", { className: "max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85", children: details })] })] })] }));
 }
 function errorMessage(error) {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message;
-  }
-  if (typeof error === "string" && error.trim().length > 0) {
-    return error;
-  }
-  return "An unexpected router error occurred.";
+    if (error instanceof Error && error.message.trim().length > 0) {
+        return error.message;
+    }
+    if (typeof error === "string" && error.trim().length > 0) {
+        return error;
+    }
+    return "An unexpected router error occurred.";
 }
 function errorDetails(error) {
-  if (error instanceof Error) {
-    return error.stack ?? error.message;
-  }
-  if (typeof error === "string") {
-    return error;
-  }
-  try {
-    return JSON.stringify(error, null, 2);
-  } catch {
-    return "No additional error details are available.";
-  }
+    if (error instanceof Error) {
+        return error.stack ?? error.message;
+    }
+    if (typeof error === "string") {
+        return error;
+    }
+    try {
+        return JSON.stringify(error, null, 2);
+    }
+    catch {
+        return "No additional error details are available.";
+    }
 }
 function coalesceOrchestrationUiEvents(events) {
-  if (events.length < 2) {
-    return [...events];
-  }
-  const coalesced = [];
-  for (const event of events) {
-    const previous = coalesced.at(-1);
-    if (
-      previous?.type === "thread.message-sent" &&
-      event.type === "thread.message-sent" &&
-      previous.payload.threadId === event.payload.threadId &&
-      previous.payload.messageId === event.payload.messageId
-    ) {
-      coalesced[coalesced.length - 1] = {
-        ...event,
-        payload: {
-          ...event.payload,
-          attachments: event.payload.attachments ?? previous.payload.attachments,
-          createdAt: previous.payload.createdAt,
-          text:
-            !event.payload.streaming && event.payload.text.length > 0
-              ? event.payload.text
-              : previous.payload.text + event.payload.text,
-        },
-      };
-      continue;
+    if (events.length < 2) {
+        return [...events];
     }
-    coalesced.push(event);
-  }
-  return coalesced;
+    const coalesced = [];
+    for (const event of events) {
+        const previous = coalesced.at(-1);
+        if (previous?.type === "thread.message-sent" &&
+            event.type === "thread.message-sent" &&
+            previous.payload.threadId === event.payload.threadId &&
+            previous.payload.messageId === event.payload.messageId) {
+            coalesced[coalesced.length - 1] = {
+                ...event,
+                payload: {
+                    ...event.payload,
+                    attachments: event.payload.attachments ?? previous.payload.attachments,
+                    createdAt: previous.payload.createdAt,
+                    text: !event.payload.streaming && event.payload.text.length > 0
+                        ? event.payload.text
+                        : previous.payload.text + event.payload.text,
+                },
+            };
+            continue;
+        }
+        coalesced.push(event);
+    }
+    return coalesced;
 }
 const REPLAY_RECOVERY_RETRY_DELAY_MS = 100;
 const MAX_NO_PROGRESS_REPLAY_RETRIES = 3;
 function ServerStateBootstrap() {
-  useEffect(() => startServerStateSync(getWsRpcClient().server), []);
-  return null;
+    useEffect(() => startServerStateSync(getWsRpcClient().server), []);
+    return null;
 }
 function EventRouter() {
-  const applyOrchestrationEvents = useStore((store) => store.applyOrchestrationEvents);
-  const syncServerReadModel = useStore((store) => store.syncServerReadModel);
-  const setProjectExpanded = useUiStateStore((store) => store.setProjectExpanded);
-  const syncProjects = useUiStateStore((store) => store.syncProjects);
-  const syncThreads = useUiStateStore((store) => store.syncThreads);
-  const clearThreadUi = useUiStateStore((store) => store.clearThreadUi);
-  const removeTerminalState = useTerminalStateStore((store) => store.removeTerminalState);
-  const removeOrphanedTerminalStates = useTerminalStateStore(
-    (store) => store.removeOrphanedTerminalStates,
-  );
-  const applyTerminalEvent = useTerminalStateStore((store) => store.applyTerminalEvent);
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const pathname = useLocation({ select: (loc) => loc.pathname });
-  const readPathname = useEffectEvent(() => pathname);
-  const handledBootstrapThreadIdRef = useRef(null);
-  const seenServerConfigUpdateIdRef = useRef(getServerConfigUpdatedNotification()?.id ?? 0);
-  const disposedRef = useRef(false);
-  const bootstrapFromSnapshotRef = useRef(async () => undefined);
-  const serverConfig = useServerConfig();
-  const handleWelcome = useEffectEvent((payload) => {
-    if (!payload) return;
-    migrateLocalSettingsToServer();
-    void (async () => {
-      await bootstrapFromSnapshotRef.current();
-      if (disposedRef.current) {
-        return;
-      }
-      if (!payload.bootstrapProjectId || !payload.bootstrapThreadId) {
-        return;
-      }
-      setProjectExpanded(payload.bootstrapProjectId, true);
-      if (readPathname() !== "/") {
-        return;
-      }
-      if (handledBootstrapThreadIdRef.current === payload.bootstrapThreadId) {
-        return;
-      }
-      await navigate({
-        to: "/$threadId",
-        params: { threadId: payload.bootstrapThreadId },
-        replace: true,
-      });
-      handledBootstrapThreadIdRef.current = payload.bootstrapThreadId;
-    })().catch(() => undefined);
-  });
-  const handleServerConfigUpdated = useEffectEvent((notification) => {
-    if (!notification) return;
-    const { id, payload, source } = notification;
-    if (id <= seenServerConfigUpdateIdRef.current) {
-      return;
-    }
-    seenServerConfigUpdateIdRef.current = id;
-    if (source !== "keybindingsUpdated") {
-      return;
-    }
-    const issue = payload.issues.find((entry) => entry.kind.startsWith("keybindings."));
-    if (!issue) {
-      toastManager.add({
-        type: "success",
-        title: "Keybindings updated",
-        description: "Keybindings configuration reloaded successfully.",
-      });
-      return;
-    }
-    toastManager.add({
-      type: "warning",
-      title: "Invalid keybindings configuration",
-      description: issue.message,
-      actionProps: {
-        children: "Open keybindings.json",
-        onClick: () => {
-          const api = readNativeApi();
-          if (!api) {
+    const applyOrchestrationEvents = useStore((store) => store.applyOrchestrationEvents);
+    const syncServerReadModel = useStore((store) => store.syncServerReadModel);
+    const setProjectExpanded = useUiStateStore((store) => store.setProjectExpanded);
+    const syncProjects = useUiStateStore((store) => store.syncProjects);
+    const syncThreads = useUiStateStore((store) => store.syncThreads);
+    const clearThreadUi = useUiStateStore((store) => store.clearThreadUi);
+    const removeTerminalState = useTerminalStateStore((store) => store.removeTerminalState);
+    const removeOrphanedTerminalStates = useTerminalStateStore((store) => store.removeOrphanedTerminalStates);
+    const applyTerminalEvent = useTerminalStateStore((store) => store.applyTerminalEvent);
+    const queryClient = useQueryClient();
+    const navigate = useNavigate();
+    const pathname = useLocation({ select: (loc) => loc.pathname });
+    const readPathname = useEffectEvent(() => pathname);
+    const handledBootstrapThreadIdRef = useRef(null);
+    const seenServerConfigUpdateIdRef = useRef(getServerConfigUpdatedNotification()?.id ?? 0);
+    const disposedRef = useRef(false);
+    const bootstrapFromSnapshotRef = useRef(async () => undefined);
+    const serverConfig = useServerConfig();
+    const handleWelcome = useEffectEvent((payload) => {
+        if (!payload)
             return;
-          }
-          void Promise.resolve(serverConfig ?? api.server.getConfig())
-            .then((config) => {
-              const editor = resolveAndPersistPreferredEditor(config.availableEditors);
-              if (!editor) {
-                throw new Error("No available editors found.");
-              }
-              return api.shell.openInEditor(config.keybindingsConfigPath, editor);
-            })
-            .catch((error) => {
-              toastManager.add({
-                type: "error",
-                title: "Unable to open keybindings file",
-                description: error instanceof Error ? error.message : "Unknown error opening file.",
-              });
-            });
-        },
-      },
-    });
-  });
-  useEffect(() => {
-    const api = readNativeApi();
-    if (!api) return;
-    let disposed = false;
-    disposedRef.current = false;
-    const recovery = createOrchestrationRecoveryCoordinator();
-    let replayRetryTracker = null;
-    let needsProviderInvalidation = false;
-    const pendingDomainEvents = [];
-    let flushPendingDomainEventsScheduled = false;
-    const reconcileSnapshotDerivedState = () => {
-      const threads = useStore.getState().threads;
-      const projects = useStore.getState().projects;
-      syncProjects(projects.map((project) => ({ id: project.id, cwd: project.cwd })));
-      syncThreads(
-        threads.map((thread) => ({
-          id: thread.id,
-          seedVisitedAt: thread.updatedAt ?? thread.createdAt,
-        })),
-      );
-      clearPromotedDraftThreads(threads.map((thread) => thread.id));
-      const draftThreadIds = Object.keys(useComposerDraftStore.getState().draftThreadsByThreadId);
-      const activeThreadIds = collectActiveTerminalThreadIds({
-        snapshotThreads: threads.map((thread) => ({
-          id: thread.id,
-          deletedAt: null,
-          archivedAt: thread.archivedAt,
-        })),
-        draftThreadIds,
-      });
-      removeOrphanedTerminalStates(activeThreadIds);
-    };
-    const queryInvalidationThrottler = new Throttler(
-      () => {
-        if (!needsProviderInvalidation) {
-          return;
-        }
-        needsProviderInvalidation = false;
-        void queryClient.invalidateQueries({ queryKey: providerQueryKeys.all });
-        // Invalidate workspace entry queries so the @-mention file picker
-        // reflects files created, deleted, or restored during this turn.
-        void queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
-      },
-      {
-        wait: 100,
-        leading: false,
-        trailing: true,
-      },
-    );
-    const applyEventBatch = (events) => {
-      const nextEvents = recovery.markEventBatchApplied(events);
-      if (nextEvents.length === 0) {
-        return;
-      }
-      const batchEffects = deriveOrchestrationBatchEffects(nextEvents);
-      const uiEvents = coalesceOrchestrationUiEvents(nextEvents);
-      const needsProjectUiSync = nextEvents.some(
-        (event) =>
-          event.type === "project.created" ||
-          event.type === "project.meta-updated" ||
-          event.type === "project.deleted",
-      );
-      if (batchEffects.needsProviderInvalidation) {
-        needsProviderInvalidation = true;
-        void queryInvalidationThrottler.maybeExecute();
-      }
-      applyOrchestrationEvents(uiEvents);
-      if (needsProjectUiSync) {
-        const projects = useStore.getState().projects;
-        syncProjects(projects.map((project) => ({ id: project.id, cwd: project.cwd })));
-      }
-      const needsThreadUiSync = nextEvents.some(
-        (event) => event.type === "thread.created" || event.type === "thread.deleted",
-      );
-      if (needsThreadUiSync) {
-        const threads = useStore.getState().threads;
-        syncThreads(
-          threads.map((thread) => ({
-            id: thread.id,
-            seedVisitedAt: thread.updatedAt ?? thread.createdAt,
-          })),
-        );
-      }
-      const draftStore = useComposerDraftStore.getState();
-      for (const threadId of batchEffects.clearPromotedDraftThreadIds) {
-        clearPromotedDraftThread(threadId);
-      }
-      for (const threadId of batchEffects.clearDeletedThreadIds) {
-        draftStore.clearDraftThread(threadId);
-        clearThreadUi(threadId);
-      }
-      for (const threadId of batchEffects.removeTerminalStateThreadIds) {
-        removeTerminalState(threadId);
-      }
-    };
-    const flushPendingDomainEvents = () => {
-      flushPendingDomainEventsScheduled = false;
-      if (disposed || pendingDomainEvents.length === 0) {
-        return;
-      }
-      const events = pendingDomainEvents.splice(0, pendingDomainEvents.length);
-      applyEventBatch(events);
-    };
-    const schedulePendingDomainEventFlush = () => {
-      if (flushPendingDomainEventsScheduled) {
-        return;
-      }
-      flushPendingDomainEventsScheduled = true;
-      queueMicrotask(flushPendingDomainEvents);
-    };
-    const runReplayRecovery = async (reason) => {
-      if (!recovery.beginReplayRecovery(reason)) {
-        return;
-      }
-      const fromSequenceExclusive = recovery.getState().latestSequence;
-      try {
-        const events = await api.orchestration.replayEvents(fromSequenceExclusive);
-        if (!disposed) {
-          applyEventBatch(events);
-        }
-      } catch {
-        replayRetryTracker = null;
-        recovery.failReplayRecovery();
-        void fallbackToSnapshotRecovery();
-        return;
-      }
-      if (!disposed) {
-        const replayCompletion = recovery.completeReplayRecovery();
-        const retryDecision = deriveReplayRetryDecision({
-          previousTracker: replayRetryTracker,
-          completion: replayCompletion,
-          recoveryState: recovery.getState(),
-          baseDelayMs: REPLAY_RECOVERY_RETRY_DELAY_MS,
-          maxNoProgressRetries: MAX_NO_PROGRESS_REPLAY_RETRIES,
-        });
-        replayRetryTracker = retryDecision.tracker;
-        if (retryDecision.shouldRetry) {
-          if (retryDecision.delayMs > 0) {
-            await new Promise((resolve) => {
-              setTimeout(resolve, retryDecision.delayMs);
-            });
-            if (disposed) {
-              return;
+        migrateLocalSettingsToServer();
+        void (async () => {
+            await bootstrapFromSnapshotRef.current();
+            if (disposedRef.current) {
+                return;
             }
-          }
-          void runReplayRecovery(reason);
-        } else if (replayCompletion.shouldReplay && import.meta.env.MODE !== "test") {
-          console.warn(
-            "[orchestration-recovery]",
-            "Stopping replay recovery after no-progress retries.",
-            {
-              state: recovery.getState(),
-            },
-          );
-        }
-      }
-    };
-    const runSnapshotRecovery = async (reason) => {
-      const started = recovery.beginSnapshotRecovery(reason);
-      if (import.meta.env.MODE !== "test") {
-        const state = recovery.getState();
-        console.info("[orchestration-recovery]", "Snapshot recovery requested.", {
-          reason,
-          skipped: !started,
-          ...(started
-            ? {}
-            : {
-                blockedBy: state.inFlight?.kind ?? null,
-                blockedByReason: state.inFlight?.reason ?? null,
-              }),
-          state,
-        });
-      }
-      if (!started) {
-        return;
-      }
-      try {
-        const snapshot = await api.orchestration.getSnapshot();
-        if (!disposed) {
-          syncServerReadModel(snapshot);
-          reconcileSnapshotDerivedState();
-          if (recovery.completeSnapshotRecovery(snapshot.snapshotSequence)) {
-            void runReplayRecovery("sequence-gap");
-          }
-        }
-      } catch {
-        // Keep prior state and wait for welcome or a later replay attempt.
-        recovery.failSnapshotRecovery();
-      }
-    };
-    const bootstrapFromSnapshot = async () => {
-      await runSnapshotRecovery("bootstrap");
-    };
-    bootstrapFromSnapshotRef.current = bootstrapFromSnapshot;
-    const fallbackToSnapshotRecovery = async () => {
-      await runSnapshotRecovery("replay-failed");
-    };
-    const unsubDomainEvent = api.orchestration.onDomainEvent(
-      (event) => {
-        const action = recovery.classifyDomainEvent(event.sequence);
-        if (action === "apply") {
-          pendingDomainEvents.push(event);
-          schedulePendingDomainEventFlush();
-          return;
-        }
-        if (action === "recover") {
-          flushPendingDomainEvents();
-          void runReplayRecovery("sequence-gap");
-        }
-      },
-      {
-        onResubscribe: () => {
-          if (disposed) {
-            return;
-          }
-          flushPendingDomainEvents();
-          void runReplayRecovery("resubscribe");
-        },
-      },
-    );
-    const unsubTerminalEvent = api.terminal.onEvent((event) => {
-      const thread = useStore.getState().threads.find((entry) => entry.id === event.threadId);
-      if (thread && thread.archivedAt !== null) {
-        return;
-      }
-      applyTerminalEvent(event);
+            if (!payload.bootstrapProjectId || !payload.bootstrapThreadId) {
+                return;
+            }
+            setProjectExpanded(payload.bootstrapProjectId, true);
+            if (readPathname() !== "/") {
+                return;
+            }
+            if (handledBootstrapThreadIdRef.current === payload.bootstrapThreadId) {
+                return;
+            }
+            await navigate({
+                to: "/$threadId",
+                params: { threadId: payload.bootstrapThreadId },
+                replace: true,
+            });
+            handledBootstrapThreadIdRef.current = payload.bootstrapThreadId;
+        })().catch(() => undefined);
     });
-    return () => {
-      disposed = true;
-      disposedRef.current = true;
-      needsProviderInvalidation = false;
-      flushPendingDomainEventsScheduled = false;
-      pendingDomainEvents.length = 0;
-      queryInvalidationThrottler.cancel();
-      unsubDomainEvent();
-      unsubTerminalEvent();
-    };
-  }, [
-    applyOrchestrationEvents,
-    navigate,
-    queryClient,
-    removeTerminalState,
-    removeOrphanedTerminalStates,
-    applyTerminalEvent,
-    clearThreadUi,
-    setProjectExpanded,
-    syncProjects,
-    syncServerReadModel,
-    syncThreads,
-  ]);
-  useServerWelcomeSubscription(handleWelcome);
-  useServerConfigUpdatedSubscription(handleServerConfigUpdated);
-  return null;
+    const handleServerConfigUpdated = useEffectEvent((notification) => {
+        if (!notification)
+            return;
+        const { id, payload, source } = notification;
+        if (id <= seenServerConfigUpdateIdRef.current) {
+            return;
+        }
+        seenServerConfigUpdateIdRef.current = id;
+        if (source !== "keybindingsUpdated") {
+            return;
+        }
+        const issue = payload.issues.find((entry) => entry.kind.startsWith("keybindings."));
+        if (!issue) {
+            toastManager.add({
+                type: "success",
+                title: "Keybindings updated",
+                description: "Keybindings configuration reloaded successfully.",
+            });
+            return;
+        }
+        toastManager.add({
+            type: "warning",
+            title: "Invalid keybindings configuration",
+            description: issue.message,
+            actionProps: {
+                children: "Open keybindings.json",
+                onClick: () => {
+                    const api = readNativeApi();
+                    if (!api) {
+                        return;
+                    }
+                    void Promise.resolve(serverConfig ?? api.server.getConfig())
+                        .then((config) => {
+                        const editor = resolveAndPersistPreferredEditor(config.availableEditors);
+                        if (!editor) {
+                            throw new Error("No available editors found.");
+                        }
+                        return api.shell.openInEditor(config.keybindingsConfigPath, editor);
+                    })
+                        .catch((error) => {
+                        toastManager.add({
+                            type: "error",
+                            title: "Unable to open keybindings file",
+                            description: error instanceof Error ? error.message : "Unknown error opening file.",
+                        });
+                    });
+                },
+            },
+        });
+    });
+    useEffect(() => {
+        const api = readNativeApi();
+        if (!api)
+            return;
+        let disposed = false;
+        disposedRef.current = false;
+        const recovery = createOrchestrationRecoveryCoordinator();
+        let replayRetryTracker = null;
+        let needsProviderInvalidation = false;
+        const pendingDomainEvents = [];
+        let flushPendingDomainEventsScheduled = false;
+        const reconcileSnapshotDerivedState = () => {
+            const threads = useStore.getState().threads;
+            const projects = useStore.getState().projects;
+            syncProjects(projects.map((project) => ({ id: project.id, cwd: project.cwd })));
+            syncThreads(threads.map((thread) => ({
+                id: thread.id,
+                seedVisitedAt: thread.updatedAt ?? thread.createdAt,
+            })));
+            clearPromotedDraftThreads(threads.map((thread) => thread.id));
+            const draftThreadIds = Object.keys(useComposerDraftStore.getState().draftThreadsByThreadId);
+            const activeThreadIds = collectActiveTerminalThreadIds({
+                snapshotThreads: threads.map((thread) => ({
+                    id: thread.id,
+                    deletedAt: null,
+                    archivedAt: thread.archivedAt,
+                })),
+                draftThreadIds,
+            });
+            removeOrphanedTerminalStates(activeThreadIds);
+        };
+        const queryInvalidationThrottler = new Throttler(() => {
+            if (!needsProviderInvalidation) {
+                return;
+            }
+            needsProviderInvalidation = false;
+            void queryClient.invalidateQueries({ queryKey: providerQueryKeys.all });
+            // Invalidate workspace entry queries so the @-mention file picker
+            // reflects files created, deleted, or restored during this turn.
+            void queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
+        }, {
+            wait: 100,
+            leading: false,
+            trailing: true,
+        });
+        const applyEventBatch = (events) => {
+            const nextEvents = recovery.markEventBatchApplied(events);
+            if (nextEvents.length === 0) {
+                return;
+            }
+            const batchEffects = deriveOrchestrationBatchEffects(nextEvents);
+            const uiEvents = coalesceOrchestrationUiEvents(nextEvents);
+            const needsProjectUiSync = nextEvents.some((event) => event.type === "project.created" ||
+                event.type === "project.meta-updated" ||
+                event.type === "project.deleted");
+            if (batchEffects.needsProviderInvalidation) {
+                needsProviderInvalidation = true;
+                void queryInvalidationThrottler.maybeExecute();
+            }
+            applyOrchestrationEvents(uiEvents);
+            if (needsProjectUiSync) {
+                const projects = useStore.getState().projects;
+                syncProjects(projects.map((project) => ({ id: project.id, cwd: project.cwd })));
+            }
+            const needsThreadUiSync = nextEvents.some((event) => event.type === "thread.created" || event.type === "thread.deleted");
+            if (needsThreadUiSync) {
+                const threads = useStore.getState().threads;
+                syncThreads(threads.map((thread) => ({
+                    id: thread.id,
+                    seedVisitedAt: thread.updatedAt ?? thread.createdAt,
+                })));
+            }
+            const draftStore = useComposerDraftStore.getState();
+            for (const threadId of batchEffects.clearPromotedDraftThreadIds) {
+                clearPromotedDraftThread(threadId);
+            }
+            for (const threadId of batchEffects.clearDeletedThreadIds) {
+                draftStore.clearDraftThread(threadId);
+                clearThreadUi(threadId);
+            }
+            for (const threadId of batchEffects.removeTerminalStateThreadIds) {
+                removeTerminalState(threadId);
+            }
+        };
+        const flushPendingDomainEvents = () => {
+            flushPendingDomainEventsScheduled = false;
+            if (disposed || pendingDomainEvents.length === 0) {
+                return;
+            }
+            const events = pendingDomainEvents.splice(0, pendingDomainEvents.length);
+            applyEventBatch(events);
+        };
+        const schedulePendingDomainEventFlush = () => {
+            if (flushPendingDomainEventsScheduled) {
+                return;
+            }
+            flushPendingDomainEventsScheduled = true;
+            queueMicrotask(flushPendingDomainEvents);
+        };
+        const runReplayRecovery = async (reason) => {
+            if (!recovery.beginReplayRecovery(reason)) {
+                return;
+            }
+            const fromSequenceExclusive = recovery.getState().latestSequence;
+            try {
+                const events = await api.orchestration.replayEvents(fromSequenceExclusive);
+                if (!disposed) {
+                    applyEventBatch(events);
+                }
+            }
+            catch {
+                replayRetryTracker = null;
+                recovery.failReplayRecovery();
+                void fallbackToSnapshotRecovery();
+                return;
+            }
+            if (!disposed) {
+                const replayCompletion = recovery.completeReplayRecovery();
+                const retryDecision = deriveReplayRetryDecision({
+                    previousTracker: replayRetryTracker,
+                    completion: replayCompletion,
+                    recoveryState: recovery.getState(),
+                    baseDelayMs: REPLAY_RECOVERY_RETRY_DELAY_MS,
+                    maxNoProgressRetries: MAX_NO_PROGRESS_REPLAY_RETRIES,
+                });
+                replayRetryTracker = retryDecision.tracker;
+                if (retryDecision.shouldRetry) {
+                    if (retryDecision.delayMs > 0) {
+                        await new Promise((resolve) => {
+                            setTimeout(resolve, retryDecision.delayMs);
+                        });
+                        if (disposed) {
+                            return;
+                        }
+                    }
+                    void runReplayRecovery(reason);
+                }
+                else if (replayCompletion.shouldReplay && import.meta.env.MODE !== "test") {
+                    console.warn("[orchestration-recovery]", "Stopping replay recovery after no-progress retries.", {
+                        state: recovery.getState(),
+                    });
+                }
+            }
+        };
+        const runSnapshotRecovery = async (reason) => {
+            const started = recovery.beginSnapshotRecovery(reason);
+            if (import.meta.env.MODE !== "test") {
+                const state = recovery.getState();
+                console.info("[orchestration-recovery]", "Snapshot recovery requested.", {
+                    reason,
+                    skipped: !started,
+                    ...(started
+                        ? {}
+                        : {
+                            blockedBy: state.inFlight?.kind ?? null,
+                            blockedByReason: state.inFlight?.reason ?? null,
+                        }),
+                    state,
+                });
+            }
+            if (!started) {
+                return;
+            }
+            try {
+                const snapshot = await api.orchestration.getSnapshot();
+                if (!disposed) {
+                    syncServerReadModel(snapshot);
+                    reconcileSnapshotDerivedState();
+                    if (recovery.completeSnapshotRecovery(snapshot.snapshotSequence)) {
+                        void runReplayRecovery("sequence-gap");
+                    }
+                }
+            }
+            catch {
+                // Keep prior state and wait for welcome or a later replay attempt.
+                recovery.failSnapshotRecovery();
+            }
+        };
+        const bootstrapFromSnapshot = async () => {
+            await runSnapshotRecovery("bootstrap");
+        };
+        bootstrapFromSnapshotRef.current = bootstrapFromSnapshot;
+        const fallbackToSnapshotRecovery = async () => {
+            await runSnapshotRecovery("replay-failed");
+        };
+        const unsubDomainEvent = api.orchestration.onDomainEvent((event) => {
+            const action = recovery.classifyDomainEvent(event.sequence);
+            if (action === "apply") {
+                pendingDomainEvents.push(event);
+                schedulePendingDomainEventFlush();
+                return;
+            }
+            if (action === "recover") {
+                flushPendingDomainEvents();
+                void runReplayRecovery("sequence-gap");
+            }
+        }, {
+            onResubscribe: () => {
+                if (disposed) {
+                    return;
+                }
+                flushPendingDomainEvents();
+                void runReplayRecovery("resubscribe");
+            },
+        });
+        const unsubTerminalEvent = api.terminal.onEvent((event) => {
+            const thread = useStore.getState().threads.find((entry) => entry.id === event.threadId);
+            if (thread && thread.archivedAt !== null) {
+                return;
+            }
+            applyTerminalEvent(event);
+        });
+        return () => {
+            disposed = true;
+            disposedRef.current = true;
+            needsProviderInvalidation = false;
+            flushPendingDomainEventsScheduled = false;
+            pendingDomainEvents.length = 0;
+            queryInvalidationThrottler.cancel();
+            unsubDomainEvent();
+            unsubTerminalEvent();
+        };
+    }, [
+        applyOrchestrationEvents,
+        navigate,
+        queryClient,
+        removeTerminalState,
+        removeOrphanedTerminalStates,
+        applyTerminalEvent,
+        clearThreadUi,
+        setProjectExpanded,
+        syncProjects,
+        syncServerReadModel,
+        syncThreads,
+    ]);
+    useServerWelcomeSubscription(handleWelcome);
+    useServerConfigUpdatedSubscription(handleServerConfigUpdated);
+    return null;
 }

@@ -1,4 +1,9 @@
-import type { GeminiSettings, ServerProvider, ServerProviderModel } from "@t3tools/contracts";
+import type {
+  GeminiSettings,
+  ModelCapabilities,
+  ServerProvider,
+  ServerProviderModel,
+} from "@t3tools/contracts";
 import { Effect, Equal, FileSystem, Layer, Option, Path, Result, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
@@ -15,6 +20,14 @@ import { makeManagedServerProvider } from "../makeManagedServerProvider";
 import { GeminiProvider } from "../Services/GeminiProvider";
 import { ServerSettingsError } from "@t3tools/contracts";
 import { ServerSettingsService } from "../../serverSettings";
+
+const DEFAULT_GEMINI_MODEL_CAPABILITIES: ModelCapabilities = {
+  reasoningEffortLevels: [],
+  supportsFastMode: false,
+  supportsThinkingToggle: false,
+  contextWindowOptions: [],
+  promptInjectedEffortLevels: [],
+};
 
 const PROVIDER = "gemini" as const;
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
@@ -115,6 +128,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
       BUILT_IN_MODELS,
       PROVIDER,
       geminiSettings.customModels,
+      DEFAULT_GEMINI_MODEL_CAPABILITIES,
     );
 
     if (!geminiSettings.enabled) {

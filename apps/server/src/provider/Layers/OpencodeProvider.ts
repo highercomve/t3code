@@ -1,4 +1,9 @@
-import type { OpencodeSettings, ServerProvider, ServerProviderModel } from "@t3tools/contracts";
+import type {
+  ModelCapabilities,
+  OpencodeSettings,
+  ServerProvider,
+  ServerProviderModel,
+} from "@t3tools/contracts";
 import { Effect, Equal, FileSystem, Layer, Option, Path, Result, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
@@ -15,6 +20,14 @@ import { makeManagedServerProvider } from "../makeManagedServerProvider";
 import { OpencodeProvider } from "../Services/OpencodeProvider";
 import { ServerSettingsError } from "@t3tools/contracts";
 import { ServerSettingsService } from "../../serverSettings";
+
+const DEFAULT_OPENCODE_MODEL_CAPABILITIES: ModelCapabilities = {
+  reasoningEffortLevels: [],
+  supportsFastMode: false,
+  supportsThinkingToggle: false,
+  contextWindowOptions: [],
+  promptInjectedEffortLevels: [],
+};
 
 const PROVIDER = "opencode" as const;
 
@@ -127,6 +140,7 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
       BUILT_IN_MODELS,
       PROVIDER,
       opencodeSettings.customModels,
+      DEFAULT_OPENCODE_MODEL_CAPABILITIES,
     );
 
     if (!opencodeSettings.enabled) {

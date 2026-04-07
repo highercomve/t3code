@@ -1,5 +1,6 @@
 import type {
   CopilotSettings,
+  ModelCapabilities,
   ServerProvider,
   ServerProviderModel,
   ServerProviderAuth,
@@ -22,6 +23,14 @@ import { makeManagedServerProvider } from "../makeManagedServerProvider";
 import { CopilotProvider } from "../Services/CopilotProvider";
 import { ServerSettingsError } from "@t3tools/contracts";
 import { ServerSettingsService } from "../../serverSettings";
+
+const DEFAULT_COPILOT_MODEL_CAPABILITIES: ModelCapabilities = {
+  reasoningEffortLevels: [],
+  supportsFastMode: false,
+  supportsThinkingToggle: false,
+  contextWindowOptions: [],
+  promptInjectedEffortLevels: [],
+};
 
 const PROVIDER = "copilotAgent" as const;
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
@@ -177,6 +186,7 @@ export const checkCopilotProviderStatus = Effect.fn("checkCopilotProviderStatus"
       BUILT_IN_MODELS,
       PROVIDER,
       copilotSettings.customModels,
+      DEFAULT_COPILOT_MODEL_CAPABILITIES,
     );
 
     if (!copilotSettings.enabled) {

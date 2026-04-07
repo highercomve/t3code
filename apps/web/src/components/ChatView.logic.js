@@ -2,222 +2,206 @@ import { ProjectId } from "@t3tools/contracts";
 import { randomUUID } from "~/lib/utils";
 import { Schema } from "effect";
 import { useStore } from "../store";
-import {
-  filterTerminalContextsWithText,
-  stripInlineTerminalContextPlaceholders,
-} from "../lib/terminalContext";
+import { filterTerminalContextsWithText, stripInlineTerminalContextPlaceholders, } from "../lib/terminalContext";
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "t3code:last-invoked-script-by-project";
 export const MAX_HIDDEN_MOUNTED_TERMINAL_THREADS = 10;
 const WORKTREE_BRANCH_PREFIX = "t3code";
 export const LastInvokedScriptByProjectSchema = Schema.Record(ProjectId, Schema.String);
 export function buildLocalDraftThread(threadId, draftThread, fallbackModelSelection, error) {
-  return {
-    id: threadId,
-    codexThreadId: null,
-    projectId: draftThread.projectId,
-    title: "New thread",
-    modelSelection: fallbackModelSelection,
-    runtimeMode: draftThread.runtimeMode,
-    interactionMode: draftThread.interactionMode,
-    session: null,
-    messages: [],
-    error,
-    createdAt: draftThread.createdAt,
-    archivedAt: null,
-    latestTurn: null,
-    branch: draftThread.branch,
-    worktreePath: draftThread.worktreePath,
-    turnDiffSummaries: [],
-    activities: [],
-    proposedPlans: [],
-  };
+    return {
+        id: threadId,
+        codexThreadId: null,
+        projectId: draftThread.projectId,
+        title: "New thread",
+        modelSelection: fallbackModelSelection,
+        runtimeMode: draftThread.runtimeMode,
+        interactionMode: draftThread.interactionMode,
+        session: null,
+        messages: [],
+        error,
+        createdAt: draftThread.createdAt,
+        archivedAt: null,
+        latestTurn: null,
+        branch: draftThread.branch,
+        worktreePath: draftThread.worktreePath,
+        turnDiffSummaries: [],
+        activities: [],
+        proposedPlans: [],
+    };
 }
 export function reconcileMountedTerminalThreadIds(input) {
-  const openThreadIdSet = new Set(input.openThreadIds);
-  const hiddenThreadIds = input.currentThreadIds.filter(
-    (threadId) => threadId !== input.activeThreadId && openThreadIdSet.has(threadId),
-  );
-  const maxHiddenThreadCount = Math.max(
-    0,
-    input.maxHiddenThreadCount ?? MAX_HIDDEN_MOUNTED_TERMINAL_THREADS,
-  );
-  const nextThreadIds =
-    hiddenThreadIds.length > maxHiddenThreadCount
-      ? hiddenThreadIds.slice(-maxHiddenThreadCount)
-      : hiddenThreadIds;
-  if (
-    input.activeThreadId &&
-    input.activeThreadTerminalOpen &&
-    !nextThreadIds.includes(input.activeThreadId)
-  ) {
-    nextThreadIds.push(input.activeThreadId);
-  }
-  return nextThreadIds;
+    const openThreadIdSet = new Set(input.openThreadIds);
+    const hiddenThreadIds = input.currentThreadIds.filter((threadId) => threadId !== input.activeThreadId && openThreadIdSet.has(threadId));
+    const maxHiddenThreadCount = Math.max(0, input.maxHiddenThreadCount ?? MAX_HIDDEN_MOUNTED_TERMINAL_THREADS);
+    const nextThreadIds = hiddenThreadIds.length > maxHiddenThreadCount
+        ? hiddenThreadIds.slice(-maxHiddenThreadCount)
+        : hiddenThreadIds;
+    if (input.activeThreadId &&
+        input.activeThreadTerminalOpen &&
+        !nextThreadIds.includes(input.activeThreadId)) {
+        nextThreadIds.push(input.activeThreadId);
+    }
+    return nextThreadIds;
 }
 export function revokeBlobPreviewUrl(previewUrl) {
-  if (!previewUrl || typeof URL === "undefined" || !previewUrl.startsWith("blob:")) {
-    return;
-  }
-  URL.revokeObjectURL(previewUrl);
+    if (!previewUrl || typeof URL === "undefined" || !previewUrl.startsWith("blob:")) {
+        return;
+    }
+    URL.revokeObjectURL(previewUrl);
 }
 export function revokeUserMessagePreviewUrls(message) {
-  if (message.role !== "user" || !message.attachments) {
-    return;
-  }
-  for (const attachment of message.attachments) {
-    if (attachment.type !== "image") {
-      continue;
+    if (message.role !== "user" || !message.attachments) {
+        return;
     }
-    revokeBlobPreviewUrl(attachment.previewUrl);
-  }
+    for (const attachment of message.attachments) {
+        if (attachment.type !== "image") {
+            continue;
+        }
+        revokeBlobPreviewUrl(attachment.previewUrl);
+    }
 }
 export function collectUserMessageBlobPreviewUrls(message) {
-  if (message.role !== "user" || !message.attachments) {
-    return [];
-  }
-  const previewUrls = [];
-  for (const attachment of message.attachments) {
-    if (attachment.type !== "image") continue;
-    if (!attachment.previewUrl || !attachment.previewUrl.startsWith("blob:")) continue;
-    previewUrls.push(attachment.previewUrl);
-  }
-  return previewUrls;
+    if (message.role !== "user" || !message.attachments) {
+        return [];
+    }
+    const previewUrls = [];
+    for (const attachment of message.attachments) {
+        if (attachment.type !== "image")
+            continue;
+        if (!attachment.previewUrl || !attachment.previewUrl.startsWith("blob:"))
+            continue;
+        previewUrls.push(attachment.previewUrl);
+    }
+    return previewUrls;
 }
 export function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error("Could not read image data."));
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+            if (typeof reader.result === "string") {
+                resolve(reader.result);
+                return;
+            }
+            reject(new Error("Could not read image data."));
+        });
+        reader.addEventListener("error", () => {
+            reject(reader.error ?? new Error("Failed to read image."));
+        });
+        reader.readAsDataURL(file);
     });
-    reader.addEventListener("error", () => {
-      reject(reader.error ?? new Error("Failed to read image."));
-    });
-    reader.readAsDataURL(file);
-  });
 }
 export function buildTemporaryWorktreeBranchName() {
-  // Keep the 8-hex suffix shape for backend temporary-branch detection.
-  const token = randomUUID().slice(0, 8).toLowerCase();
-  return `${WORKTREE_BRANCH_PREFIX}/${token}`;
+    // Keep the 8-hex suffix shape for backend temporary-branch detection.
+    const token = randomUUID().slice(0, 8).toLowerCase();
+    return `${WORKTREE_BRANCH_PREFIX}/${token}`;
 }
 export function cloneComposerImageForRetry(image) {
-  if (typeof URL === "undefined" || !image.previewUrl.startsWith("blob:")) {
-    return image;
-  }
-  try {
-    return {
-      ...image,
-      previewUrl: URL.createObjectURL(image.file),
-    };
-  } catch {
-    return image;
-  }
+    if (typeof URL === "undefined" || !image.previewUrl.startsWith("blob:")) {
+        return image;
+    }
+    try {
+        return {
+            ...image,
+            previewUrl: URL.createObjectURL(image.file),
+        };
+    }
+    catch {
+        return image;
+    }
 }
 export function deriveComposerSendState(options) {
-  const trimmedPrompt = stripInlineTerminalContextPlaceholders(options.prompt).trim();
-  const sendableTerminalContexts = filterTerminalContextsWithText(options.terminalContexts);
-  const expiredTerminalContextCount =
-    options.terminalContexts.length - sendableTerminalContexts.length;
-  return {
-    trimmedPrompt,
-    sendableTerminalContexts,
-    expiredTerminalContextCount,
-    hasSendableContent:
-      trimmedPrompt.length > 0 || options.imageCount > 0 || sendableTerminalContexts.length > 0,
-  };
+    const trimmedPrompt = stripInlineTerminalContextPlaceholders(options.prompt).trim();
+    const sendableTerminalContexts = filterTerminalContextsWithText(options.terminalContexts);
+    const expiredTerminalContextCount = options.terminalContexts.length - sendableTerminalContexts.length;
+    return {
+        trimmedPrompt,
+        sendableTerminalContexts,
+        expiredTerminalContextCount,
+        hasSendableContent: trimmedPrompt.length > 0 || options.imageCount > 0 || sendableTerminalContexts.length > 0,
+    };
 }
 export function buildExpiredTerminalContextToastCopy(expiredTerminalContextCount, variant) {
-  const count = Math.max(1, Math.floor(expiredTerminalContextCount));
-  const noun = count === 1 ? "Expired terminal context" : "Expired terminal contexts";
-  if (variant === "empty") {
+    const count = Math.max(1, Math.floor(expiredTerminalContextCount));
+    const noun = count === 1 ? "Expired terminal context" : "Expired terminal contexts";
+    if (variant === "empty") {
+        return {
+            title: `${noun} won't be sent`,
+            description: "Remove it or re-add it to include terminal output.",
+        };
+    }
     return {
-      title: `${noun} won't be sent`,
-      description: "Remove it or re-add it to include terminal output.",
+        title: `${noun} omitted from message`,
+        description: "Re-add it if you want that terminal output included.",
     };
-  }
-  return {
-    title: `${noun} omitted from message`,
-    description: "Re-add it if you want that terminal output included.",
-  };
 }
 export function threadHasStarted(thread) {
-  return Boolean(
-    thread && (thread.latestTurn !== null || thread.messages.length > 0 || thread.session !== null),
-  );
+    return Boolean(thread && (thread.latestTurn !== null || thread.messages.length > 0 || thread.session !== null));
 }
 export async function waitForStartedServerThread(threadId, timeoutMs = 1_000) {
-  const getThread = () => useStore.getState().threads.find((thread) => thread.id === threadId);
-  const thread = getThread();
-  if (threadHasStarted(thread)) {
-    return true;
-  }
-  return await new Promise((resolve) => {
-    let settled = false;
-    let timeoutId = null;
-    const finish = (result) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      if (timeoutId !== null) {
-        globalThis.clearTimeout(timeoutId);
-      }
-      unsubscribe();
-      resolve(result);
-    };
-    const unsubscribe = useStore.subscribe((state) => {
-      if (!threadHasStarted(state.threads.find((thread) => thread.id === threadId))) {
-        return;
-      }
-      finish(true);
-    });
-    if (threadHasStarted(getThread())) {
-      finish(true);
-      return;
+    const getThread = () => useStore.getState().threads.find((thread) => thread.id === threadId);
+    const thread = getThread();
+    if (threadHasStarted(thread)) {
+        return true;
     }
-    timeoutId = globalThis.setTimeout(() => {
-      finish(false);
-    }, timeoutMs);
-  });
+    return await new Promise((resolve) => {
+        let settled = false;
+        let timeoutId = null;
+        const finish = (result) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            if (timeoutId !== null) {
+                globalThis.clearTimeout(timeoutId);
+            }
+            unsubscribe();
+            resolve(result);
+        };
+        const unsubscribe = useStore.subscribe((state) => {
+            if (!threadHasStarted(state.threads.find((thread) => thread.id === threadId))) {
+                return;
+            }
+            finish(true);
+        });
+        if (threadHasStarted(getThread())) {
+            finish(true);
+            return;
+        }
+        timeoutId = globalThis.setTimeout(() => {
+            finish(false);
+        }, timeoutMs);
+    });
 }
 export function createLocalDispatchSnapshot(activeThread, options) {
-  const latestTurn = activeThread?.latestTurn ?? null;
-  const session = activeThread?.session ?? null;
-  return {
-    startedAt: new Date().toISOString(),
-    preparingWorktree: Boolean(options?.preparingWorktree),
-    latestTurnTurnId: latestTurn?.turnId ?? null,
-    latestTurnRequestedAt: latestTurn?.requestedAt ?? null,
-    latestTurnStartedAt: latestTurn?.startedAt ?? null,
-    latestTurnCompletedAt: latestTurn?.completedAt ?? null,
-    sessionOrchestrationStatus: session?.orchestrationStatus ?? null,
-    sessionUpdatedAt: session?.updatedAt ?? null,
-  };
+    const latestTurn = activeThread?.latestTurn ?? null;
+    const session = activeThread?.session ?? null;
+    return {
+        startedAt: new Date().toISOString(),
+        preparingWorktree: Boolean(options?.preparingWorktree),
+        latestTurnTurnId: latestTurn?.turnId ?? null,
+        latestTurnRequestedAt: latestTurn?.requestedAt ?? null,
+        latestTurnStartedAt: latestTurn?.startedAt ?? null,
+        latestTurnCompletedAt: latestTurn?.completedAt ?? null,
+        sessionOrchestrationStatus: session?.orchestrationStatus ?? null,
+        sessionUpdatedAt: session?.updatedAt ?? null,
+    };
 }
 export function hasServerAcknowledgedLocalDispatch(input) {
-  if (!input.localDispatch) {
-    return false;
-  }
-  if (
-    input.phase === "running" ||
-    input.hasPendingApproval ||
-    input.hasPendingUserInput ||
-    Boolean(input.threadError)
-  ) {
-    return true;
-  }
-  const latestTurn = input.latestTurn ?? null;
-  const session = input.session ?? null;
-  return (
-    input.localDispatch.latestTurnTurnId !== (latestTurn?.turnId ?? null) ||
-    input.localDispatch.latestTurnRequestedAt !== (latestTurn?.requestedAt ?? null) ||
-    input.localDispatch.latestTurnStartedAt !== (latestTurn?.startedAt ?? null) ||
-    input.localDispatch.latestTurnCompletedAt !== (latestTurn?.completedAt ?? null) ||
-    input.localDispatch.sessionOrchestrationStatus !== (session?.orchestrationStatus ?? null) ||
-    input.localDispatch.sessionUpdatedAt !== (session?.updatedAt ?? null)
-  );
+    if (!input.localDispatch) {
+        return false;
+    }
+    if (input.phase === "running" ||
+        input.hasPendingApproval ||
+        input.hasPendingUserInput ||
+        Boolean(input.threadError)) {
+        return true;
+    }
+    const latestTurn = input.latestTurn ?? null;
+    const session = input.session ?? null;
+    return (input.localDispatch.latestTurnTurnId !== (latestTurn?.turnId ?? null) ||
+        input.localDispatch.latestTurnRequestedAt !== (latestTurn?.requestedAt ?? null) ||
+        input.localDispatch.latestTurnStartedAt !== (latestTurn?.startedAt ?? null) ||
+        input.localDispatch.latestTurnCompletedAt !== (latestTurn?.completedAt ?? null) ||
+        input.localDispatch.sessionOrchestrationStatus !== (session?.orchestrationStatus ?? null) ||
+        input.localDispatch.sessionUpdatedAt !== (session?.updatedAt ?? null));
 }

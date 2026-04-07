@@ -9,63 +9,59 @@ import { AppAtomRegistryProvider } from "../../rpc/atomRegistry";
 import { resetServerStateForTests, setServerConfigSnapshot } from "../../rpc/serverState";
 import { GeneralSettingsPanel } from "./SettingsPanels";
 function createBaseServerConfig() {
-  return {
-    cwd: "/repo/project",
-    keybindingsConfigPath: "/repo/project/.t3code-keybindings.json",
-    keybindings: [],
-    issues: [],
-    providers: [],
-    availableEditors: ["cursor"],
-    observability: {
-      logsDirectoryPath: "/repo/project/.t3/logs",
-      localTracingEnabled: true,
-      otlpTracesUrl: "http://localhost:4318/v1/traces",
-      otlpTracesEnabled: true,
-      otlpMetricsEnabled: false,
-    },
-    settings: DEFAULT_SERVER_SETTINGS,
-  };
+    return {
+        cwd: "/repo/project",
+        keybindingsConfigPath: "/repo/project/.t3code-keybindings.json",
+        keybindings: [],
+        issues: [],
+        providers: [],
+        availableEditors: ["cursor"],
+        observability: {
+            logsDirectoryPath: "/repo/project/.t3/logs",
+            localTracingEnabled: true,
+            otlpTracesUrl: "http://localhost:4318/v1/traces",
+            otlpTracesEnabled: true,
+            otlpMetricsEnabled: false,
+        },
+        settings: DEFAULT_SERVER_SETTINGS,
+    };
 }
 describe("GeneralSettingsPanel observability", () => {
-  beforeEach(() => {
-    resetServerStateForTests();
-    __resetNativeApiForTests();
-    localStorage.clear();
-    document.body.innerHTML = "";
-  });
-  afterEach(() => {
-    resetServerStateForTests();
-    __resetNativeApiForTests();
-    document.body.innerHTML = "";
-  });
-  it("shows diagnostics inside About with a single logs-folder action", async () => {
-    setServerConfigSnapshot(createBaseServerConfig());
-    await render(_jsx(AppAtomRegistryProvider, { children: _jsx(GeneralSettingsPanel, {}) }));
-    await expect.element(page.getByText("About")).toBeInTheDocument();
-    await expect.element(page.getByText("Diagnostics")).toBeInTheDocument();
-    await expect.element(page.getByText("Open logs folder")).toBeInTheDocument();
-    await expect
-      .element(page.getByText("/repo/project/.t3/logs", { exact: true }))
-      .toBeInTheDocument();
-    await expect
-      .element(
-        page.getByText(
-          "Local trace file. OTLP exporting traces to http://localhost:4318/v1/traces.",
-        ),
-      )
-      .toBeInTheDocument();
-  });
-  it("opens the logs folder in the preferred editor", async () => {
-    const openInEditor = vi.fn().mockResolvedValue(undefined);
-    window.nativeApi = {
-      shell: {
-        openInEditor,
-      },
-    };
-    setServerConfigSnapshot(createBaseServerConfig());
-    await render(_jsx(AppAtomRegistryProvider, { children: _jsx(GeneralSettingsPanel, {}) }));
-    const openLogsButton = page.getByText("Open logs folder");
-    await openLogsButton.click();
-    expect(openInEditor).toHaveBeenCalledWith("/repo/project/.t3/logs", "cursor");
-  });
+    beforeEach(async () => {
+        resetServerStateForTests();
+        await __resetNativeApiForTests();
+        localStorage.clear();
+        document.body.innerHTML = "";
+    });
+    afterEach(async () => {
+        resetServerStateForTests();
+        await __resetNativeApiForTests();
+        document.body.innerHTML = "";
+    });
+    it("shows diagnostics inside About with a single logs-folder action", async () => {
+        setServerConfigSnapshot(createBaseServerConfig());
+        await render(_jsx(AppAtomRegistryProvider, { children: _jsx(GeneralSettingsPanel, {}) }));
+        await expect.element(page.getByText("About")).toBeInTheDocument();
+        await expect.element(page.getByText("Diagnostics")).toBeInTheDocument();
+        await expect.element(page.getByText("Open logs folder")).toBeInTheDocument();
+        await expect
+            .element(page.getByText("/repo/project/.t3/logs", { exact: true }))
+            .toBeInTheDocument();
+        await expect
+            .element(page.getByText("Local trace file. OTLP exporting traces to http://localhost:4318/v1/traces."))
+            .toBeInTheDocument();
+    });
+    it("opens the logs folder in the preferred editor", async () => {
+        const openInEditor = vi.fn().mockResolvedValue(undefined);
+        window.nativeApi = {
+            shell: {
+                openInEditor,
+            },
+        };
+        setServerConfigSnapshot(createBaseServerConfig());
+        await render(_jsx(AppAtomRegistryProvider, { children: _jsx(GeneralSettingsPanel, {}) }));
+        const openLogsButton = page.getByText("Open logs folder");
+        await openLogsButton.click();
+        expect(openInEditor).toHaveBeenCalledWith("/repo/project/.t3/logs", "cursor");
+    });
 });

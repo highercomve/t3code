@@ -10,15 +10,8 @@
  * store.
  */
 import { useCallback, useMemo } from "react";
-import { ServerSettings, ModelSelection, ThreadEnvMode } from "@t3tools/contracts";
-import {
-  ClientSettingsSchema,
-  DEFAULT_CLIENT_SETTINGS,
-  DEFAULT_UNIFIED_SETTINGS,
-  SidebarProjectSortOrder,
-  SidebarThreadSortOrder,
-  TimestampFormat,
-} from "@t3tools/contracts/settings";
+import { ServerSettings, ModelSelection, ThreadEnvMode, } from "@t3tools/contracts";
+import { ClientSettingsSchema, DEFAULT_CLIENT_SETTINGS, DEFAULT_UNIFIED_SETTINGS, SidebarProjectSortOrder, SidebarThreadSortOrder, TimestampFormat, } from "@t3tools/contracts/settings";
 import { ensureNativeApi } from "~/nativeApi";
 import { useLocalStorage } from "./useLocalStorage";
 import { normalizeCustomModelSlugs } from "~/modelSelection";
@@ -30,19 +23,20 @@ const OLD_SETTINGS_KEY = "t3code:app-settings:v1";
 // ── Key sets for routing patches ─────────────────────────────────────
 const SERVER_SETTINGS_KEYS = new Set(Struct.keys(ServerSettings.fields));
 function splitPatch(patch) {
-  const serverPatch = {};
-  const clientPatch = {};
-  for (const [key, value] of Object.entries(patch)) {
-    if (SERVER_SETTINGS_KEYS.has(key)) {
-      serverPatch[key] = value;
-    } else {
-      clientPatch[key] = value;
+    const serverPatch = {};
+    const clientPatch = {};
+    for (const [key, value] of Object.entries(patch)) {
+        if (SERVER_SETTINGS_KEYS.has(key)) {
+            serverPatch[key] = value;
+        }
+        else {
+            clientPatch[key] = value;
+        }
     }
-  }
-  return {
-    serverPatch: serverPatch,
-    clientPatch: clientPatch,
-  };
+    return {
+        serverPatch: serverPatch,
+        clientPatch: clientPatch,
+    };
 }
 // ── Hooks ────────────────────────────────────────────────────────────
 /**
@@ -50,20 +44,13 @@ function splitPatch(patch) {
  * only re-render when the slice they care about changes.
  */
 export function useSettings(selector) {
-  const serverSettings = useServerSettings();
-  const [clientSettings] = useLocalStorage(
-    CLIENT_SETTINGS_STORAGE_KEY,
-    DEFAULT_CLIENT_SETTINGS,
-    ClientSettingsSchema,
-  );
-  const merged = useMemo(
-    () => ({
-      ...serverSettings,
-      ...clientSettings,
-    }),
-    [clientSettings, serverSettings],
-  );
-  return useMemo(() => (selector ? selector(merged) : merged), [merged, selector]);
+    const serverSettings = useServerSettings();
+    const [clientSettings] = useLocalStorage(CLIENT_SETTINGS_STORAGE_KEY, DEFAULT_CLIENT_SETTINGS, ClientSettingsSchema);
+    const merged = useMemo(() => ({
+        ...serverSettings,
+        ...clientSettings,
+    }), [clientSettings, serverSettings]);
+    return useMemo(() => (selector ? selector(merged) : merged), [merged, selector]);
 }
 /**
  * Returns an updater that routes each key to the correct backing store.
@@ -72,123 +59,104 @@ export function useSettings(selector) {
  * persisted via RPC. Client keys go straight to localStorage.
  */
 export function useUpdateSettings() {
-  const [, setClientSettings] = useLocalStorage(
-    CLIENT_SETTINGS_STORAGE_KEY,
-    DEFAULT_CLIENT_SETTINGS,
-    ClientSettingsSchema,
-  );
-  const updateSettings = useCallback(
-    (patch) => {
-      const { serverPatch, clientPatch } = splitPatch(patch);
-      if (Object.keys(serverPatch).length > 0) {
-        const currentServerConfig = getServerConfig();
-        if (currentServerConfig) {
-          applySettingsUpdated(deepMerge(currentServerConfig.settings, serverPatch));
+    const [, setClientSettings] = useLocalStorage(CLIENT_SETTINGS_STORAGE_KEY, DEFAULT_CLIENT_SETTINGS, ClientSettingsSchema);
+    const updateSettings = useCallback((patch) => {
+        const { serverPatch, clientPatch } = splitPatch(patch);
+        if (Object.keys(serverPatch).length > 0) {
+            const currentServerConfig = getServerConfig();
+            if (currentServerConfig) {
+                applySettingsUpdated(deepMerge(currentServerConfig.settings, serverPatch));
+            }
+            // Fire-and-forget RPC — push will reconcile on success
+            void ensureNativeApi().server.updateSettings(serverPatch);
         }
-        // Fire-and-forget RPC — push will reconcile on success
-        void ensureNativeApi().server.updateSettings(serverPatch);
-      }
-      if (Object.keys(clientPatch).length > 0) {
-        setClientSettings((prev) => ({ ...prev, ...clientPatch }));
-      }
-    },
-    [setClientSettings],
-  );
-  const resetSettings = useCallback(() => {
-    updateSettings(DEFAULT_UNIFIED_SETTINGS);
-  }, [updateSettings]);
-  return {
-    updateSettings,
-    resetSettings,
-  };
+        if (Object.keys(clientPatch).length > 0) {
+            setClientSettings((prev) => ({ ...prev, ...clientPatch }));
+        }
+    }, [setClientSettings]);
+    const resetSettings = useCallback(() => {
+        updateSettings(DEFAULT_UNIFIED_SETTINGS);
+    }, [updateSettings]);
+    return {
+        updateSettings,
+        resetSettings,
+    };
 }
 // ── One-time migration from localStorage ─────────────────────────────
 export function buildLegacyServerSettingsMigrationPatch(legacySettings) {
-  const patch = {};
-  if (Predicate.isBoolean(legacySettings.enableAssistantStreaming)) {
-    patch.enableAssistantStreaming = legacySettings.enableAssistantStreaming;
-  }
-  if (Schema.is(ThreadEnvMode)(legacySettings.defaultThreadEnvMode)) {
-    patch.defaultThreadEnvMode = legacySettings.defaultThreadEnvMode;
-  }
-  if (Schema.is(ModelSelection)(legacySettings.textGenerationModelSelection)) {
-    patch.textGenerationModelSelection = legacySettings.textGenerationModelSelection;
-  }
-  if (typeof legacySettings.codexBinaryPath === "string") {
-    patch.providers ??= {};
-    patch.providers.codex ??= {};
-    patch.providers.codex.binaryPath = legacySettings.codexBinaryPath;
-  }
-  if (typeof legacySettings.codexHomePath === "string") {
-    patch.providers ??= {};
-    patch.providers.codex ??= {};
-    patch.providers.codex.homePath = legacySettings.codexHomePath;
-  }
-  if (Array.isArray(legacySettings.customCodexModels)) {
-    patch.providers ??= {};
-    patch.providers.codex ??= {};
-    patch.providers.codex.customModels = normalizeCustomModelSlugs(
-      legacySettings.customCodexModels,
-      new Set(),
-      "codex",
-    );
-  }
-  if (Predicate.isString(legacySettings.claudeBinaryPath)) {
-    patch.providers ??= {};
-    patch.providers.claudeAgent ??= {};
-    patch.providers.claudeAgent.binaryPath = legacySettings.claudeBinaryPath;
-  }
-  if (Predicate.isString(legacySettings.geminiBinaryPath)) {
-    patch.providers ??= {};
-    patch.providers.gemini ??= {};
-    patch.providers.gemini.binaryPath = legacySettings.geminiBinaryPath;
-  }
-  if (Predicate.isString(legacySettings.geminiHomePath)) {
-    patch.providers ??= {};
-    patch.providers.gemini ??= {};
-    patch.providers.gemini.homePath = legacySettings.geminiHomePath;
-  }
-  if (Array.isArray(legacySettings.customClaudeModels)) {
-    patch.providers ??= {};
-    patch.providers.claudeAgent ??= {};
-    patch.providers.claudeAgent.customModels = normalizeCustomModelSlugs(
-      legacySettings.customClaudeModels,
-      new Set(),
-      "claudeAgent",
-    );
-  }
-  if (Array.isArray(legacySettings.customGeminiModels)) {
-    patch.providers ??= {};
-    patch.providers.gemini ??= {};
-    patch.providers.gemini.customModels = normalizeCustomModelSlugs(
-      legacySettings.customGeminiModels,
-      new Set(),
-      "gemini",
-    );
-  }
-  return patch;
+    const patch = {};
+    if (Predicate.isBoolean(legacySettings.enableAssistantStreaming)) {
+        patch.enableAssistantStreaming = legacySettings.enableAssistantStreaming;
+    }
+    if (Schema.is(ThreadEnvMode)(legacySettings.defaultThreadEnvMode)) {
+        patch.defaultThreadEnvMode = legacySettings.defaultThreadEnvMode;
+    }
+    if (Schema.is(ModelSelection)(legacySettings.textGenerationModelSelection)) {
+        patch.textGenerationModelSelection = legacySettings.textGenerationModelSelection;
+    }
+    if (typeof legacySettings.codexBinaryPath === "string") {
+        patch.providers ??= {};
+        patch.providers.codex ??= {};
+        patch.providers.codex.binaryPath = legacySettings.codexBinaryPath;
+    }
+    if (typeof legacySettings.codexHomePath === "string") {
+        patch.providers ??= {};
+        patch.providers.codex ??= {};
+        patch.providers.codex.homePath = legacySettings.codexHomePath;
+    }
+    if (Array.isArray(legacySettings.customCodexModels)) {
+        patch.providers ??= {};
+        patch.providers.codex ??= {};
+        patch.providers.codex.customModels = normalizeCustomModelSlugs(legacySettings.customCodexModels, new Set(), "codex");
+    }
+    if (Predicate.isString(legacySettings.claudeBinaryPath)) {
+        patch.providers ??= {};
+        patch.providers.claudeAgent ??= {};
+        patch.providers.claudeAgent.binaryPath = legacySettings.claudeBinaryPath;
+    }
+    if (Predicate.isString(legacySettings.geminiBinaryPath)) {
+        patch.providers ??= {};
+        patch.providers.gemini ??= {};
+        patch.providers.gemini.binaryPath = legacySettings.geminiBinaryPath;
+    }
+    if (Predicate.isString(legacySettings.geminiHomePath)) {
+        patch.providers ??= {};
+        patch.providers.gemini ??= {};
+        patch.providers.gemini.homePath = legacySettings.geminiHomePath;
+    }
+    if (Array.isArray(legacySettings.customClaudeModels)) {
+        patch.providers ??= {};
+        patch.providers.claudeAgent ??= {};
+        patch.providers.claudeAgent.customModels = normalizeCustomModelSlugs(legacySettings.customClaudeModels, new Set(), "claudeAgent");
+    }
+    if (Array.isArray(legacySettings.customGeminiModels)) {
+        patch.providers ??= {};
+        patch.providers.gemini ??= {};
+        patch.providers.gemini.customModels = normalizeCustomModelSlugs(legacySettings.customGeminiModels, new Set(), "gemini");
+    }
+    return patch;
 }
 export function buildLegacyClientSettingsMigrationPatch(legacySettings) {
-  const patch = {};
-  if (Predicate.isBoolean(legacySettings.confirmThreadArchive)) {
-    patch.confirmThreadArchive = legacySettings.confirmThreadArchive;
-  }
-  if (Predicate.isBoolean(legacySettings.confirmThreadDelete)) {
-    patch.confirmThreadDelete = legacySettings.confirmThreadDelete;
-  }
-  if (Predicate.isBoolean(legacySettings.diffWordWrap)) {
-    patch.diffWordWrap = legacySettings.diffWordWrap;
-  }
-  if (Schema.is(SidebarProjectSortOrder)(legacySettings.sidebarProjectSortOrder)) {
-    patch.sidebarProjectSortOrder = legacySettings.sidebarProjectSortOrder;
-  }
-  if (Schema.is(SidebarThreadSortOrder)(legacySettings.sidebarThreadSortOrder)) {
-    patch.sidebarThreadSortOrder = legacySettings.sidebarThreadSortOrder;
-  }
-  if (Schema.is(TimestampFormat)(legacySettings.timestampFormat)) {
-    patch.timestampFormat = legacySettings.timestampFormat;
-  }
-  return patch;
+    const patch = {};
+    if (Predicate.isBoolean(legacySettings.confirmThreadArchive)) {
+        patch.confirmThreadArchive = legacySettings.confirmThreadArchive;
+    }
+    if (Predicate.isBoolean(legacySettings.confirmThreadDelete)) {
+        patch.confirmThreadDelete = legacySettings.confirmThreadDelete;
+    }
+    if (Predicate.isBoolean(legacySettings.diffWordWrap)) {
+        patch.diffWordWrap = legacySettings.diffWordWrap;
+    }
+    if (Schema.is(SidebarProjectSortOrder)(legacySettings.sidebarProjectSortOrder)) {
+        patch.sidebarProjectSortOrder = legacySettings.sidebarProjectSortOrder;
+    }
+    if (Schema.is(SidebarThreadSortOrder)(legacySettings.sidebarThreadSortOrder)) {
+        patch.sidebarThreadSortOrder = legacySettings.sidebarThreadSortOrder;
+    }
+    if (Schema.is(TimestampFormat)(legacySettings.timestampFormat)) {
+        patch.timestampFormat = legacySettings.timestampFormat;
+    }
+    return patch;
 }
 /**
  * Call once on app startup.
@@ -196,32 +164,34 @@ export function buildLegacyClientSettingsMigrationPatch(legacySettings) {
  * and client storage formats, then remove the legacy key so this only runs once.
  */
 export function migrateLocalSettingsToServer() {
-  if (typeof window === "undefined") return;
-  const raw = localStorage.getItem(OLD_SETTINGS_KEY);
-  if (!raw) return;
-  try {
-    const old = JSON.parse(raw);
-    if (!Predicate.isObject(old)) return;
-    // Migrate server-relevant keys via RPC
-    const serverPatch = buildLegacyServerSettingsMigrationPatch(old);
-    if (Object.keys(serverPatch).length > 0) {
-      const api = ensureNativeApi();
-      void api.server.updateSettings(serverPatch);
+    if (typeof window === "undefined")
+        return;
+    const raw = localStorage.getItem(OLD_SETTINGS_KEY);
+    if (!raw)
+        return;
+    try {
+        const old = JSON.parse(raw);
+        if (!Predicate.isObject(old))
+            return;
+        // Migrate server-relevant keys via RPC
+        const serverPatch = buildLegacyServerSettingsMigrationPatch(old);
+        if (Object.keys(serverPatch).length > 0) {
+            const api = ensureNativeApi();
+            void api.server.updateSettings(serverPatch);
+        }
+        // Migrate client-only keys to the new localStorage key
+        const clientPatch = buildLegacyClientSettingsMigrationPatch(old);
+        if (Object.keys(clientPatch).length > 0) {
+            const existing = localStorage.getItem(CLIENT_SETTINGS_STORAGE_KEY);
+            const current = existing ? JSON.parse(existing) : {};
+            localStorage.setItem(CLIENT_SETTINGS_STORAGE_KEY, JSON.stringify({ ...current, ...clientPatch }));
+        }
     }
-    // Migrate client-only keys to the new localStorage key
-    const clientPatch = buildLegacyClientSettingsMigrationPatch(old);
-    if (Object.keys(clientPatch).length > 0) {
-      const existing = localStorage.getItem(CLIENT_SETTINGS_STORAGE_KEY);
-      const current = existing ? JSON.parse(existing) : {};
-      localStorage.setItem(
-        CLIENT_SETTINGS_STORAGE_KEY,
-        JSON.stringify({ ...current, ...clientPatch }),
-      );
+    catch (error) {
+        console.error("[MIGRATION] Error migrating local settings:", error);
     }
-  } catch (error) {
-    console.error("[MIGRATION] Error migrating local settings:", error);
-  } finally {
-    // Remove the legacy key regardless to keep migration one-shot behavior.
-    localStorage.removeItem(OLD_SETTINGS_KEY);
-  }
+    finally {
+        // Remove the legacy key regardless to keep migration one-shot behavior.
+        localStorage.removeItem(OLD_SETTINGS_KEY);
+    }
 }

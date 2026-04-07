@@ -9,648 +9,575 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { resolveStorage } from "./lib/storage";
 import { terminalRunningSubprocessFromEvent } from "./terminalActivity";
-import {
-  DEFAULT_THREAD_TERMINAL_HEIGHT,
-  DEFAULT_THREAD_TERMINAL_ID,
-  MAX_TERMINALS_PER_GROUP,
-} from "./types";
+import { DEFAULT_THREAD_TERMINAL_HEIGHT, DEFAULT_THREAD_TERMINAL_ID, MAX_TERMINALS_PER_GROUP, } from "./types";
 const TERMINAL_STATE_STORAGE_KEY = "t3code:terminal-state:v1";
 const EMPTY_TERMINAL_EVENT_ENTRIES = [];
 const MAX_TERMINAL_EVENT_BUFFER = 200;
 function createTerminalStateStorage() {
-  return resolveStorage(typeof window !== "undefined" ? window.localStorage : undefined);
+    return resolveStorage(typeof window !== "undefined" ? window.localStorage : undefined);
 }
 function normalizeTerminalIds(terminalIds) {
-  const ids = [...new Set(terminalIds.map((id) => id.trim()).filter((id) => id.length > 0))];
-  return ids.length > 0 ? ids : [DEFAULT_THREAD_TERMINAL_ID];
+    const ids = [...new Set(terminalIds.map((id) => id.trim()).filter((id) => id.length > 0))];
+    return ids.length > 0 ? ids : [DEFAULT_THREAD_TERMINAL_ID];
 }
 function normalizeRunningTerminalIds(runningTerminalIds, terminalIds) {
-  if (runningTerminalIds.length === 0) return [];
-  const validTerminalIdSet = new Set(terminalIds);
-  return [...new Set(runningTerminalIds)]
-    .map((id) => id.trim())
-    .filter((id) => id.length > 0 && validTerminalIdSet.has(id));
+    if (runningTerminalIds.length === 0)
+        return [];
+    const validTerminalIdSet = new Set(terminalIds);
+    return [...new Set(runningTerminalIds)]
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0 && validTerminalIdSet.has(id));
 }
 function fallbackGroupId(terminalId) {
-  return `group-${terminalId}`;
+    return `group-${terminalId}`;
 }
 function assignUniqueGroupId(baseId, usedGroupIds) {
-  let candidate = baseId;
-  let index = 2;
-  while (usedGroupIds.has(candidate)) {
-    candidate = `${baseId}-${index}`;
-    index += 1;
-  }
-  usedGroupIds.add(candidate);
-  return candidate;
+    let candidate = baseId;
+    let index = 2;
+    while (usedGroupIds.has(candidate)) {
+        candidate = `${baseId}-${index}`;
+        index += 1;
+    }
+    usedGroupIds.add(candidate);
+    return candidate;
 }
 function findGroupIndexByTerminalId(terminalGroups, terminalId) {
-  return terminalGroups.findIndex((group) => group.terminalIds.includes(terminalId));
+    return terminalGroups.findIndex((group) => group.terminalIds.includes(terminalId));
 }
 function normalizeTerminalGroupIds(terminalIds) {
-  return [...new Set(terminalIds.map((id) => id.trim()).filter((id) => id.length > 0))];
+    return [...new Set(terminalIds.map((id) => id.trim()).filter((id) => id.length > 0))];
 }
 function normalizeTerminalGroups(terminalGroups, terminalIds) {
-  const validTerminalIdSet = new Set(terminalIds);
-  const assignedTerminalIds = new Set();
-  const nextGroups = [];
-  const usedGroupIds = new Set();
-  for (const group of terminalGroups) {
-    const groupTerminalIds = normalizeTerminalGroupIds(group.terminalIds).filter((terminalId) => {
-      if (!validTerminalIdSet.has(terminalId)) return false;
-      if (assignedTerminalIds.has(terminalId)) return false;
-      return true;
-    });
-    if (groupTerminalIds.length === 0) continue;
-    for (const terminalId of groupTerminalIds) {
-      assignedTerminalIds.add(terminalId);
+    const validTerminalIdSet = new Set(terminalIds);
+    const assignedTerminalIds = new Set();
+    const nextGroups = [];
+    const usedGroupIds = new Set();
+    for (const group of terminalGroups) {
+        const groupTerminalIds = normalizeTerminalGroupIds(group.terminalIds).filter((terminalId) => {
+            if (!validTerminalIdSet.has(terminalId))
+                return false;
+            if (assignedTerminalIds.has(terminalId))
+                return false;
+            return true;
+        });
+        if (groupTerminalIds.length === 0)
+            continue;
+        for (const terminalId of groupTerminalIds) {
+            assignedTerminalIds.add(terminalId);
+        }
+        const baseGroupId = group.id.trim().length > 0
+            ? group.id.trim()
+            : fallbackGroupId(groupTerminalIds[0] ?? DEFAULT_THREAD_TERMINAL_ID);
+        nextGroups.push({
+            id: assignUniqueGroupId(baseGroupId, usedGroupIds),
+            terminalIds: groupTerminalIds,
+        });
     }
-    const baseGroupId =
-      group.id.trim().length > 0
-        ? group.id.trim()
-        : fallbackGroupId(groupTerminalIds[0] ?? DEFAULT_THREAD_TERMINAL_ID);
-    nextGroups.push({
-      id: assignUniqueGroupId(baseGroupId, usedGroupIds),
-      terminalIds: groupTerminalIds,
-    });
-  }
-  for (const terminalId of terminalIds) {
-    if (assignedTerminalIds.has(terminalId)) continue;
-    nextGroups.push({
-      id: assignUniqueGroupId(fallbackGroupId(terminalId), usedGroupIds),
-      terminalIds: [terminalId],
-    });
-  }
-  if (nextGroups.length === 0) {
-    return [
-      {
-        id: fallbackGroupId(DEFAULT_THREAD_TERMINAL_ID),
-        terminalIds: [DEFAULT_THREAD_TERMINAL_ID],
-      },
-    ];
-  }
-  return nextGroups;
+    for (const terminalId of terminalIds) {
+        if (assignedTerminalIds.has(terminalId))
+            continue;
+        nextGroups.push({
+            id: assignUniqueGroupId(fallbackGroupId(terminalId), usedGroupIds),
+            terminalIds: [terminalId],
+        });
+    }
+    if (nextGroups.length === 0) {
+        return [
+            {
+                id: fallbackGroupId(DEFAULT_THREAD_TERMINAL_ID),
+                terminalIds: [DEFAULT_THREAD_TERMINAL_ID],
+            },
+        ];
+    }
+    return nextGroups;
 }
 function arraysEqual(a, b) {
-  if (a.length !== b.length) return false;
-  for (let index = 0; index < a.length; index += 1) {
-    if (a[index] !== b[index]) return false;
-  }
-  return true;
+    if (a.length !== b.length)
+        return false;
+    for (let index = 0; index < a.length; index += 1) {
+        if (a[index] !== b[index])
+            return false;
+    }
+    return true;
 }
 function terminalGroupsEqual(left, right) {
-  if (left.length !== right.length) return false;
-  for (let index = 0; index < left.length; index += 1) {
-    const leftGroup = left[index];
-    const rightGroup = right[index];
-    if (!leftGroup || !rightGroup) return false;
-    if (leftGroup.id !== rightGroup.id) return false;
-    if (!arraysEqual(leftGroup.terminalIds, rightGroup.terminalIds)) return false;
-  }
-  return true;
+    if (left.length !== right.length)
+        return false;
+    for (let index = 0; index < left.length; index += 1) {
+        const leftGroup = left[index];
+        const rightGroup = right[index];
+        if (!leftGroup || !rightGroup)
+            return false;
+        if (leftGroup.id !== rightGroup.id)
+            return false;
+        if (!arraysEqual(leftGroup.terminalIds, rightGroup.terminalIds))
+            return false;
+    }
+    return true;
 }
 function threadTerminalStateEqual(left, right) {
-  return (
-    left.terminalOpen === right.terminalOpen &&
-    left.terminalHeight === right.terminalHeight &&
-    left.activeTerminalId === right.activeTerminalId &&
-    left.activeTerminalGroupId === right.activeTerminalGroupId &&
-    arraysEqual(left.terminalIds, right.terminalIds) &&
-    arraysEqual(left.runningTerminalIds, right.runningTerminalIds) &&
-    terminalGroupsEqual(left.terminalGroups, right.terminalGroups)
-  );
+    return (left.terminalOpen === right.terminalOpen &&
+        left.terminalHeight === right.terminalHeight &&
+        left.activeTerminalId === right.activeTerminalId &&
+        left.activeTerminalGroupId === right.activeTerminalGroupId &&
+        arraysEqual(left.terminalIds, right.terminalIds) &&
+        arraysEqual(left.runningTerminalIds, right.runningTerminalIds) &&
+        terminalGroupsEqual(left.terminalGroups, right.terminalGroups));
 }
 const DEFAULT_THREAD_TERMINAL_STATE = Object.freeze({
-  terminalOpen: false,
-  terminalHeight: DEFAULT_THREAD_TERMINAL_HEIGHT,
-  terminalIds: [DEFAULT_THREAD_TERMINAL_ID],
-  runningTerminalIds: [],
-  activeTerminalId: DEFAULT_THREAD_TERMINAL_ID,
-  terminalGroups: [
-    {
-      id: fallbackGroupId(DEFAULT_THREAD_TERMINAL_ID),
-      terminalIds: [DEFAULT_THREAD_TERMINAL_ID],
-    },
-  ],
-  activeTerminalGroupId: fallbackGroupId(DEFAULT_THREAD_TERMINAL_ID),
+    terminalOpen: false,
+    terminalHeight: DEFAULT_THREAD_TERMINAL_HEIGHT,
+    terminalIds: [DEFAULT_THREAD_TERMINAL_ID],
+    runningTerminalIds: [],
+    activeTerminalId: DEFAULT_THREAD_TERMINAL_ID,
+    terminalGroups: [
+        {
+            id: fallbackGroupId(DEFAULT_THREAD_TERMINAL_ID),
+            terminalIds: [DEFAULT_THREAD_TERMINAL_ID],
+        },
+    ],
+    activeTerminalGroupId: fallbackGroupId(DEFAULT_THREAD_TERMINAL_ID),
 });
 function createDefaultThreadTerminalState() {
-  return {
-    ...DEFAULT_THREAD_TERMINAL_STATE,
-    terminalIds: [...DEFAULT_THREAD_TERMINAL_STATE.terminalIds],
-    runningTerminalIds: [...DEFAULT_THREAD_TERMINAL_STATE.runningTerminalIds],
-    terminalGroups: copyTerminalGroups(DEFAULT_THREAD_TERMINAL_STATE.terminalGroups),
-  };
+    return {
+        ...DEFAULT_THREAD_TERMINAL_STATE,
+        terminalIds: [...DEFAULT_THREAD_TERMINAL_STATE.terminalIds],
+        runningTerminalIds: [...DEFAULT_THREAD_TERMINAL_STATE.runningTerminalIds],
+        terminalGroups: copyTerminalGroups(DEFAULT_THREAD_TERMINAL_STATE.terminalGroups),
+    };
 }
 function getDefaultThreadTerminalState() {
-  return DEFAULT_THREAD_TERMINAL_STATE;
+    return DEFAULT_THREAD_TERMINAL_STATE;
 }
 function normalizeThreadTerminalState(state) {
-  const terminalIds = normalizeTerminalIds(state.terminalIds);
-  const nextTerminalIds = terminalIds.length > 0 ? terminalIds : [DEFAULT_THREAD_TERMINAL_ID];
-  const runningTerminalIds = normalizeRunningTerminalIds(state.runningTerminalIds, nextTerminalIds);
-  const activeTerminalId = nextTerminalIds.includes(state.activeTerminalId)
-    ? state.activeTerminalId
-    : (nextTerminalIds[0] ?? DEFAULT_THREAD_TERMINAL_ID);
-  const terminalGroups = normalizeTerminalGroups(state.terminalGroups, nextTerminalIds);
-  const activeGroupIdFromState = terminalGroups.some(
-    (group) => group.id === state.activeTerminalGroupId,
-  )
-    ? state.activeTerminalGroupId
-    : null;
-  const activeGroupIdFromTerminal =
-    terminalGroups.find((group) => group.terminalIds.includes(activeTerminalId))?.id ?? null;
-  const normalized = {
-    terminalOpen: state.terminalOpen,
-    terminalHeight:
-      Number.isFinite(state.terminalHeight) && state.terminalHeight > 0
-        ? state.terminalHeight
-        : DEFAULT_THREAD_TERMINAL_HEIGHT,
-    terminalIds: nextTerminalIds,
-    runningTerminalIds,
-    activeTerminalId,
-    terminalGroups,
-    activeTerminalGroupId:
-      activeGroupIdFromState ??
-      activeGroupIdFromTerminal ??
-      terminalGroups[0]?.id ??
-      fallbackGroupId(DEFAULT_THREAD_TERMINAL_ID),
-  };
-  return threadTerminalStateEqual(state, normalized) ? state : normalized;
+    const terminalIds = normalizeTerminalIds(state.terminalIds);
+    const nextTerminalIds = terminalIds.length > 0 ? terminalIds : [DEFAULT_THREAD_TERMINAL_ID];
+    const runningTerminalIds = normalizeRunningTerminalIds(state.runningTerminalIds, nextTerminalIds);
+    const activeTerminalId = nextTerminalIds.includes(state.activeTerminalId)
+        ? state.activeTerminalId
+        : (nextTerminalIds[0] ?? DEFAULT_THREAD_TERMINAL_ID);
+    const terminalGroups = normalizeTerminalGroups(state.terminalGroups, nextTerminalIds);
+    const activeGroupIdFromState = terminalGroups.some((group) => group.id === state.activeTerminalGroupId)
+        ? state.activeTerminalGroupId
+        : null;
+    const activeGroupIdFromTerminal = terminalGroups.find((group) => group.terminalIds.includes(activeTerminalId))?.id ?? null;
+    const normalized = {
+        terminalOpen: state.terminalOpen,
+        terminalHeight: Number.isFinite(state.terminalHeight) && state.terminalHeight > 0
+            ? state.terminalHeight
+            : DEFAULT_THREAD_TERMINAL_HEIGHT,
+        terminalIds: nextTerminalIds,
+        runningTerminalIds,
+        activeTerminalId,
+        terminalGroups,
+        activeTerminalGroupId: activeGroupIdFromState ??
+            activeGroupIdFromTerminal ??
+            terminalGroups[0]?.id ??
+            fallbackGroupId(DEFAULT_THREAD_TERMINAL_ID),
+    };
+    return threadTerminalStateEqual(state, normalized) ? state : normalized;
 }
 function isDefaultThreadTerminalState(state) {
-  const normalized = normalizeThreadTerminalState(state);
-  return threadTerminalStateEqual(normalized, DEFAULT_THREAD_TERMINAL_STATE);
+    const normalized = normalizeThreadTerminalState(state);
+    return threadTerminalStateEqual(normalized, DEFAULT_THREAD_TERMINAL_STATE);
 }
 function isValidTerminalId(terminalId) {
-  return terminalId.trim().length > 0;
+    return terminalId.trim().length > 0;
 }
 function terminalEventBufferKey(threadId, terminalId) {
-  return `${threadId}\u0000${terminalId}`;
+    return `${threadId}\u0000${terminalId}`;
 }
 function copyTerminalGroups(groups) {
-  return groups.map((group) => ({
-    id: group.id,
-    terminalIds: [...group.terminalIds],
-  }));
+    return groups.map((group) => ({
+        id: group.id,
+        terminalIds: [...group.terminalIds],
+    }));
 }
 function appendTerminalEventEntry(terminalEventEntriesByKey, nextTerminalEventId, event) {
-  const key = terminalEventBufferKey(ThreadId.makeUnsafe(event.threadId), event.terminalId);
-  const currentEntries = terminalEventEntriesByKey[key] ?? EMPTY_TERMINAL_EVENT_ENTRIES;
-  const nextEntry = {
-    id: nextTerminalEventId,
-    event,
-  };
-  const nextEntries =
-    currentEntries.length >= MAX_TERMINAL_EVENT_BUFFER
-      ? [...currentEntries.slice(1), nextEntry]
-      : [...currentEntries, nextEntry];
-  return {
-    terminalEventEntriesByKey: {
-      ...terminalEventEntriesByKey,
-      [key]: nextEntries,
-    },
-    nextTerminalEventId: nextTerminalEventId + 1,
-  };
+    const key = terminalEventBufferKey(ThreadId.makeUnsafe(event.threadId), event.terminalId);
+    const currentEntries = terminalEventEntriesByKey[key] ?? EMPTY_TERMINAL_EVENT_ENTRIES;
+    const nextEntry = {
+        id: nextTerminalEventId,
+        event,
+    };
+    const nextEntries = currentEntries.length >= MAX_TERMINAL_EVENT_BUFFER
+        ? [...currentEntries.slice(1), nextEntry]
+        : [...currentEntries, nextEntry];
+    return {
+        terminalEventEntriesByKey: {
+            ...terminalEventEntriesByKey,
+            [key]: nextEntries,
+        },
+        nextTerminalEventId: nextTerminalEventId + 1,
+    };
 }
 function launchContextFromStartEvent(event) {
-  return {
-    cwd: event.snapshot.cwd,
-    worktreePath: event.snapshot.worktreePath,
-  };
+    return {
+        cwd: event.snapshot.cwd,
+        worktreePath: event.snapshot.worktreePath,
+    };
 }
 function upsertTerminalIntoGroups(state, terminalId, mode) {
-  const normalized = normalizeThreadTerminalState(state);
-  if (!isValidTerminalId(terminalId)) {
-    return normalized;
-  }
-  const isNewTerminal = !normalized.terminalIds.includes(terminalId);
-  const terminalIds = isNewTerminal
-    ? [...normalized.terminalIds, terminalId]
-    : normalized.terminalIds;
-  const terminalGroups = copyTerminalGroups(normalized.terminalGroups);
-  const existingGroupIndex = findGroupIndexByTerminalId(terminalGroups, terminalId);
-  if (existingGroupIndex >= 0) {
-    terminalGroups[existingGroupIndex].terminalIds = terminalGroups[
-      existingGroupIndex
-    ].terminalIds.filter((id) => id !== terminalId);
-    if (terminalGroups[existingGroupIndex].terminalIds.length === 0) {
-      terminalGroups.splice(existingGroupIndex, 1);
+    const normalized = normalizeThreadTerminalState(state);
+    if (!isValidTerminalId(terminalId)) {
+        return normalized;
     }
-  }
-  if (mode === "new") {
-    const usedGroupIds = new Set(terminalGroups.map((group) => group.id));
-    const nextGroupId = assignUniqueGroupId(fallbackGroupId(terminalId), usedGroupIds);
-    terminalGroups.push({ id: nextGroupId, terminalIds: [terminalId] });
+    const isNewTerminal = !normalized.terminalIds.includes(terminalId);
+    const terminalIds = isNewTerminal
+        ? [...normalized.terminalIds, terminalId]
+        : normalized.terminalIds;
+    const terminalGroups = copyTerminalGroups(normalized.terminalGroups);
+    const existingGroupIndex = findGroupIndexByTerminalId(terminalGroups, terminalId);
+    if (existingGroupIndex >= 0) {
+        terminalGroups[existingGroupIndex].terminalIds = terminalGroups[existingGroupIndex].terminalIds.filter((id) => id !== terminalId);
+        if (terminalGroups[existingGroupIndex].terminalIds.length === 0) {
+            terminalGroups.splice(existingGroupIndex, 1);
+        }
+    }
+    if (mode === "new") {
+        const usedGroupIds = new Set(terminalGroups.map((group) => group.id));
+        const nextGroupId = assignUniqueGroupId(fallbackGroupId(terminalId), usedGroupIds);
+        terminalGroups.push({ id: nextGroupId, terminalIds: [terminalId] });
+        return normalizeThreadTerminalState({
+            ...normalized,
+            terminalOpen: true,
+            terminalIds,
+            activeTerminalId: terminalId,
+            terminalGroups,
+            activeTerminalGroupId: nextGroupId,
+        });
+    }
+    let activeGroupIndex = terminalGroups.findIndex((group) => group.id === normalized.activeTerminalGroupId);
+    if (activeGroupIndex < 0) {
+        activeGroupIndex = findGroupIndexByTerminalId(terminalGroups, normalized.activeTerminalId);
+    }
+    if (activeGroupIndex < 0) {
+        const usedGroupIds = new Set(terminalGroups.map((group) => group.id));
+        const nextGroupId = assignUniqueGroupId(fallbackGroupId(normalized.activeTerminalId), usedGroupIds);
+        terminalGroups.push({ id: nextGroupId, terminalIds: [normalized.activeTerminalId] });
+        activeGroupIndex = terminalGroups.length - 1;
+    }
+    const destinationGroup = terminalGroups[activeGroupIndex];
+    if (!destinationGroup) {
+        return normalized;
+    }
+    if (isNewTerminal &&
+        !destinationGroup.terminalIds.includes(terminalId) &&
+        destinationGroup.terminalIds.length >= MAX_TERMINALS_PER_GROUP) {
+        return normalized;
+    }
+    if (!destinationGroup.terminalIds.includes(terminalId)) {
+        const anchorIndex = destinationGroup.terminalIds.indexOf(normalized.activeTerminalId);
+        if (anchorIndex >= 0) {
+            destinationGroup.terminalIds.splice(anchorIndex + 1, 0, terminalId);
+        }
+        else {
+            destinationGroup.terminalIds.push(terminalId);
+        }
+    }
     return normalizeThreadTerminalState({
-      ...normalized,
-      terminalOpen: true,
-      terminalIds,
-      activeTerminalId: terminalId,
-      terminalGroups,
-      activeTerminalGroupId: nextGroupId,
+        ...normalized,
+        terminalOpen: true,
+        terminalIds,
+        activeTerminalId: terminalId,
+        terminalGroups,
+        activeTerminalGroupId: destinationGroup.id,
     });
-  }
-  let activeGroupIndex = terminalGroups.findIndex(
-    (group) => group.id === normalized.activeTerminalGroupId,
-  );
-  if (activeGroupIndex < 0) {
-    activeGroupIndex = findGroupIndexByTerminalId(terminalGroups, normalized.activeTerminalId);
-  }
-  if (activeGroupIndex < 0) {
-    const usedGroupIds = new Set(terminalGroups.map((group) => group.id));
-    const nextGroupId = assignUniqueGroupId(
-      fallbackGroupId(normalized.activeTerminalId),
-      usedGroupIds,
-    );
-    terminalGroups.push({ id: nextGroupId, terminalIds: [normalized.activeTerminalId] });
-    activeGroupIndex = terminalGroups.length - 1;
-  }
-  const destinationGroup = terminalGroups[activeGroupIndex];
-  if (!destinationGroup) {
-    return normalized;
-  }
-  if (
-    isNewTerminal &&
-    !destinationGroup.terminalIds.includes(terminalId) &&
-    destinationGroup.terminalIds.length >= MAX_TERMINALS_PER_GROUP
-  ) {
-    return normalized;
-  }
-  if (!destinationGroup.terminalIds.includes(terminalId)) {
-    const anchorIndex = destinationGroup.terminalIds.indexOf(normalized.activeTerminalId);
-    if (anchorIndex >= 0) {
-      destinationGroup.terminalIds.splice(anchorIndex + 1, 0, terminalId);
-    } else {
-      destinationGroup.terminalIds.push(terminalId);
-    }
-  }
-  return normalizeThreadTerminalState({
-    ...normalized,
-    terminalOpen: true,
-    terminalIds,
-    activeTerminalId: terminalId,
-    terminalGroups,
-    activeTerminalGroupId: destinationGroup.id,
-  });
 }
 function setThreadTerminalOpen(state, open) {
-  const normalized = normalizeThreadTerminalState(state);
-  if (normalized.terminalOpen === open) return normalized;
-  return { ...normalized, terminalOpen: open };
+    const normalized = normalizeThreadTerminalState(state);
+    if (normalized.terminalOpen === open)
+        return normalized;
+    return { ...normalized, terminalOpen: open };
 }
 function setThreadTerminalHeight(state, height) {
-  const normalized = normalizeThreadTerminalState(state);
-  if (!Number.isFinite(height) || height <= 0 || normalized.terminalHeight === height) {
-    return normalized;
-  }
-  return { ...normalized, terminalHeight: height };
+    const normalized = normalizeThreadTerminalState(state);
+    if (!Number.isFinite(height) || height <= 0 || normalized.terminalHeight === height) {
+        return normalized;
+    }
+    return { ...normalized, terminalHeight: height };
 }
 function splitThreadTerminal(state, terminalId) {
-  return upsertTerminalIntoGroups(state, terminalId, "split");
+    return upsertTerminalIntoGroups(state, terminalId, "split");
 }
 function newThreadTerminal(state, terminalId) {
-  return upsertTerminalIntoGroups(state, terminalId, "new");
+    return upsertTerminalIntoGroups(state, terminalId, "new");
 }
 function setThreadActiveTerminal(state, terminalId) {
-  const normalized = normalizeThreadTerminalState(state);
-  if (!normalized.terminalIds.includes(terminalId)) {
-    return normalized;
-  }
-  const activeTerminalGroupId =
-    normalized.terminalGroups.find((group) => group.terminalIds.includes(terminalId))?.id ??
-    normalized.activeTerminalGroupId;
-  if (
-    normalized.activeTerminalId === terminalId &&
-    normalized.activeTerminalGroupId === activeTerminalGroupId
-  ) {
-    return normalized;
-  }
-  return {
-    ...normalized,
-    activeTerminalId: terminalId,
-    activeTerminalGroupId,
-  };
+    const normalized = normalizeThreadTerminalState(state);
+    if (!normalized.terminalIds.includes(terminalId)) {
+        return normalized;
+    }
+    const activeTerminalGroupId = normalized.terminalGroups.find((group) => group.terminalIds.includes(terminalId))?.id ??
+        normalized.activeTerminalGroupId;
+    if (normalized.activeTerminalId === terminalId &&
+        normalized.activeTerminalGroupId === activeTerminalGroupId) {
+        return normalized;
+    }
+    return {
+        ...normalized,
+        activeTerminalId: terminalId,
+        activeTerminalGroupId,
+    };
 }
 function closeThreadTerminal(state, terminalId) {
-  const normalized = normalizeThreadTerminalState(state);
-  if (!normalized.terminalIds.includes(terminalId)) {
-    return normalized;
-  }
-  const remainingTerminalIds = normalized.terminalIds.filter((id) => id !== terminalId);
-  if (remainingTerminalIds.length === 0) {
-    return createDefaultThreadTerminalState();
-  }
-  const closedTerminalIndex = normalized.terminalIds.indexOf(terminalId);
-  const nextActiveTerminalId =
-    normalized.activeTerminalId === terminalId
-      ? (remainingTerminalIds[Math.min(closedTerminalIndex, remainingTerminalIds.length - 1)] ??
-        remainingTerminalIds[0] ??
-        DEFAULT_THREAD_TERMINAL_ID)
-      : normalized.activeTerminalId;
-  const terminalGroups = normalized.terminalGroups
-    .map((group) => ({
-      ...group,
-      terminalIds: group.terminalIds.filter((id) => id !== terminalId),
+    const normalized = normalizeThreadTerminalState(state);
+    if (!normalized.terminalIds.includes(terminalId)) {
+        return normalized;
+    }
+    const remainingTerminalIds = normalized.terminalIds.filter((id) => id !== terminalId);
+    if (remainingTerminalIds.length === 0) {
+        return createDefaultThreadTerminalState();
+    }
+    const closedTerminalIndex = normalized.terminalIds.indexOf(terminalId);
+    const nextActiveTerminalId = normalized.activeTerminalId === terminalId
+        ? (remainingTerminalIds[Math.min(closedTerminalIndex, remainingTerminalIds.length - 1)] ??
+            remainingTerminalIds[0] ??
+            DEFAULT_THREAD_TERMINAL_ID)
+        : normalized.activeTerminalId;
+    const terminalGroups = normalized.terminalGroups
+        .map((group) => ({
+        ...group,
+        terminalIds: group.terminalIds.filter((id) => id !== terminalId),
     }))
-    .filter((group) => group.terminalIds.length > 0);
-  const nextActiveTerminalGroupId =
-    terminalGroups.find((group) => group.terminalIds.includes(nextActiveTerminalId))?.id ??
-    terminalGroups[0]?.id ??
-    fallbackGroupId(nextActiveTerminalId);
-  return normalizeThreadTerminalState({
-    terminalOpen: normalized.terminalOpen,
-    terminalHeight: normalized.terminalHeight,
-    terminalIds: remainingTerminalIds,
-    runningTerminalIds: normalized.runningTerminalIds.filter((id) => id !== terminalId),
-    activeTerminalId: nextActiveTerminalId,
-    terminalGroups,
-    activeTerminalGroupId: nextActiveTerminalGroupId,
-  });
+        .filter((group) => group.terminalIds.length > 0);
+    const nextActiveTerminalGroupId = terminalGroups.find((group) => group.terminalIds.includes(nextActiveTerminalId))?.id ??
+        terminalGroups[0]?.id ??
+        fallbackGroupId(nextActiveTerminalId);
+    return normalizeThreadTerminalState({
+        terminalOpen: normalized.terminalOpen,
+        terminalHeight: normalized.terminalHeight,
+        terminalIds: remainingTerminalIds,
+        runningTerminalIds: normalized.runningTerminalIds.filter((id) => id !== terminalId),
+        activeTerminalId: nextActiveTerminalId,
+        terminalGroups,
+        activeTerminalGroupId: nextActiveTerminalGroupId,
+    });
 }
 function setThreadTerminalActivity(state, terminalId, hasRunningSubprocess) {
-  const normalized = normalizeThreadTerminalState(state);
-  if (!normalized.terminalIds.includes(terminalId)) {
-    return normalized;
-  }
-  const alreadyRunning = normalized.runningTerminalIds.includes(terminalId);
-  if (hasRunningSubprocess === alreadyRunning) {
-    return normalized;
-  }
-  const runningTerminalIds = new Set(normalized.runningTerminalIds);
-  if (hasRunningSubprocess) {
-    runningTerminalIds.add(terminalId);
-  } else {
-    runningTerminalIds.delete(terminalId);
-  }
-  return { ...normalized, runningTerminalIds: [...runningTerminalIds] };
+    const normalized = normalizeThreadTerminalState(state);
+    if (!normalized.terminalIds.includes(terminalId)) {
+        return normalized;
+    }
+    const alreadyRunning = normalized.runningTerminalIds.includes(terminalId);
+    if (hasRunningSubprocess === alreadyRunning) {
+        return normalized;
+    }
+    const runningTerminalIds = new Set(normalized.runningTerminalIds);
+    if (hasRunningSubprocess) {
+        runningTerminalIds.add(terminalId);
+    }
+    else {
+        runningTerminalIds.delete(terminalId);
+    }
+    return { ...normalized, runningTerminalIds: [...runningTerminalIds] };
 }
 export function selectThreadTerminalState(terminalStateByThreadId, threadId) {
-  if (threadId.length === 0) {
-    return getDefaultThreadTerminalState();
-  }
-  return terminalStateByThreadId[threadId] ?? getDefaultThreadTerminalState();
+    if (threadId.length === 0) {
+        return getDefaultThreadTerminalState();
+    }
+    return terminalStateByThreadId[threadId] ?? getDefaultThreadTerminalState();
 }
 function updateTerminalStateByThreadId(terminalStateByThreadId, threadId, updater) {
-  if (threadId.length === 0) {
-    return terminalStateByThreadId;
-  }
-  const current = selectThreadTerminalState(terminalStateByThreadId, threadId);
-  const next = updater(current);
-  if (next === current) {
-    return terminalStateByThreadId;
-  }
-  if (isDefaultThreadTerminalState(next)) {
-    if (terminalStateByThreadId[threadId] === undefined) {
-      return terminalStateByThreadId;
+    if (threadId.length === 0) {
+        return terminalStateByThreadId;
     }
-    const { [threadId]: _removed, ...rest } = terminalStateByThreadId;
-    return rest;
-  }
-  return {
-    ...terminalStateByThreadId,
-    [threadId]: next,
-  };
+    const current = selectThreadTerminalState(terminalStateByThreadId, threadId);
+    const next = updater(current);
+    if (next === current) {
+        return terminalStateByThreadId;
+    }
+    if (isDefaultThreadTerminalState(next)) {
+        if (terminalStateByThreadId[threadId] === undefined) {
+            return terminalStateByThreadId;
+        }
+        const { [threadId]: _removed, ...rest } = terminalStateByThreadId;
+        return rest;
+    }
+    return {
+        ...terminalStateByThreadId,
+        [threadId]: next,
+    };
 }
 export function selectTerminalEventEntries(terminalEventEntriesByKey, threadId, terminalId) {
-  if (threadId.length === 0 || terminalId.trim().length === 0) {
-    return EMPTY_TERMINAL_EVENT_ENTRIES;
-  }
-  return (
-    terminalEventEntriesByKey[terminalEventBufferKey(threadId, terminalId)] ??
-    EMPTY_TERMINAL_EVENT_ENTRIES
-  );
+    if (threadId.length === 0 || terminalId.trim().length === 0) {
+        return EMPTY_TERMINAL_EVENT_ENTRIES;
+    }
+    return (terminalEventEntriesByKey[terminalEventBufferKey(threadId, terminalId)] ??
+        EMPTY_TERMINAL_EVENT_ENTRIES);
 }
-export const useTerminalStateStore = create()(
-  persist(
-    (set) => {
-      const updateTerminal = (threadId, updater) => {
+export const useTerminalStateStore = create()(persist((set) => {
+    const updateTerminal = (threadId, updater) => {
         set((state) => {
-          const nextTerminalStateByThreadId = updateTerminalStateByThreadId(
-            state.terminalStateByThreadId,
-            threadId,
-            updater,
-          );
-          if (nextTerminalStateByThreadId === state.terminalStateByThreadId) {
-            return state;
-          }
-          return {
-            terminalStateByThreadId: nextTerminalStateByThreadId,
-          };
+            const nextTerminalStateByThreadId = updateTerminalStateByThreadId(state.terminalStateByThreadId, threadId, updater);
+            if (nextTerminalStateByThreadId === state.terminalStateByThreadId) {
+                return state;
+            }
+            return {
+                terminalStateByThreadId: nextTerminalStateByThreadId,
+            };
         });
-      };
-      return {
+    };
+    return {
         terminalStateByThreadId: {},
         terminalLaunchContextByThreadId: {},
         terminalEventEntriesByKey: {},
         nextTerminalEventId: 1,
-        setTerminalOpen: (threadId, open) =>
-          updateTerminal(threadId, (state) => setThreadTerminalOpen(state, open)),
-        setTerminalHeight: (threadId, height) =>
-          updateTerminal(threadId, (state) => setThreadTerminalHeight(state, height)),
-        splitTerminal: (threadId, terminalId) =>
-          updateTerminal(threadId, (state) => splitThreadTerminal(state, terminalId)),
-        newTerminal: (threadId, terminalId) =>
-          updateTerminal(threadId, (state) => newThreadTerminal(state, terminalId)),
-        ensureTerminal: (threadId, terminalId, options) =>
-          updateTerminal(threadId, (state) => {
+        setTerminalOpen: (threadId, open) => updateTerminal(threadId, (state) => setThreadTerminalOpen(state, open)),
+        setTerminalHeight: (threadId, height) => updateTerminal(threadId, (state) => setThreadTerminalHeight(state, height)),
+        splitTerminal: (threadId, terminalId) => updateTerminal(threadId, (state) => splitThreadTerminal(state, terminalId)),
+        newTerminal: (threadId, terminalId) => updateTerminal(threadId, (state) => newThreadTerminal(state, terminalId)),
+        ensureTerminal: (threadId, terminalId, options) => updateTerminal(threadId, (state) => {
             let nextState = state;
             if (!state.terminalIds.includes(terminalId)) {
-              nextState = newThreadTerminal(nextState, terminalId);
+                nextState = newThreadTerminal(nextState, terminalId);
             }
             if (options?.active === false) {
-              nextState = {
-                ...nextState,
-                activeTerminalId: state.activeTerminalId,
-                activeTerminalGroupId: state.activeTerminalGroupId,
-              };
+                nextState = {
+                    ...nextState,
+                    activeTerminalId: state.activeTerminalId,
+                    activeTerminalGroupId: state.activeTerminalGroupId,
+                };
             }
             if (options?.active ?? true) {
-              nextState = setThreadActiveTerminal(nextState, terminalId);
+                nextState = setThreadActiveTerminal(nextState, terminalId);
             }
             if (options?.open) {
-              nextState = setThreadTerminalOpen(nextState, true);
+                nextState = setThreadTerminalOpen(nextState, true);
             }
             return normalizeThreadTerminalState(nextState);
-          }),
-        setActiveTerminal: (threadId, terminalId) =>
-          updateTerminal(threadId, (state) => setThreadActiveTerminal(state, terminalId)),
-        closeTerminal: (threadId, terminalId) =>
-          updateTerminal(threadId, (state) => closeThreadTerminal(state, terminalId)),
-        setTerminalLaunchContext: (threadId, context) =>
-          set((state) => ({
+        }),
+        setActiveTerminal: (threadId, terminalId) => updateTerminal(threadId, (state) => setThreadActiveTerminal(state, terminalId)),
+        closeTerminal: (threadId, terminalId) => updateTerminal(threadId, (state) => closeThreadTerminal(state, terminalId)),
+        setTerminalLaunchContext: (threadId, context) => set((state) => ({
             terminalLaunchContextByThreadId: {
-              ...state.terminalLaunchContextByThreadId,
-              [threadId]: context,
+                ...state.terminalLaunchContextByThreadId,
+                [threadId]: context,
             },
-          })),
-        clearTerminalLaunchContext: (threadId) =>
-          set((state) => {
+        })),
+        clearTerminalLaunchContext: (threadId) => set((state) => {
             if (!state.terminalLaunchContextByThreadId[threadId]) {
-              return state;
+                return state;
             }
             const { [threadId]: _removed, ...rest } = state.terminalLaunchContextByThreadId;
             return { terminalLaunchContextByThreadId: rest };
-          }),
-        setTerminalActivity: (threadId, terminalId, hasRunningSubprocess) =>
-          updateTerminal(threadId, (state) =>
-            setThreadTerminalActivity(state, terminalId, hasRunningSubprocess),
-          ),
-        recordTerminalEvent: (event) =>
-          set((state) =>
-            appendTerminalEventEntry(
-              state.terminalEventEntriesByKey,
-              state.nextTerminalEventId,
-              event,
-            ),
-          ),
-        applyTerminalEvent: (event) =>
-          set((state) => {
+        }),
+        setTerminalActivity: (threadId, terminalId, hasRunningSubprocess) => updateTerminal(threadId, (state) => setThreadTerminalActivity(state, terminalId, hasRunningSubprocess)),
+        recordTerminalEvent: (event) => set((state) => appendTerminalEventEntry(state.terminalEventEntriesByKey, state.nextTerminalEventId, event)),
+        applyTerminalEvent: (event) => set((state) => {
             const threadId = ThreadId.makeUnsafe(event.threadId);
             let nextTerminalStateByThreadId = state.terminalStateByThreadId;
             let nextTerminalLaunchContextByThreadId = state.terminalLaunchContextByThreadId;
             if (event.type === "started" || event.type === "restarted") {
-              nextTerminalStateByThreadId = updateTerminalStateByThreadId(
-                nextTerminalStateByThreadId,
-                threadId,
-                (current) => {
-                  let nextState = current;
-                  if (!current.terminalIds.includes(event.terminalId)) {
-                    nextState = newThreadTerminal(nextState, event.terminalId);
-                  }
-                  nextState = setThreadActiveTerminal(nextState, event.terminalId);
-                  nextState = setThreadTerminalOpen(nextState, true);
-                  return normalizeThreadTerminalState(nextState);
-                },
-              );
-              nextTerminalLaunchContextByThreadId = {
-                ...nextTerminalLaunchContextByThreadId,
-                [threadId]: launchContextFromStartEvent(event),
-              };
+                nextTerminalStateByThreadId = updateTerminalStateByThreadId(nextTerminalStateByThreadId, threadId, (current) => {
+                    let nextState = current;
+                    if (!current.terminalIds.includes(event.terminalId)) {
+                        nextState = newThreadTerminal(nextState, event.terminalId);
+                    }
+                    nextState = setThreadActiveTerminal(nextState, event.terminalId);
+                    nextState = setThreadTerminalOpen(nextState, true);
+                    return normalizeThreadTerminalState(nextState);
+                });
+                nextTerminalLaunchContextByThreadId = {
+                    ...nextTerminalLaunchContextByThreadId,
+                    [threadId]: launchContextFromStartEvent(event),
+                };
             }
             const hasRunningSubprocess = terminalRunningSubprocessFromEvent(event);
             if (hasRunningSubprocess !== null) {
-              nextTerminalStateByThreadId = updateTerminalStateByThreadId(
-                nextTerminalStateByThreadId,
-                threadId,
-                (current) =>
-                  setThreadTerminalActivity(current, event.terminalId, hasRunningSubprocess),
-              );
+                nextTerminalStateByThreadId = updateTerminalStateByThreadId(nextTerminalStateByThreadId, threadId, (current) => setThreadTerminalActivity(current, event.terminalId, hasRunningSubprocess));
             }
-            const nextEventState = appendTerminalEventEntry(
-              state.terminalEventEntriesByKey,
-              state.nextTerminalEventId,
-              event,
-            );
+            const nextEventState = appendTerminalEventEntry(state.terminalEventEntriesByKey, state.nextTerminalEventId, event);
             return {
-              terminalStateByThreadId: nextTerminalStateByThreadId,
-              terminalLaunchContextByThreadId: nextTerminalLaunchContextByThreadId,
-              ...nextEventState,
+                terminalStateByThreadId: nextTerminalStateByThreadId,
+                terminalLaunchContextByThreadId: nextTerminalLaunchContextByThreadId,
+                ...nextEventState,
             };
-          }),
-        clearTerminalState: (threadId) =>
-          set((state) => {
-            const nextTerminalStateByThreadId = updateTerminalStateByThreadId(
-              state.terminalStateByThreadId,
-              threadId,
-              () => createDefaultThreadTerminalState(),
-            );
+        }),
+        clearTerminalState: (threadId) => set((state) => {
+            const nextTerminalStateByThreadId = updateTerminalStateByThreadId(state.terminalStateByThreadId, threadId, () => createDefaultThreadTerminalState());
             const hadLaunchContext = state.terminalLaunchContextByThreadId[threadId] !== undefined;
-            const { [threadId]: _removed, ...remainingLaunchContexts } =
-              state.terminalLaunchContextByThreadId;
+            const { [threadId]: _removed, ...remainingLaunchContexts } = state.terminalLaunchContextByThreadId;
             const nextTerminalEventEntriesByKey = { ...state.terminalEventEntriesByKey };
             let removedEventEntries = false;
             for (const key of Object.keys(nextTerminalEventEntriesByKey)) {
-              if (key.startsWith(`${threadId}\u0000`)) {
-                delete nextTerminalEventEntriesByKey[key];
-                removedEventEntries = true;
-              }
+                if (key.startsWith(`${threadId}\u0000`)) {
+                    delete nextTerminalEventEntriesByKey[key];
+                    removedEventEntries = true;
+                }
             }
-            if (
-              nextTerminalStateByThreadId === state.terminalStateByThreadId &&
-              !hadLaunchContext &&
-              !removedEventEntries
-            ) {
-              return state;
+            if (nextTerminalStateByThreadId === state.terminalStateByThreadId &&
+                !hadLaunchContext &&
+                !removedEventEntries) {
+                return state;
             }
             return {
-              terminalStateByThreadId: nextTerminalStateByThreadId,
-              terminalLaunchContextByThreadId: remainingLaunchContexts,
-              terminalEventEntriesByKey: nextTerminalEventEntriesByKey,
+                terminalStateByThreadId: nextTerminalStateByThreadId,
+                terminalLaunchContextByThreadId: remainingLaunchContexts,
+                terminalEventEntriesByKey: nextTerminalEventEntriesByKey,
             };
-          }),
-        removeTerminalState: (threadId) =>
-          set((state) => {
+        }),
+        removeTerminalState: (threadId) => set((state) => {
             const hadTerminalState = state.terminalStateByThreadId[threadId] !== undefined;
             const hadLaunchContext = state.terminalLaunchContextByThreadId[threadId] !== undefined;
             const nextTerminalEventEntriesByKey = { ...state.terminalEventEntriesByKey };
             let removedEventEntries = false;
             for (const key of Object.keys(nextTerminalEventEntriesByKey)) {
-              if (key.startsWith(`${threadId}\u0000`)) {
-                delete nextTerminalEventEntriesByKey[key];
-                removedEventEntries = true;
-              }
+                if (key.startsWith(`${threadId}\u0000`)) {
+                    delete nextTerminalEventEntriesByKey[key];
+                    removedEventEntries = true;
+                }
             }
             if (!hadTerminalState && !hadLaunchContext && !removedEventEntries) {
-              return state;
+                return state;
             }
             const nextTerminalStateByThreadId = { ...state.terminalStateByThreadId };
             delete nextTerminalStateByThreadId[threadId];
             const nextLaunchContexts = { ...state.terminalLaunchContextByThreadId };
             delete nextLaunchContexts[threadId];
             return {
-              terminalStateByThreadId: nextTerminalStateByThreadId,
-              terminalLaunchContextByThreadId: nextLaunchContexts,
-              terminalEventEntriesByKey: nextTerminalEventEntriesByKey,
+                terminalStateByThreadId: nextTerminalStateByThreadId,
+                terminalLaunchContextByThreadId: nextLaunchContexts,
+                terminalEventEntriesByKey: nextTerminalEventEntriesByKey,
             };
-          }),
-        removeOrphanedTerminalStates: (activeThreadIds) =>
-          set((state) => {
-            const orphanedIds = Object.keys(state.terminalStateByThreadId).filter(
-              (id) => !activeThreadIds.has(id),
-            );
-            const orphanedLaunchContextIds = Object.keys(
-              state.terminalLaunchContextByThreadId,
-            ).filter((id) => !activeThreadIds.has(id));
+        }),
+        removeOrphanedTerminalStates: (activeThreadIds) => set((state) => {
+            const orphanedIds = Object.keys(state.terminalStateByThreadId).filter((id) => !activeThreadIds.has(id));
+            const orphanedLaunchContextIds = Object.keys(state.terminalLaunchContextByThreadId).filter((id) => !activeThreadIds.has(id));
             const nextTerminalEventEntriesByKey = { ...state.terminalEventEntriesByKey };
             let removedEventEntries = false;
             for (const key of Object.keys(nextTerminalEventEntriesByKey)) {
-              const [threadId] = key.split("\u0000");
-              if (threadId && !activeThreadIds.has(threadId)) {
-                delete nextTerminalEventEntriesByKey[key];
-                removedEventEntries = true;
-              }
+                const [threadId] = key.split("\u0000");
+                if (threadId && !activeThreadIds.has(threadId)) {
+                    delete nextTerminalEventEntriesByKey[key];
+                    removedEventEntries = true;
+                }
             }
-            if (
-              orphanedIds.length === 0 &&
-              orphanedLaunchContextIds.length === 0 &&
-              !removedEventEntries
-            ) {
-              return state;
+            if (orphanedIds.length === 0 &&
+                orphanedLaunchContextIds.length === 0 &&
+                !removedEventEntries) {
+                return state;
             }
             const next = { ...state.terminalStateByThreadId };
             for (const id of orphanedIds) {
-              delete next[id];
+                delete next[id];
             }
             const nextLaunchContexts = { ...state.terminalLaunchContextByThreadId };
             for (const id of orphanedLaunchContextIds) {
-              delete nextLaunchContexts[id];
+                delete nextLaunchContexts[id];
             }
             return {
-              terminalStateByThreadId: next,
-              terminalLaunchContextByThreadId: nextLaunchContexts,
-              terminalEventEntriesByKey: nextTerminalEventEntriesByKey,
+                terminalStateByThreadId: next,
+                terminalLaunchContextByThreadId: nextLaunchContexts,
+                terminalEventEntriesByKey: nextTerminalEventEntriesByKey,
             };
-          }),
-      };
-    },
-    {
-      name: TERMINAL_STATE_STORAGE_KEY,
-      version: 1,
-      storage: createJSONStorage(createTerminalStateStorage),
-      partialize: (state) => ({
+        }),
+    };
+}, {
+    name: TERMINAL_STATE_STORAGE_KEY,
+    version: 1,
+    storage: createJSONStorage(createTerminalStateStorage),
+    partialize: (state) => ({
         terminalStateByThreadId: state.terminalStateByThreadId,
-      }),
-    },
-  ),
-);
+    }),
+}));
