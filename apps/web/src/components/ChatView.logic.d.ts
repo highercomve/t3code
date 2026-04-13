@@ -1,8 +1,16 @@
-import { type ModelSelection, type ThreadId, type TurnId } from "@t3tools/contracts";
+import {
+  type EnvironmentId,
+  type ModelSelection,
+  type ProviderKind,
+  type ScopedThreadRef,
+  type ThreadId,
+  type TurnId,
+} from "@t3tools/contracts";
 import { type ChatMessage, type SessionPhase, type Thread, type ThreadSession } from "../types";
 import { type ComposerImageAttachment, type DraftThreadState } from "../composerDraftStore";
 import { Schema } from "effect";
 import { type TerminalContextDraft } from "../lib/terminalContext";
+import type { DraftThreadEnvMode } from "../composerDraftStore";
 export declare const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "t3code:last-invoked-script-by-project";
 export declare const MAX_HIDDEN_MOUNTED_TERMINAL_THREADS = 10;
 export declare const LastInvokedScriptByProjectSchema: Schema.$Record<
@@ -15,13 +23,24 @@ export declare function buildLocalDraftThread(
   fallbackModelSelection: ModelSelection,
   error: string | null,
 ): Thread;
+export declare function shouldWriteThreadErrorToCurrentServerThread(input: {
+  serverThread:
+    | {
+        environmentId: EnvironmentId;
+        id: ThreadId;
+      }
+    | null
+    | undefined;
+  routeThreadRef: ScopedThreadRef;
+  targetThreadId: ThreadId;
+}): boolean;
 export declare function reconcileMountedTerminalThreadIds(input: {
-  currentThreadIds: ReadonlyArray<ThreadId>;
-  openThreadIds: ReadonlyArray<ThreadId>;
-  activeThreadId: ThreadId | null;
+  currentThreadIds: ReadonlyArray<string>;
+  openThreadIds: ReadonlyArray<string>;
+  activeThreadId: string | null;
   activeThreadTerminalOpen: boolean;
   maxHiddenThreadCount?: number;
-}): ThreadId[];
+}): string[];
 export declare function revokeBlobPreviewUrl(previewUrl: string | undefined): void;
 export declare function revokeUserMessagePreviewUrls(message: ChatMessage): void;
 export declare function collectUserMessageBlobPreviewUrls(message: ChatMessage): string[];
@@ -30,7 +49,10 @@ export interface PullRequestDialogState {
   key: number;
 }
 export declare function readFileAsDataUrl(file: File): Promise<string>;
-export declare function buildTemporaryWorktreeBranchName(): string;
+export declare function resolveSendEnvMode(input: {
+  requestedEnvMode: DraftThreadEnvMode;
+  isGitRepo: boolean;
+}): DraftThreadEnvMode;
 export declare function cloneComposerImageForRetry(
   image: ComposerImageAttachment,
 ): ComposerImageAttachment;
@@ -52,8 +74,13 @@ export declare function buildExpiredTerminalContextToastCopy(
   description: string;
 };
 export declare function threadHasStarted(thread: Thread | null | undefined): boolean;
+export declare function deriveLockedProvider(input: {
+  thread: Thread | null | undefined;
+  selectedProvider: ProviderKind | null;
+  threadProvider: ProviderKind | null;
+}): ProviderKind | null;
 export declare function waitForStartedServerThread(
-  threadId: ThreadId,
+  threadRef: ScopedThreadRef,
   timeoutMs?: number,
 ): Promise<boolean>;
 export interface LocalDispatchSnapshot {

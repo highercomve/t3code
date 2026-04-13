@@ -1,0 +1,51 @@
+- generic [ref=e1]:
+    - generic [ref=e3]:
+        - generic [ref=e6]:
+            - link "Go to threads" [ref=e9] [cursor=pointer]:
+                - /url: /
+                - img "T3" [ref=e10]
+                - generic [ref=e12]: Code
+                - generic [ref=e13]: Dev
+            - generic [ref=e276]:
+                - list [ref=e278]:
+                    - listitem [ref=e279]:
+                        - button "Search Ctrl+K" [ref=e280] [cursor=pointer]
+                - generic [ref=e285]:
+                    - generic [ref=e286]:
+                        - generic [ref=e287]: Projects
+                        - generic [ref=e288]
+                    - list [ref=e295]:
+                        - listitem [ref=e296]
+                        - listitem [ref=e343]
+            - separator [ref=e349]
+            - list [ref=e351]:
+                - listitem [ref=e352]:
+                    - button "Settings" [ref=e353] [cursor=pointer]:
+                        - img [ref=e354]
+                        - generic [ref=e357]: Settings
+            - button "Resize Sidebar" [ref=e44]
+        - main [ref=e458]:
+            - generic [ref=e459]:
+                - generic [ref=e461]:
+                    - generic [ref=e462]:
+                        - heading "New thread" [level=2] [ref=e463]
+                        - generic [ref=e465]: fleet
+                    - generic [ref=e466]:
+                        - button "Add action" [ref=e467] [cursor=pointer]
+                        - group "Subscription actions" [ref=e469]
+                        - group "Git actions" [ref=e473]
+                        - button "Toggle terminal drawer" [ref=e477] [cursor=pointer]
+                        - button "Toggle diff panel" [ref=e478] [cursor=pointer]
+                - generic [ref=e480]:
+                    - paragraph [ref=e483]: Send a message to start the conversation.
+                    - generic [ref=e487]:
+                        - generic [ref=e489]
+                        - generic [ref=e492]
+                    - generic [ref=e509]:
+                        - generic [ref=e510]
+                        - combobox [ref=e515] [cursor=pointer]
+                        - textbox [ref=e517]: feature/environment_support
+    - generic:
+        - region "Notifications"
+    - generic:
+        - region "Notifications"

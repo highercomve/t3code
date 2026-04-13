@@ -1,9 +1,9 @@
+import { type ScopedThreadRef } from "@t3tools/contracts";
 import type {
   GitActionProgressEvent,
   GitRunStackedActionResult,
   GitStackedAction,
   GitStatusResult,
-  ThreadId,
 } from "@t3tools/contracts";
 import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
@@ -57,12 +57,16 @@ import {
 import { refreshGitStatus, useGitStatus } from "~/lib/gitStatusState";
 import { newCommandId, randomUUID } from "~/lib/utils";
 import { resolvePathLinkTarget } from "~/terminal-links";
-import { readNativeApi } from "~/nativeApi";
+import { type DraftId, useComposerDraftStore } from "~/composerDraftStore";
+import { readEnvironmentApi } from "~/environmentApi";
+import { readLocalApi } from "~/localApi";
 import { useStore } from "~/store";
+import { createThreadSelectorByRef } from "~/storeSelectors";
 
 interface GitActionsControlProps {
   gitCwd: string | null;
-  activeThreadId: ThreadId | null;
+  activeThreadRef: ScopedThreadRef | null;
+  draftId?: DraftId;
 }
 
 interface PendingDefaultBranchAction {
@@ -214,14 +218,29 @@ function GitQuickActionIcon({ quickAction }: { quickAction: GitQuickAction }) {
   return <InfoIcon className={iconClassName} />;
 }
 
-export default function GitActionsControl({ gitCwd, activeThreadId }: GitActionsControlProps) {
+export default function GitActionsControl({
+  gitCwd,
+  activeThreadRef,
+  draftId,
+}: GitActionsControlProps) {
+  const activeEnvironmentId = activeThreadRef?.environmentId ?? null;
   const threadToastData = useMemo(
-    () => (activeThreadId ? { threadId: activeThreadId } : undefined),
-    [activeThreadId],
+    () => (activeThreadRef ? { threadRef: activeThreadRef } : undefined),
+    [activeThreadRef],
   );
-  const activeServerThread = useStore((store) =>
-    activeThreadId ? store.threads.find((thread) => thread.id === activeThreadId) : undefined,
+  const activeServerThreadSelector = useMemo(
+    () => createThreadSelectorByRef(activeThreadRef),
+    [activeThreadRef],
   );
+  const activeServerThread = useStore(activeServerThreadSelector);
+  const activeDraftThread = useComposerDraftStore((store) =>
+    draftId
+      ? store.getDraftSession(draftId)
+      : activeThreadRef
+        ? store.getDraftThreadByRef(activeThreadRef)
+        : null,
+  );
+  const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
   const setThreadBranch = useStore((store) => store.setThreadBranch);
   const queryClient = useQueryClient();
   const [isCommitDialogOpen, setIsCommitDialogOpen] = useState(false);
@@ -249,27 +268,50 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
 
   const persistThreadBranchSync = useCallback(
     (branch: string | null) => {
-      if (!activeThreadId || !activeServerThread || activeServerThread.branch === branch) {
+      if (!activeThreadRef) {
         return;
       }
 
-      const worktreePath = activeServerThread.worktreePath;
-      const api = readNativeApi();
-      if (api) {
-        void api.orchestration
-          .dispatchCommand({
-            type: "thread.meta.update",
-            commandId: newCommandId(),
-            threadId: activeThreadId,
-            branch,
-            worktreePath,
-          })
-          .catch(() => undefined);
+      if (activeServerThread) {
+        if (activeServerThread.branch === branch) {
+          return;
+        }
+
+        const worktreePath = activeServerThread.worktreePath;
+        const api = readEnvironmentApi(activeThreadRef.environmentId);
+        if (api) {
+          void api.orchestration
+            .dispatchCommand({
+              type: "thread.meta.update",
+              commandId: newCommandId(),
+              threadId: activeThreadRef.threadId,
+              branch,
+              worktreePath,
+            })
+            .catch(() => undefined);
+        }
+
+        setThreadBranch(activeThreadRef, branch, worktreePath);
+        return;
       }
 
-      setThreadBranch(activeThreadId, branch, worktreePath);
+      if (!activeDraftThread || activeDraftThread.branch === branch) {
+        return;
+      }
+
+      setDraftThreadContext(draftId ?? activeThreadRef, {
+        branch,
+        worktreePath: activeDraftThread.worktreePath,
+      });
     },
-    [activeServerThread, activeThreadId, setThreadBranch],
+    [
+      activeDraftThread,
+      activeServerThread,
+      activeThreadRef,
+      draftId,
+      setDraftThreadContext,
+      setThreadBranch,
+    ],
   );
 
   const syncThreadBranchAfterGitAction = useCallback(
@@ -284,7 +326,10 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
     [persistThreadBranchSync],
   );
 
-  const { data: gitStatus = null, error: gitStatusError } = useGitStatus(gitCwd);
+  const { data: gitStatus = null, error: gitStatusError } = useGitStatus({
+    environmentId: activeEnvironmentId,
+    cwd: gitCwd,
+  });
   // Default to true while loading so we don't flash init controls.
   const isRepo = gitStatus?.isRepo ?? true;
   const hasOriginRemote = gitStatus?.hasOriginRemote ?? false;
@@ -295,31 +340,43 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
   const allSelected = excludedFiles.size === 0;
   const noneSelected = selectedFiles.length === 0;
 
-  const initMutation = useMutation(gitInitMutationOptions({ cwd: gitCwd, queryClient }));
+  const initMutation = useMutation(
+    gitInitMutationOptions({ environmentId: activeEnvironmentId, cwd: gitCwd, queryClient }),
+  );
 
   const runImmediateGitActionMutation = useMutation(
     gitRunStackedActionMutationOptions({
+      environmentId: activeEnvironmentId,
       cwd: gitCwd,
       queryClient,
     }),
   );
-  const pullMutation = useMutation(gitPullMutationOptions({ cwd: gitCwd, queryClient }));
+  const pullMutation = useMutation(
+    gitPullMutationOptions({ environmentId: activeEnvironmentId, cwd: gitCwd, queryClient }),
+  );
   const suggestCommitMessageMutation = useMutation(
-    gitSuggestCommitMessageMutationOptions({ cwd: gitCwd }),
+    gitSuggestCommitMessageMutationOptions({ environmentId: activeEnvironmentId, cwd: gitCwd }),
   );
 
   const isRunStackedActionRunning =
-    useIsMutating({ mutationKey: gitMutationKeys.runStackedAction(gitCwd) }) > 0;
-  const isPullRunning = useIsMutating({ mutationKey: gitMutationKeys.pull(gitCwd) }) > 0;
+    useIsMutating({
+      mutationKey: gitMutationKeys.runStackedAction(activeEnvironmentId, gitCwd),
+    }) > 0;
+  const isPullRunning =
+    useIsMutating({ mutationKey: gitMutationKeys.pull(activeEnvironmentId, gitCwd) }) > 0;
   const isGitActionRunning = isRunStackedActionRunning || isPullRunning;
+  const isSelectingWorktreeBase =
+    !activeServerThread &&
+    activeDraftThread?.envMode === "worktree" &&
+    activeDraftThread.worktreePath === null;
 
   useEffect(() => {
-    if (isGitActionRunning) {
+    if (isGitActionRunning || isSelectingWorktreeBase) {
       return;
     }
 
     const branchUpdate = resolveLiveThreadBranchUpdate({
-      threadBranch: activeServerThread?.branch ?? null,
+      threadBranch: activeServerThread?.branch ?? activeDraftThread?.branch ?? null,
       gitStatus: gitStatusForActions,
     });
     if (!branchUpdate) {
@@ -329,8 +386,10 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
     persistThreadBranchSync(branchUpdate.branch);
   }, [
     activeServerThread?.branch,
+    activeDraftThread?.branch,
     gitStatusForActions,
     isGitActionRunning,
+    isSelectingWorktreeBase,
     persistThreadBranchSync,
   ]);
 
@@ -383,7 +442,9 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
       }
       refreshTimeout = window.setTimeout(() => {
         refreshTimeout = null;
-        void refreshGitStatus(gitCwd).catch(() => undefined);
+        void refreshGitStatus({ environmentId: activeEnvironmentId, cwd: gitCwd }).catch(
+          () => undefined,
+        );
       }, GIT_STATUS_WINDOW_REFRESH_DEBOUNCE_MS);
     };
     const handleVisibilityChange = () => {
@@ -402,10 +463,10 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
       window.removeEventListener("focus", scheduleRefreshCurrentGitStatus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [gitCwd]);
+  }, [activeEnvironmentId, gitCwd]);
 
   const openExistingPr = useCallback(async () => {
-    const api = readNativeApi();
+    const api = readLocalApi();
     if (!api) {
       toastManager.add({
         type: "error",
@@ -423,7 +484,7 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
       });
       return;
     }
-    void api.shell.openExternal(prUrl).catch((err) => {
+    void api.shell.openExternal(prUrl).catch((err: unknown) => {
       toastManager.add({
         type: "error",
         title: "Unable to open PR link",
@@ -612,7 +673,7 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
           toastActionProps = {
             children: toastCta.label,
             onClick: () => {
-              const api = readNativeApi();
+              const api = readLocalApi();
               if (!api) return;
               closeResultToast();
               void api.shell.openExternal(toastCta.url);
@@ -771,7 +832,7 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
 
   const openChangedFileInEditor = useCallback(
     (filePath: string) => {
-      const api = readNativeApi();
+      const api = readLocalApi();
       if (!api || !gitCwd) {
         toastManager.add({
           type: "error",
@@ -847,7 +908,10 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
           <Menu
             onOpenChange={(open) => {
               if (open) {
-                void refreshGitStatus(gitCwd).catch(() => undefined);
+                void refreshGitStatus({
+                  environmentId: activeEnvironmentId,
+                  cwd: gitCwd,
+                }).catch(() => undefined);
               }
             }}
           >

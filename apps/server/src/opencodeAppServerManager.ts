@@ -20,7 +20,7 @@ import {
   PROVIDER_OPENCODE,
 } from "@t3tools/contracts";
 import { normalizeModelSlug } from "@t3tools/shared/model";
-import { Effect, ServiceMap } from "effect";
+import { Effect, Context } from "effect";
 import { setProviderDynamicModels } from "./provider/providerDynamicModels";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -264,7 +264,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
   private readonly sessions = new Map<ThreadId, OpencodeSessionContext>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
-  constructor(services?: ServiceMap.ServiceMap<never>) {
+  constructor(services?: Context.Context<never>) {
     super();
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
   }
@@ -466,7 +466,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         this.stopSession(threadId);
       } else {
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "error",
           provider: PROVIDER,
           threadId,
@@ -508,10 +508,10 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       throw new Error("Turn input must include text or attachments.");
     }
 
-    const turnId = TurnId.makeUnsafe(randomUUID());
+    const turnId = TurnId.make(randomUUID());
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -576,7 +576,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       const turnStatus = stopReason === "end_turn" ? "completed" : "cancelled";
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -603,7 +603,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       const message = error instanceof Error ? error.message : "Prompt failed";
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -686,7 +686,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -722,7 +722,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -884,7 +884,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
   ): void {
     if (notification.method !== "session/update") {
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -910,7 +910,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -929,7 +929,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -948,7 +948,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -968,7 +968,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         const title = asString(update.title);
         const kind = asString(update.kind);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
         const canonicalItemKind =
           kind === "read" || kind === "search"
@@ -979,7 +979,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
 
         if (status === "in_progress" || status === "pending") {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -1000,7 +1000,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
           });
         } else {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -1027,10 +1027,10 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         const toolCallId = asString(update.toolCallId);
         const status = asString(update.status);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "notification",
           provider: PROVIDER,
           threadId: context.session.threadId,
@@ -1051,7 +1051,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
 
       default: {
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "notification",
           provider: PROVIDER,
           threadId: context.session.threadId,
@@ -1072,7 +1072,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     }
 
     if (request.method === "item/tool/requestUserInput") {
-      const requestId = ApprovalRequestId.makeUnsafe(randomUUID());
+      const requestId = ApprovalRequestId.make(randomUUID());
       const turnId = context.session.activeTurnId;
 
       context.pendingUserInputs.set(requestId, {
@@ -1083,7 +1083,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       });
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "request",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -1126,11 +1126,11 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
       })
       .filter((o): o is AcpPermissionOption => o !== undefined);
 
-    const requestId = ApprovalRequestId.makeUnsafe(randomUUID());
+    const requestId = ApprovalRequestId.make(randomUUID());
     const requestKind = acpToolKindToRequestKind(toolKind);
     const approvalMethod = acpToolKindToApprovalMethod(toolKind);
     const turnId = context.session.activeTurnId;
-    const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+    const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
     // In full-access mode, auto-approve all permission requests immediately
     if (context.session.runtimeMode === "full-access") {
@@ -1147,7 +1147,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         },
       });
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -1197,7 +1197,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     }
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "request",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -1275,7 +1275,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
     message: string,
   ): void {
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "session",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -1287,7 +1287,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
 
   private emitErrorEvent(context: OpencodeSessionContext, method: string, message: string): void {
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "error",
       provider: PROVIDER,
       threadId: context.session.threadId,

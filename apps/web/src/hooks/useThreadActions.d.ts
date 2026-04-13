@@ -1,12 +1,12 @@
-import { ThreadId } from "@t3tools/contracts";
+import { type ScopedThreadRef } from "@t3tools/contracts";
 export declare function useThreadActions(): {
-  archiveThread: (threadId: ThreadId) => Promise<void>;
-  unarchiveThread: (threadId: ThreadId) => Promise<void>;
+  archiveThread: (target: ScopedThreadRef) => Promise<void>;
+  unarchiveThread: (target: ScopedThreadRef) => Promise<void>;
   deleteThread: (
-    threadId: ThreadId,
+    target: ScopedThreadRef,
     opts?: {
-      deletedThreadIds?: ReadonlySet<ThreadId>;
+      deletedThreadKeys?: ReadonlySet<string>;
     },
   ) => Promise<void>;
-  confirmAndDeleteThread: (threadId: ThreadId) => Promise<void>;
+  confirmAndDeleteThread: (target: ScopedThreadRef) => Promise<void>;
 };

@@ -17,6 +17,9 @@ export function getCanRetryAfterDownloadFailure(currentState) {
   return currentState.availableVersion !== null;
 }
 export function getAutoUpdateDisabledReason(args) {
+  if (!args.hasUpdateFeedConfig) {
+    return "Automatic updates are not available because no update feed is configured.";
+  }
   if (args.isDevelopment || !args.isPackaged) {
     return "Automatic updates are only available in packaged production builds.";
   }

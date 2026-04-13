@@ -1,19 +1,21 @@
 import {
   type ProviderKind,
   type ProviderModelOptions,
+  type ScopedThreadRef,
   type ServerProviderModel,
-  type ThreadId,
 } from "@t3tools/contracts";
 import type { VariantProps } from "class-variance-authority";
 import { buttonVariants } from "../ui/button";
+import { DraftId } from "../../composerDraftStore";
 type ProviderOptions = ProviderModelOptions[ProviderKind];
 type TraitsPersistence =
   | {
-      threadId: ThreadId;
+      threadRef?: ScopedThreadRef;
+      draftId?: DraftId;
       onModelOptionsChange?: never;
     }
   | {
-      threadId?: undefined;
+      threadRef?: undefined;
       onModelOptionsChange: (nextOptions: ProviderOptions | undefined) => void;
     };
 export interface TraitsMenuContentProps {

@@ -70,7 +70,7 @@ describe("OpencodeAppServerManager server requests", () => {
         threadId: asThreadId("thread_1"),
         runtimeMode: "full-access",
         model: "opencode/big-pickle",
-        activeTurnId: TurnId.makeUnsafe("turn_1"),
+        activeTurnId: TurnId.make("turn_1"),
         createdAt: "2026-02-10T00:00:00.000Z",
         updatedAt: "2026-02-10T00:00:00.000Z",
       },
@@ -149,9 +149,9 @@ describe("OpencodeAppServerManager server requests", () => {
       },
       pendingUserInputs: new Map([
         [
-          ApprovalRequestId.makeUnsafe("req-user-input-1"),
+          ApprovalRequestId.make("req-user-input-1"),
           {
-            requestId: ApprovalRequestId.makeUnsafe("req-user-input-1"),
+            requestId: ApprovalRequestId.make("req-user-input-1"),
             jsonRpcId: 42,
             threadId: asThreadId("thread_1"),
           },
@@ -177,7 +177,7 @@ describe("OpencodeAppServerManager server requests", () => {
 
     await manager.respondToUserInput(
       asThreadId("thread_1"),
-      ApprovalRequestId.makeUnsafe("req-user-input-1"),
+      ApprovalRequestId.make("req-user-input-1"),
       {
         scope: "All request methods",
       },

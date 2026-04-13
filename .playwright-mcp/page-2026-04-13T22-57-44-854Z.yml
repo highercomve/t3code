@@ -1,0 +1,255 @@
+- generic [ref=e1]:
+    - generic [ref=e3]:
+        - generic [ref=e6]:
+            - link "Go to threads" [ref=e9] [cursor=pointer]:
+                - /url: /
+                - img "T3" [ref=e10]
+                - generic [ref=e12]: Code
+                - generic [ref=e13]: Dev
+            - generic [ref=e15]:
+                - list [ref=e17]:
+                    - listitem [ref=e18]:
+                        - button "Search Ctrl+K" [ref=e83] [cursor=pointer]:
+                            - img [ref=e20]
+                            - generic [ref=e23]: Search
+                            - generic: Ctrl+K
+                - generic [ref=e24]:
+                    - generic [ref=e25]:
+                        - generic [ref=e26]: Projects
+                        - generic [ref=e27]:
+                            - button [ref=e28] [cursor=pointer]:
+                                - img [ref=e29]
+                            - button "Add project" [ref=e32] [cursor=pointer]:
+                                - img [ref=e33]
+                    - list [ref=e84]:
+                        - listitem [ref=e85]:
+                            - generic [ref=e86]:
+                                - button "t3code" [ref=e87] [cursor=pointer]:
+                                    - img [ref=e88]
+                                    - generic [ref=e90]: t3code
+                                - generic:
+                                    - button "Create new thread in t3code":
+                                        - img
+                            - list [ref=e91]:
+                                - listitem [ref=e92]:
+                                    - button "New thread Archive New thread 19m ago" [ref=e93] [cursor=pointer]:
+                                        - generic [ref=e95]: New thread
+                                        - generic [ref=e97]:
+                                            - generic:
+                                                - button "Archive New thread":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 19m ago
+                                - listitem [ref=e98]:
+                                    - button "Invalid input provided Archive Invalid input provided 7d ago" [ref=e99] [cursor=pointer]:
+                                        - generic [ref=e101]: Invalid input provided
+                                        - generic [ref=e103]:
+                                            - generic:
+                                                - button "Archive Invalid input provided":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e104]:
+                                    - button "Agent self-test Archive Agent self-test 7d ago" [ref=e105] [cursor=pointer]:
+                                        - generic [ref=e107]: Agent self-test
+                                        - generic [ref=e109]:
+                                            - generic:
+                                                - button "Archive Agent self-test":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e110]:
+                                    - button "Quick Test Archive Quick Test 7d ago" [ref=e111] [cursor=pointer]:
+                                        - generic [ref=e113]: Quick Test
+                                        - generic [ref=e115]:
+                                            - generic:
+                                                - button "Archive Quick Test":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e116]:
+                                    - button "Node.js path provided Archive Node.js path provided 7d ago" [ref=e117] [cursor=pointer]:
+                                        - generic [ref=e119]: Node.js path provided
+                                        - generic [ref=e121]:
+                                            - generic:
+                                                - button "Archive Node.js path provided":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e122]:
+                                    - button "User greeting message Archive User greeting message 7d ago" [ref=e123] [cursor=pointer]:
+                                        - generic [ref=e125]: User greeting message
+                                        - generic [ref=e127]:
+                                            - generic:
+                                                - button "Archive User greeting message":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e128]:
+                                    - button "Show more" [ref=e129] [cursor=pointer]:
+                                        - generic [ref=e131]: Show more
+                        - listitem [ref=e132]:
+                            - generic [ref=e133]:
+                                - button "fleet" [ref=e134] [cursor=pointer]:
+                                    - img [ref=e135]
+                                    - generic [ref=e137]: fleet
+                                - generic:
+                                    - button "Create new thread in fleet":
+                                        - img
+                            - list [ref=e138]:
+                                - listitem [ref=e139]:
+                                    - button "Claude Testing Archive Claude Testing 29m ago" [ref=e140] [cursor=pointer]:
+                                        - generic [ref=e142]: Claude Testing
+                                        - generic [ref=e144]:
+                                            - generic:
+                                                - button "Archive Claude Testing":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 29m ago
+                                - listitem [ref=e145]:
+                                    - button "Codex Testing Archive Codex Testing 31m ago" [ref=e146] [cursor=pointer]:
+                                        - generic [ref=e148]: Codex Testing
+                                        - generic [ref=e150]:
+                                            - generic:
+                                                - button "Archive Codex Testing":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 31m ago
+                                - listitem [ref=e151]:
+                                    - button "Gemini Test Archive Gemini Test 31m ago" [ref=e152] [cursor=pointer]:
+                                        - generic [ref=e154]: Gemini Test
+                                        - generic [ref=e156]:
+                                            - generic:
+                                                - button "Archive Gemini Test":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 31m ago
+                                - listitem [ref=e157]:
+                                    - button "Initial Test Archive Initial Test 12d ago" [ref=e158] [cursor=pointer]:
+                                        - generic [ref=e160]: Initial Test
+                                        - generic [ref=e162]:
+                                            - generic:
+                                                - button "Archive Initial Test":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 12d ago
+            - separator [ref=e35]
+            - list [ref=e37]:
+                - listitem [ref=e38]:
+                    - button "Settings" [ref=e39] [cursor=pointer]:
+                        - img [ref=e40]
+                        - generic [ref=e43]: Settings
+            - button "Resize Sidebar" [ref=e44]
+        - main [ref=e45]:
+            - generic [ref=e46]:
+                - generic [ref=e48]:
+                    - generic [ref=e49]:
+                        - heading "New thread" [level=2] [ref=e50]
+                        - generic [ref=e164]: fleet
+                    - generic [ref=e51]:
+                        - button "Add action" [ref=e165] [cursor=pointer]:
+                            - img
+                            - generic [ref=e166]: Add action
+                        - group "Subscription actions" [ref=e167]:
+                            - button "Open" [ref=e168] [cursor=pointer]:
+                                - img
+                                - generic [ref=e169]: Open
+                            - separator
+                            - button "Copy options" [ref=e170] [cursor=pointer]:
+                                - img
+                        - group "Git actions" [ref=e171]:
+                            - button "Commit, push & PR" [ref=e172] [cursor=pointer]:
+                                - img
+                                - generic [ref=e173]: Commit, push & PR
+                            - separator
+                            - button "Git action options" [ref=e174] [cursor=pointer]:
+                                - img
+                        - button "Toggle terminal drawer" [ref=e175] [cursor=pointer]:
+                            - img
+                        - button "Toggle diff panel" [ref=e52] [cursor=pointer]:
+                            - img
+                - generic [ref=e54]:
+                    - paragraph [ref=e57]: Send a message to start the conversation.
+                    - generic [ref=e61]:
+                        - generic [ref=e63]:
+                            - textbox [ref=e64]:
+                                - paragraph [ref=e176]
+                            - generic: Ask for follow-up changes or attach images
+                        - generic [ref=e66]:
+                            - generic [ref=e67]:
+                                - button "gemini-3.1-pro-preview" [expanded] [ref=e178] [cursor=pointer]:
+                                    - generic [ref=e69]:
+                                        - img
+                                        - generic [ref=e70]: gemini-3.1-pro-preview
+                                        - img
+                                - menu "gemini-3.1-pro-preview" [active] [ref=e205]:
+                                    - generic [ref=e206]:
+                                        - menuitem "Codex" [ref=e207]:
+                                            - img
+                                            - text: Codex
+                                            - img
+                                        - menuitem "Gemini" [ref=e208]:
+                                            - img
+                                            - text: Gemini
+                                            - img
+                                        - menuitem "Claude" [ref=e209]:
+                                            - img
+                                            - text: Claude
+                                            - img
+                                        - menuitem "OpenCode" [ref=e210]:
+                                            - img
+                                            - text: OpenCode
+                                            - img
+                                        - menuitem "Copilot" [ref=e211]:
+                                            - img
+                                            - text: Copilot
+                                            - img
+                                        - separator [ref=e212]
+                                        - menuitem "Cursor Coming soon" [disabled]:
+                                            - img
+                                            - generic: Cursor
+                                            - generic: Coming soon
+                                - separator [ref=e71]
+                                - button [ref=e72] [cursor=pointer]:
+                                    - generic [ref=e73]:
+                                        - img
+                                - separator [ref=e74]
+                                - button "Build" [ref=e75] [cursor=pointer]:
+                                    - img
+                                    - generic [ref=e76]: Build
+                                - separator [ref=e77]
+                                - combobox "Runtime mode" [ref=e78] [cursor=pointer]:
+                                    - img
+                                    - generic [ref=e79]: Full access
+                                    - generic [ref=e80]:
+                                        - img
+                                - textbox [ref=e81]: full-access
+                            - generic [ref=e82]:
+                                - button "Send message" [disabled]:
+                                    - img
+                    - generic [ref=e192]:
+                        - generic [ref=e193]:
+                            - combobox "Workspace" [ref=e194] [cursor=pointer]:
+                                - img
+                                - generic [ref=e195]: Current checkout
+                                - generic [ref=e196]:
+                                    - img
+                            - textbox [ref=e197]: local
+                        - combobox [ref=e198] [cursor=pointer]:
+                            - generic [ref=e199]: feature/environment_support
+                            - img
+                        - textbox [ref=e200]: feature/environment_support
+    - generic:
+        - region "Notifications"
+    - generic:
+        - region "Notifications"

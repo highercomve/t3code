@@ -1,8 +1,8 @@
 import { Exit, Layer, ManagedRuntime, Scope, Tracer } from "effect";
 import { FetchHttpClient, HttpClient } from "effect/unstable/http";
 import { OtlpSerialization, OtlpTracer } from "effect/unstable/observability";
+import { resolvePrimaryEnvironmentHttpUrl } from "../environments/primary";
 import { isElectron } from "../env";
-import { resolveServerUrl } from "../lib/utils";
 import { APP_VERSION } from "~/branding";
 const DEFAULT_EXPORT_INTERVAL_MS = 1_000;
 const CLIENT_TRACING_RESOURCE = {
@@ -40,10 +40,7 @@ export function configureClientTracing(config = {}) {
   return pendingConfiguration;
 }
 async function applyClientTracingConfig(config) {
-  const otlpTracesUrl = resolveServerUrl({
-    protocol: window.location.protocol === "https:" ? "https" : "http",
-    pathname: "/api/observability/v1/traces",
-  });
+  const otlpTracesUrl = resolvePrimaryEnvironmentHttpUrl("/api/observability/v1/traces");
   const exportIntervalMs = Math.max(10, config.exportIntervalMs ?? DEFAULT_EXPORT_INTERVAL_MS);
   const nextConfigKey = `${otlpTracesUrl}|${exportIntervalMs}`;
   if (activeConfigKey === nextConfigKey && activeDelegate !== null) {

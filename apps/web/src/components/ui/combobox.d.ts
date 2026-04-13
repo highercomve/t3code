@@ -83,6 +83,14 @@ declare function ComboboxList({
   className,
   ...props
 }: ComboboxPrimitive.List.Props): import("react/jsx-runtime").JSX.Element;
+/**
+ * A variant of `ComboboxList` without `ScrollArea`, for use when
+ * an external virtualizer (e.g. LegendList) owns the scroll container.
+ */
+declare function ComboboxListVirtualized({
+  className,
+  ...props
+}: ComboboxPrimitive.List.Props): import("react/jsx-runtime").JSX.Element;
 declare function ComboboxClear({
   className,
   ...props
@@ -120,6 +128,7 @@ export {
   ComboboxEmpty,
   ComboboxValue,
   ComboboxList,
+  ComboboxListVirtualized,
   ComboboxClear,
   ComboboxStatus,
   ComboboxRow,

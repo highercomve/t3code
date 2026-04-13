@@ -1,5 +1,8 @@
 import type { ComponentType } from "react";
-export type SettingsSectionPath = "/settings/general" | "/settings/archived";
+export type SettingsSectionPath =
+  | "/settings/general"
+  | "/settings/connections"
+  | "/settings/archived";
 export declare const SETTINGS_NAV_ITEMS: ReadonlyArray<{
   label: string;
   to: SettingsSectionPath;

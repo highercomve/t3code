@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Option, Schema } from "effect";
+import { Effect, Option, Schema } from "effect";
 import {
   TrimmedNonEmptyString,
   type ProviderKind,
@@ -54,8 +54,8 @@ const withDefaults =
   ) =>
   (schema: S) =>
     schema.pipe(
-      Schema.withConstructorDefault(() => Option.some(fallback())),
-      Schema.withDecodingDefault(() => fallback()),
+      Schema.withConstructorDefault(Effect.succeed(Option.some(fallback())) as never),
+      Schema.withDecodingDefault(Effect.succeed(fallback()) as never),
     );
 
 export const AppSettingsSchema = Schema.Struct({
@@ -83,7 +83,7 @@ export interface AppModelOption {
   isCustom: boolean;
 }
 
-const DEFAULT_APP_SETTINGS = AppSettingsSchema.makeUnsafe({});
+const DEFAULT_APP_SETTINGS = Schema.decodeSync(AppSettingsSchema)({});
 const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConfig> = {
   codex: {
     provider: "codex",
@@ -358,7 +358,7 @@ export function useAppSettings() {
 
   const updateSettings = useCallback(
     (patch: Partial<AppSettings>) => {
-      setSettings((prev) => normalizeAppSettings({ ...prev, ...patch }));
+      setSettings((prev: AppSettings) => normalizeAppSettings({ ...prev, ...patch }));
     },
     [setSettings],
   );

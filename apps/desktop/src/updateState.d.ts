@@ -13,4 +13,5 @@ export declare function getAutoUpdateDisabledReason(args: {
   platform: NodeJS.Platform;
   appImage?: string | undefined;
   disabledByEnv: boolean;
+  hasUpdateFeedConfig: boolean;
 }): string | null;

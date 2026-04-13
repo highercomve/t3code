@@ -1,23 +1,24 @@
-import { EnvMode } from "./BranchToolbar.logic";
+import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import { type DraftId } from "../composerDraftStore";
 interface BranchToolbarBranchSelectorProps {
-  activeProjectCwd: string;
-  activeThreadBranch: string | null;
-  activeWorktreePath: string | null;
-  branchCwd: string | null;
-  effectiveEnvMode: EnvMode;
+  environmentId: EnvironmentId;
+  threadId: ThreadId;
+  draftId?: DraftId;
   envLocked: boolean;
-  onSetThreadBranch: (branch: string | null, worktreePath: string | null) => void;
+  effectiveEnvModeOverride?: "local" | "worktree";
+  activeThreadBranchOverride?: string | null;
+  onActiveThreadBranchOverrideChange?: (branch: string | null) => void;
   onCheckoutPullRequestRequest?: (reference: string) => void;
   onComposerFocusRequest?: () => void;
 }
 export declare function BranchToolbarBranchSelector({
-  activeProjectCwd,
-  activeThreadBranch,
-  activeWorktreePath,
-  branchCwd,
-  effectiveEnvMode,
+  environmentId,
+  threadId,
+  draftId,
   envLocked,
-  onSetThreadBranch,
+  effectiveEnvModeOverride,
+  activeThreadBranchOverride,
+  onActiveThreadBranchOverrideChange,
   onCheckoutPullRequestRequest,
   onComposerFocusRequest,
 }: BranchToolbarBranchSelectorProps): import("react/jsx-runtime").JSX.Element;

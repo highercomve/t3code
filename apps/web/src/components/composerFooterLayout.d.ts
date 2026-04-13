@@ -13,18 +13,3 @@ export declare function shouldUseCompactComposerPrimaryActions(
     hasWideActions?: boolean;
   },
 ): boolean;
-export declare function measureComposerFooterOverflowPx(input: {
-  footerContentWidth: number | null;
-  leadingContentWidth: number | null;
-  actionsWidth: number | null;
-}): number | null;
-export declare function shouldForceCompactComposerFooterForFit(input: {
-  footerContentWidth: number | null;
-  leadingContentWidth: number | null;
-  actionsWidth: number | null;
-}): boolean;
-export declare function resolveComposerFooterContentWidth(input: {
-  footerWidth: number | null;
-  paddingLeft: number | null;
-  paddingRight: number | null;
-}): number | null;

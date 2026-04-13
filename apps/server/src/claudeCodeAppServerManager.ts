@@ -22,7 +22,7 @@ import {
   PROVIDER_CLAUDE_AGENT,
 } from "@t3tools/contracts";
 import { normalizeModelSlug } from "@t3tools/shared/model";
-import { Effect, ServiceMap } from "effect";
+import { Effect, Context } from "effect";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -235,7 +235,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
   private readonly sessions = new Map<ThreadId, ClaudeCodeSessionContext>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
-  constructor(services?: ServiceMap.ServiceMap<never>) {
+  constructor(services?: Context.Context<never>) {
     super();
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
   }
@@ -444,7 +444,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
         this.stopSession(threadId);
       } else {
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "error",
           provider: PROVIDER,
           threadId,
@@ -486,10 +486,10 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
       throw new Error("Turn input must include text or attachments.");
     }
 
-    const turnId = TurnId.makeUnsafe(randomUUID());
+    const turnId = TurnId.make(randomUUID());
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -562,7 +562,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
       const turnStatus = stopReason === "end_turn" ? "completed" : "cancelled";
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -589,7 +589,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
       const message = error instanceof Error ? error.message : "Prompt failed";
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -671,7 +671,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -707,7 +707,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -875,7 +875,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
   ): void {
     if (notification.method !== "session/update") {
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -901,7 +901,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -920,7 +920,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -939,7 +939,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -959,7 +959,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
         const title = asString(update.title);
         const kind = asString(update.kind);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
         const canonicalItemKind =
           kind === "read" || kind === "search"
@@ -970,7 +970,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
 
         if (status === "in_progress" || status === "pending") {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -991,7 +991,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
           });
         } else {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -1018,10 +1018,10 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
         const toolCallId = asString(update.toolCallId);
         const status = asString(update.status);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "notification",
           provider: PROVIDER,
           threadId: context.session.threadId,
@@ -1042,7 +1042,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
 
       default: {
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "notification",
           provider: PROVIDER,
           threadId: context.session.threadId,
@@ -1095,11 +1095,11 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
       })
       .filter((o): o is AcpPermissionOption => o !== undefined);
 
-    const requestId = ApprovalRequestId.makeUnsafe(randomUUID());
+    const requestId = ApprovalRequestId.make(randomUUID());
     const requestKind = acpToolKindToRequestKind(toolKind);
     const approvalMethod = acpToolKindToApprovalMethod(toolKind);
     const turnId = context.session.activeTurnId;
-    const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+    const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
     // In full-access mode, auto-approve all permission requests immediately
     if (context.session.runtimeMode === "full-access") {
@@ -1116,7 +1116,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
         },
       });
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -1166,7 +1166,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
     }
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "request",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -1244,7 +1244,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
     message: string,
   ): void {
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "session",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -1256,7 +1256,7 @@ export class ClaudeCodeAppServerManager extends EventEmitter<ClaudeCodeAppServer
 
   private emitErrorEvent(context: ClaudeCodeSessionContext, method: string, message: string): void {
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "error",
       provider: PROVIDER,
       threadId: context.session.threadId,

@@ -1,18 +1,18 @@
-import { type ProjectId, type ThreadId } from "@t3tools/contracts";
 export interface UiProjectState {
   projectExpandedById: Record<string, boolean>;
-  projectOrder: ProjectId[];
+  projectOrder: string[];
 }
 export interface UiThreadState {
   threadLastVisitedAtById: Record<string, string>;
+  threadChangedFilesExpandedById: Record<string, Record<string, boolean>>;
 }
 export interface UiState extends UiProjectState, UiThreadState {}
 export interface SyncProjectInput {
-  id: ProjectId;
+  key: string;
   cwd: string;
 }
 export interface SyncThreadInput {
-  id: ThreadId;
+  key: string;
   seedVisitedAt?: string | undefined;
 }
 export declare function syncProjects(
@@ -22,35 +22,45 @@ export declare function syncProjects(
 export declare function syncThreads(state: UiState, threads: readonly SyncThreadInput[]): UiState;
 export declare function markThreadVisited(
   state: UiState,
-  threadId: ThreadId,
+  threadId: string,
   visitedAt?: string,
 ): UiState;
 export declare function markThreadUnread(
   state: UiState,
-  threadId: ThreadId,
+  threadId: string,
   latestTurnCompletedAt: string | null | undefined,
 ): UiState;
-export declare function clearThreadUi(state: UiState, threadId: ThreadId): UiState;
-export declare function toggleProject(state: UiState, projectId: ProjectId): UiState;
+export declare function clearThreadUi(state: UiState, threadId: string): UiState;
+export declare function setThreadChangedFilesExpanded(
+  state: UiState,
+  threadId: string,
+  turnId: string,
+  expanded: boolean,
+): UiState;
+export declare function toggleProject(state: UiState, projectId: string): UiState;
 export declare function setProjectExpanded(
   state: UiState,
-  projectId: ProjectId,
+  projectId: string,
   expanded: boolean,
 ): UiState;
 export declare function reorderProjects(
   state: UiState,
-  draggedProjectId: ProjectId,
-  targetProjectId: ProjectId,
+  draggedProjectIds: readonly string[],
+  targetProjectIds: readonly string[],
 ): UiState;
 interface UiStateStore extends UiState {
   syncProjects: (projects: readonly SyncProjectInput[]) => void;
   syncThreads: (threads: readonly SyncThreadInput[]) => void;
-  markThreadVisited: (threadId: ThreadId, visitedAt?: string) => void;
-  markThreadUnread: (threadId: ThreadId, latestTurnCompletedAt: string | null | undefined) => void;
-  clearThreadUi: (threadId: ThreadId) => void;
-  toggleProject: (projectId: ProjectId) => void;
-  setProjectExpanded: (projectId: ProjectId, expanded: boolean) => void;
-  reorderProjects: (draggedProjectId: ProjectId, targetProjectId: ProjectId) => void;
+  markThreadVisited: (threadId: string, visitedAt?: string) => void;
+  markThreadUnread: (threadId: string, latestTurnCompletedAt: string | null | undefined) => void;
+  clearThreadUi: (threadId: string) => void;
+  setThreadChangedFilesExpanded: (threadId: string, turnId: string, expanded: boolean) => void;
+  toggleProject: (projectId: string) => void;
+  setProjectExpanded: (projectId: string, expanded: boolean) => void;
+  reorderProjects: (
+    draggedProjectIds: readonly string[],
+    targetProjectIds: readonly string[],
+  ) => void;
 }
 export declare const useUiStateStore: import("zustand").UseBoundStore<
   import("zustand").StoreApi<UiStateStore>

@@ -100,6 +100,65 @@ export function extractTerminalLinks(line) {
   const pathMatches = collectMatches(line, "path", FILE_PATH_PATTERN, urlMatches);
   return [...urlMatches, ...pathMatches].toSorted((a, b) => a.start - b.start);
 }
+export function collectWrappedTerminalLinkLine(bufferLineNumber, getLine) {
+  const anchorLine = getLine(bufferLineNumber - 1);
+  if (!anchorLine) return null;
+  let startBufferLineNumber = bufferLineNumber;
+  let startLine = anchorLine;
+  while (startBufferLineNumber > 1 && startLine.isWrapped) {
+    const previousLine = getLine(startBufferLineNumber - 2);
+    if (!previousLine) return null;
+    startBufferLineNumber -= 1;
+    startLine = previousLine;
+  }
+  const segments = [];
+  let nextStartIndex = 0;
+  let currentBufferLineNumber = startBufferLineNumber;
+  while (true) {
+    const currentLine = getLine(currentBufferLineNumber - 1);
+    if (!currentLine) break;
+    const nextLine = getLine(currentBufferLineNumber);
+    const hasWrappedContinuation = nextLine?.isWrapped === true;
+    const text = currentLine.translateToString(!hasWrappedContinuation);
+    segments.push({
+      bufferLineNumber: currentBufferLineNumber,
+      text,
+      startIndex: nextStartIndex,
+      endIndex: nextStartIndex + text.length,
+    });
+    nextStartIndex += text.length;
+    if (!hasWrappedContinuation) break;
+    currentBufferLineNumber += 1;
+  }
+  return {
+    text: segments.map((segment) => segment.text).join(""),
+    segments,
+  };
+}
+function resolveCharacterPosition(segments, characterIndex) {
+  for (const segment of segments) {
+    if (characterIndex < segment.endIndex) {
+      return {
+        x: characterIndex - segment.startIndex + 1,
+        y: segment.bufferLineNumber,
+      };
+    }
+  }
+  const lastSegment = segments[segments.length - 1];
+  return {
+    x: Math.max(lastSegment?.text.length ?? 0, 1),
+    y: lastSegment?.bufferLineNumber ?? 1,
+  };
+}
+export function resolveWrappedTerminalLinkRange(wrappedLine, match) {
+  return {
+    start: resolveCharacterPosition(wrappedLine.segments, match.start),
+    end: resolveCharacterPosition(wrappedLine.segments, match.end - 1),
+  };
+}
+export function wrappedTerminalLinkRangeIntersectsBufferLine(range, bufferLineNumber) {
+  return range.start.y <= bufferLineNumber && bufferLineNumber <= range.end.y;
+}
 export function isTerminalLinkActivation(
   event,
   platform = typeof navigator === "undefined" ? "" : navigator.platform,

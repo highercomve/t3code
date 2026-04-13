@@ -19,7 +19,7 @@ import {
   ProviderInteractionMode,
 } from "@t3tools/contracts";
 import { normalizeModelSlug } from "@t3tools/shared/model";
-import { Effect, ServiceMap } from "effect";
+import { Effect, Context } from "effect";
 
 type PendingRequestKey = string;
 
@@ -274,7 +274,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
   private readonly sessions = new Map<ThreadId, GeminiSessionContext>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
-  constructor(services?: ServiceMap.ServiceMap<never>) {
+  constructor(services?: Context.Context<never>) {
     super();
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
   }
@@ -470,7 +470,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         this.stopSession(threadId);
       } else {
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "error",
           provider: "gemini",
           threadId,
@@ -514,11 +514,11 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       throw new Error("Turn input must include text or attachments.");
     }
 
-    const turnId = TurnId.makeUnsafe(randomUUID());
+    const turnId = TurnId.make(randomUUID());
 
     // Emit synthetic turn/started notification so the adapter sees the turn begin
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: "gemini",
       threadId: context.session.threadId,
@@ -597,7 +597,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       const turnStatus = stopReason === "end_turn" ? "completed" : "cancelled";
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: "gemini",
         threadId: context.session.threadId,
@@ -624,7 +624,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       const message = error instanceof Error ? error.message : "Prompt failed";
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: "gemini",
         threadId: context.session.threadId,
@@ -711,7 +711,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: "gemini",
       threadId: context.session.threadId,
@@ -747,7 +747,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: "gemini",
       threadId: context.session.threadId,
@@ -923,7 +923,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     if (notification.method !== "session/update") {
       // Forward unknown notifications as-is
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: "gemini",
         threadId: context.session.threadId,
@@ -949,7 +949,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: "gemini",
             threadId: context.session.threadId,
@@ -968,7 +968,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: "gemini",
             threadId: context.session.threadId,
@@ -987,7 +987,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: "gemini",
             threadId: context.session.threadId,
@@ -1007,7 +1007,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         const title = asString(update.title);
         const kind = asString(update.kind);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
         // Determine the item type for the adapter
         const canonicalItemKind =
@@ -1019,7 +1019,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
 
         if (status === "in_progress" || status === "pending") {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: "gemini",
             threadId: context.session.threadId,
@@ -1041,7 +1041,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         } else {
           // completed or failed
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: "gemini",
             threadId: context.session.threadId,
@@ -1068,10 +1068,10 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         const toolCallId = asString(update.toolCallId);
         const status = asString(update.status);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "notification",
           provider: "gemini",
           threadId: context.session.threadId,
@@ -1093,7 +1093,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       default: {
         // Pass through unrecognized session updates
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "notification",
           provider: "gemini",
           threadId: context.session.threadId,
@@ -1147,11 +1147,11 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
       })
       .filter((o): o is AcpPermissionOption => o !== undefined);
 
-    const requestId = ApprovalRequestId.makeUnsafe(randomUUID());
+    const requestId = ApprovalRequestId.make(randomUUID());
     const requestKind = acpToolKindToRequestKind(toolKind);
     const approvalMethod = acpToolKindToApprovalMethod(toolKind);
     const turnId = context.session.activeTurnId;
-    const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+    const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
     // In full-access mode, auto-approve all permission requests immediately
     if (context.session.runtimeMode === "full-access") {
@@ -1168,7 +1168,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
         },
       });
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: "gemini",
         threadId: context.session.threadId,
@@ -1221,7 +1221,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
     }
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "request",
       provider: "gemini",
       threadId: context.session.threadId,
@@ -1295,7 +1295,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
 
   private emitLifecycleEvent(context: GeminiSessionContext, method: string, message: string): void {
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "session",
       provider: "gemini",
       threadId: context.session.threadId,
@@ -1307,7 +1307,7 @@ export class GeminiAppServerManager extends EventEmitter<GeminiAppServerManagerE
 
   private emitErrorEvent(context: GeminiSessionContext, method: string, message: string): void {
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "error",
       provider: "gemini",
       threadId: context.session.threadId,

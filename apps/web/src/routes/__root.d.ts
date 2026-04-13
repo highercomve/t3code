@@ -6,7 +6,17 @@ export declare const Route: import("@tanstack/react-router").RootRoute<
     queryClient: QueryClient;
   },
   import("@tanstack/router-core").AnyContext,
-  import("@tanstack/router-core").AnyContext,
+  () => Promise<{
+    authGateState:
+      | {
+          status: "authenticated";
+        }
+      | {
+          status: "requires-auth";
+          auth: import("@t3tools/contracts").AuthSessionState["auth"];
+          errorMessage?: string;
+        };
+  }>,
   {},
   undefined,
   unknown,

@@ -1,12 +1,13 @@
 import {
   type ClaudeModelOptions,
   type CodexModelOptions,
+  type CopilotModelOptions,
   type GeminiModelOptions,
   type OpencodeModelOptions,
   type ProviderKind,
   type ProviderModelOptions,
+  type ScopedThreadRef,
   type ServerProviderModel,
-  type ThreadId,
 } from "@t3tools/contracts";
 import {
   applyClaudePromptEffortPrefix,
@@ -30,18 +31,19 @@ import {
   MenuSeparator as MenuDivider,
   MenuTrigger,
 } from "../ui/menu";
-import { useComposerDraftStore } from "../../composerDraftStore";
+import { useComposerDraftStore, DraftId } from "../../composerDraftStore";
 import { getProviderModelCapabilities } from "../../providerModels";
 import { cn } from "~/lib/utils";
 
 type ProviderOptions = ProviderModelOptions[ProviderKind];
 type TraitsPersistence =
   | {
-      threadId: ThreadId;
+      threadRef?: ScopedThreadRef;
+      draftId?: DraftId;
       onModelOptionsChange?: never;
     }
   | {
-      threadId?: undefined;
+      threadRef?: undefined;
       onModelOptionsChange: (nextOptions: ProviderOptions | undefined) => void;
     };
 
@@ -51,9 +53,10 @@ function getRawEffort(
   provider: ProviderKind,
   modelOptions: ProviderOptions | null | undefined,
 ): string | null {
-  if (provider === "codex" || provider === "opencode") {
+  if (provider === "codex" || provider === "opencode" || provider === "copilotAgent") {
     return trimOrNull(
-      (modelOptions as CodexModelOptions | OpencodeModelOptions | undefined)?.reasoningEffort,
+      (modelOptions as CodexModelOptions | OpencodeModelOptions | CopilotModelOptions | undefined)
+        ?.reasoningEffort,
     );
   }
   if (provider === "claudeAgent") {
@@ -77,7 +80,7 @@ function buildNextOptions(
   modelOptions: ProviderOptions | null | undefined,
   patch: Record<string, unknown>,
 ): ProviderOptions {
-  if (provider === "codex" || provider === "opencode") {
+  if (provider === "codex" || provider === "opencode" || provider === "copilotAgent") {
     return { ...(modelOptions as CodexModelOptions | undefined), ...patch } as CodexModelOptions;
   }
   if (provider === "gemini") {
@@ -177,7 +180,13 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         persistence.onModelOptionsChange(nextOptions);
         return;
       }
-      setProviderModelOptions(persistence.threadId, provider, nextOptions, { persistSticky: true });
+      const threadTarget = persistence.threadRef ?? persistence.draftId;
+      if (!threadTarget) {
+        return;
+      }
+      setProviderModelOptions(threadTarget, provider, nextOptions, {
+        persistSticky: true,
+      });
     },
     [persistence, provider, setProviderModelOptions],
   );
@@ -214,7 +223,9 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         onPromptChange(stripped);
       }
       const effortKey =
-        provider === "codex" || provider === "opencode" ? "reasoningEffort" : "effort";
+        provider === "codex" || provider === "opencode" || provider === "copilotAgent"
+          ? "reasoningEffort"
+          : "effort";
       updateModelOptions(
         buildNextOptions(provider, modelOptions, { [effortKey]: nextOption.value }),
       );
@@ -376,7 +387,11 @@ export const TraitsPicker = memo(function TraitsPicker({
     .filter(Boolean)
     .join(" · ");
 
-  const isCodexStyle = provider === "codex" || provider === "gemini" || provider === "opencode";
+  const isCodexStyle =
+    provider === "codex" ||
+    provider === "gemini" ||
+    provider === "opencode" ||
+    provider === "copilotAgent";
 
   return (
     <Menu

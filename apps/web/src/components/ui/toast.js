@@ -1,9 +1,8 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { Toast } from "@base-ui/react/toast";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
-import { ThreadId } from "@t3tools/contracts";
 import {
   CheckIcon,
   CircleAlertIcon,
@@ -15,8 +14,14 @@ import {
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { buttonVariants } from "~/components/ui/button";
+import { useComposerDraftStore } from "~/composerDraftStore";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
-import { buildVisibleToastLayout, shouldHideCollapsedToastContent } from "./toast.logic";
+import { resolveThreadRouteTarget } from "~/threadRoutes";
+import {
+  buildVisibleToastLayout,
+  shouldHideCollapsedToastContent,
+  shouldRenderThreadScopedToast,
+} from "./toast.logic";
 const toastManager = Toast.createToastManager();
 const anchoredToastManager = Toast.createToastManager();
 const threadToastVisibleTimeoutRemainingMs = new Map();
@@ -40,17 +45,26 @@ function CopyErrorButton({ text }) {
       : _jsx(CopyIcon, { className: "size-3.5" }),
   });
 }
-function shouldRenderForActiveThread(data, activeThreadId) {
-  const toastThreadId = data?.threadId;
-  if (!toastThreadId) return true;
-  return toastThreadId === activeThreadId;
-}
-function useActiveThreadIdFromRoute() {
-  return useParams({
+function useActiveThreadRefFromRoute() {
+  const routeTarget = useParams({
     strict: false,
-    select: (params) =>
-      typeof params.threadId === "string" ? ThreadId.makeUnsafe(params.threadId) : null,
+    select: (params) => resolveThreadRouteTarget(params),
   });
+  const activeDraftSession = useComposerDraftStore((store) =>
+    routeTarget?.kind === "draft" ? store.getDraftSession(routeTarget.draftId) : null,
+  );
+  return useMemo(() => {
+    if (routeTarget?.kind === "server") {
+      return routeTarget.threadRef;
+    }
+    if (routeTarget?.kind === "draft" && activeDraftSession) {
+      return {
+        environmentId: activeDraftSession.environmentId,
+        threadId: activeDraftSession.threadId,
+      };
+    }
+    return null;
+  }, [activeDraftSession, routeTarget]);
 }
 function ThreadToastVisibleAutoDismiss({ toastId, dismissAfterVisibleMs }) {
   useEffect(() => {
@@ -123,10 +137,10 @@ function ToastProvider({ children, position = "top-right", ...props }) {
 }
 function Toasts({ position = "top-right" }) {
   const { toasts } = Toast.useToastManager();
-  const activeThreadId = useActiveThreadIdFromRoute();
+  const activeThreadRef = useActiveThreadRefFromRoute();
   const isTop = position.startsWith("top");
   const visibleToasts = toasts.filter((toast) =>
-    shouldRenderForActiveThread(toast.data, activeThreadId),
+    shouldRenderThreadScopedToast(toast.data, activeThreadRef),
   );
   const visibleToastLayout = buildVisibleToastLayout(visibleToasts);
   useEffect(() => {
@@ -141,7 +155,7 @@ function Toasts({ position = "top-right" }) {
     "data-slot": "toast-portal",
     children: _jsx(Toast.Viewport, {
       className: cn(
-        "fixed z-50 mx-auto flex w-[calc(100%-var(--toast-inset)*2)] max-w-90 [--toast-header-offset:52px] [--toast-inset:--spacing(4)] sm:[--toast-inset:--spacing(8)]",
+        "fixed z-100 mx-auto flex w-[calc(100%-var(--toast-inset)*2)] max-w-90 [--toast-header-offset:52px] [--toast-inset:--spacing(4)] sm:[--toast-inset:--spacing(8)]",
         // Vertical positioning
         "data-[position*=top]:top-[calc(var(--toast-inset)+var(--toast-header-offset))]",
         "data-[position*=bottom]:bottom-(--toast-inset)",
@@ -295,14 +309,14 @@ function AnchoredToastProvider({ children, ...props }) {
 }
 function AnchoredToasts() {
   const { toasts } = Toast.useToastManager();
-  const activeThreadId = useActiveThreadIdFromRoute();
+  const activeThreadRef = useActiveThreadRefFromRoute();
   return _jsx(Toast.Portal, {
     "data-slot": "toast-portal-anchored",
     children: _jsx(Toast.Viewport, {
       className: "outline-none",
       "data-slot": "toast-viewport-anchored",
       children: toasts
-        .filter((toast) => shouldRenderForActiveThread(toast.data, activeThreadId))
+        .filter((toast) => shouldRenderThreadScopedToast(toast.data, activeThreadRef))
         .map((toast) => {
           const Icon = toast.type ? TOAST_ICONS[toast.type] : null;
           const tooltipStyle = toast.data?.tooltipStyle ?? false;
@@ -313,7 +327,7 @@ function AnchoredToasts() {
           return _jsx(
             Toast.Positioner,
             {
-              className: "z-50 max-w-[min(--spacing(64),var(--available-width))]",
+              className: "z-100 max-w-[min(--spacing(64),var(--available-width))]",
               "data-slot": "toast-positioner",
               sideOffset: positionerProps.sideOffset ?? 4,
               toast: toast,

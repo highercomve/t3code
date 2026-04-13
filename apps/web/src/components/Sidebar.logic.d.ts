@@ -1,4 +1,5 @@
 import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "@t3tools/contracts/settings";
+import { type ThreadSortInput } from "../lib/threadSort";
 import type { SidebarThreadSummary, Thread } from "../types";
 export declare const THREAD_SELECTION_SAFE_SELECTOR =
   "[data-thread-item], [data-thread-selection-safe]";
@@ -9,10 +10,6 @@ type SidebarProject = {
   name: string;
   createdAt?: string | undefined;
   updatedAt?: string | undefined;
-};
-type SidebarThreadSortInput = Pick<Thread, "createdAt" | "updatedAt"> & {
-  latestUserMessageAt?: string | null;
-  messages?: Pick<Thread["messages"][number], "createdAt" | "role">[];
 };
 export type ThreadTraversalDirection = "previous" | "next";
 export interface ThreadStatusPill {
@@ -118,11 +115,8 @@ export declare function getVisibleThreadsForProject<T extends Pick<Thread, "id">
   visibleThreads: T[];
   hiddenThreads: T[];
 };
-export declare function sortThreadsForSidebar<
-  T extends Pick<Thread, "id" | "createdAt" | "updatedAt"> & SidebarThreadSortInput,
->(threads: readonly T[], sortOrder: SidebarThreadSortOrder): T[];
 export declare function getFallbackThreadIdAfterDelete<
-  T extends Pick<Thread, "id" | "projectId" | "createdAt" | "updatedAt"> & SidebarThreadSortInput,
+  T extends Pick<Thread, "id" | "projectId" | "createdAt" | "updatedAt"> & ThreadSortInput,
 >(input: {
   threads: readonly T[];
   deletedThreadId: T["id"];
@@ -131,12 +125,12 @@ export declare function getFallbackThreadIdAfterDelete<
 }): T["id"] | null;
 export declare function getProjectSortTimestamp(
   project: SidebarProject,
-  projectThreads: readonly SidebarThreadSortInput[],
+  projectThreads: readonly ThreadSortInput[],
   sortOrder: Exclude<SidebarProjectSortOrder, "manual">,
 ): number;
 export declare function sortProjectsForSidebar<
   TProject extends SidebarProject,
-  TThread extends Pick<Thread, "projectId" | "createdAt" | "updatedAt"> & SidebarThreadSortInput,
+  TThread extends Pick<Thread, "projectId" | "createdAt" | "updatedAt"> & ThreadSortInput,
 >(
   projects: readonly TProject[],
   threads: readonly TThread[],

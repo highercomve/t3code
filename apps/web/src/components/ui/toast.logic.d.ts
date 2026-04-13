@@ -1,3 +1,4 @@
+import type { ScopedThreadRef, ThreadId } from "@t3tools/contracts";
 export declare function shouldHideCollapsedToastContent(
   visibleToastIndex: number,
   visibleToastCount: number,
@@ -16,4 +17,13 @@ export declare function buildVisibleToastLayout<TToast extends object>(
   frontmostHeight: number;
   items: VisibleToastLayoutItem<TToast & ToastWithHeight>[];
 };
+export declare function shouldRenderThreadScopedToast(
+  data:
+    | {
+        threadRef?: ScopedThreadRef | null;
+        threadId?: ThreadId | null;
+      }
+    | undefined,
+  activeThreadRef: ScopedThreadRef | null,
+): boolean;
 export {};

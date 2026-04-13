@@ -212,6 +212,17 @@ function ComboboxList({ className, ...props }) {
     }),
   });
 }
+/**
+ * A variant of `ComboboxList` without `ScrollArea`, for use when
+ * an external virtualizer (e.g. LegendList) owns the scroll container.
+ */
+function ComboboxListVirtualized({ className, ...props }) {
+  return _jsx(ComboboxPrimitive.List, {
+    className: cn("not-empty:px-1 not-empty:py-1", className),
+    "data-slot": "combobox-list",
+    ...props,
+  });
+}
 function ComboboxClear({ className, ...props }) {
   return _jsx(ComboboxPrimitive.Clear, {
     className: className,
@@ -288,6 +299,7 @@ export {
   ComboboxEmpty,
   ComboboxValue,
   ComboboxList,
+  ComboboxListVirtualized,
   ComboboxClear,
   ComboboxStatus,
   ComboboxRow,

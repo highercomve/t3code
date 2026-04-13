@@ -28,9 +28,12 @@ declare function Command({
 }: React.ComponentProps<typeof Autocomplete>): import("react/jsx-runtime").JSX.Element;
 declare function CommandInput({
   className,
+  wrapperClassName,
   placeholder,
   ...props
-}: React.ComponentProps<typeof AutocompleteInput>): import("react/jsx-runtime").JSX.Element;
+}: React.ComponentProps<typeof AutocompleteInput> & {
+  wrapperClassName?: string | undefined;
+}): import("react/jsx-runtime").JSX.Element;
 declare function CommandList({
   className,
   ...props

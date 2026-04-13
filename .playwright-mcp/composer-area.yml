@@ -1,0 +1,110 @@
+- generic [ref=e1]:
+    - generic [ref=e3]:
+        - generic [ref=e6]:
+            - link "Go to threads" [ref=e9] [cursor=pointer]:
+                - /url: /
+                - img "T3" [ref=e10]
+                - generic [ref=e12]: Code
+                - generic [ref=e13]: Dev
+            - generic [ref=e276]:
+                - list [ref=e278]:
+                    - listitem [ref=e279]:
+                        - button "Search Ctrl+K" [ref=e280] [cursor=pointer]:
+                            - img [ref=e281]
+                            - generic [ref=e284]: Search
+                            - generic: Ctrl+K
+                - generic [ref=e285]:
+                    - generic [ref=e286]:
+                        - generic [ref=e287]: Projects
+                        - generic [ref=e288]:
+                            - button [ref=e289] [cursor=pointer]:
+                                - img [ref=e290]
+                            - button "Add project" [ref=e293] [cursor=pointer]:
+                                - img [ref=e294]
+                    - list [ref=e295]:
+                        - listitem [ref=e296]:
+                            - generic [ref=e297]:
+                                - button "t3code" [ref=e298] [cursor=pointer]
+                                - generic
+                            - list [ref=e302]:
+                                - listitem [ref=e303]
+                                - listitem [ref=e309]
+                                - listitem [ref=e315]
+                                - listitem [ref=e321]
+                                - listitem [ref=e327]
+                                - listitem [ref=e333]
+                                - listitem [ref=e339]
+                        - listitem [ref=e343]:
+                            - generic [ref=e344]:
+                                - button "fleet" [ref=e345] [cursor=pointer]
+                                - generic
+                            - list
+            - separator [ref=e349]
+            - list [ref=e351]:
+                - listitem [ref=e352]:
+                    - button "Settings" [ref=e353] [cursor=pointer]:
+                        - img [ref=e354]
+                        - generic [ref=e357]: Settings
+            - button "Resize Sidebar" [ref=e44]
+        - main [ref=e458]:
+            - generic [ref=e459]:
+                - generic [ref=e461]:
+                    - generic [ref=e462]:
+                        - heading "New thread" [level=2] [ref=e463]
+                        - generic [ref=e465]: fleet
+                    - generic [ref=e466]:
+                        - button "Add action" [ref=e467] [cursor=pointer]:
+                            - img
+                            - generic [ref=e468]: Add action
+                        - group "Subscription actions" [ref=e469]:
+                            - button "Open" [ref=e470] [cursor=pointer]:
+                                - img
+                                - generic [ref=e471]: Open
+                            - separator
+                            - button "Copy options" [ref=e472] [cursor=pointer]:
+                                - img
+                        - group "Git actions" [ref=e473]:
+                            - button "Commit, push & PR" [ref=e474] [cursor=pointer]:
+                                - img
+                                - generic [ref=e475]: Commit, push & PR
+                            - separator
+                            - button "Git action options" [ref=e476] [cursor=pointer]:
+                                - img
+                        - button "Toggle terminal drawer" [ref=e477] [cursor=pointer]:
+                            - img
+                        - button "Toggle diff panel" [ref=e478] [cursor=pointer]:
+                            - img
+                - generic [ref=e480]:
+                    - paragraph [ref=e483]: Send a message to start the conversation.
+                    - generic [ref=e487]:
+                        - generic [ref=e489]:
+                            - textbox [ref=e490]:
+                                - paragraph [ref=e491]
+                            - generic: Ask for follow-up changes or attach images
+                        - generic [ref=e492]:
+                            - generic [ref=e493]:
+                                - button "gemini-3.1-pro-preview" [active] [ref=e494] [cursor=pointer]
+                                - separator [ref=e497]
+                                - button [ref=e498] [cursor=pointer]
+                                - separator [ref=e500]
+                                - button "Build" [ref=e501] [cursor=pointer]
+                                - separator [ref=e503]
+                                - combobox "Runtime mode" [ref=e504] [cursor=pointer]
+                                - textbox [ref=e507]: full-access
+                            - generic [ref=e508]:
+                                - button "Send message" [disabled]
+                    - generic [ref=e509]:
+                        - generic [ref=e510]:
+                            - combobox "Workspace" [ref=e511] [cursor=pointer]:
+                                - img
+                                - generic [ref=e512]: Current checkout
+                                - generic [ref=e513]
+                            - textbox [ref=e514]: local
+                        - combobox [ref=e515] [cursor=pointer]:
+                            - generic [ref=e516]: feature/environment_support
+                            - img
+                        - textbox [ref=e517]: feature/environment_support
+    - generic:
+        - region "Notifications"
+    - generic:
+        - region "Notifications"

@@ -1,10 +1,10 @@
 /**
- * Single Zustand store for terminal UI state keyed by threadId.
+ * Single Zustand store for terminal UI state keyed by scoped thread identity.
  *
  * Terminal transition helpers are intentionally private to keep the public
  * API constrained to store actions/selectors.
  */
-import { ThreadId, type TerminalEvent } from "@t3tools/contracts";
+import { type ScopedThreadRef, type TerminalEvent } from "@t3tools/contracts";
 import { type ThreadTerminalGroup } from "./types";
 interface ThreadTerminalState {
   terminalOpen: boolean;
@@ -23,46 +23,56 @@ export interface TerminalEventEntry {
   id: number;
   event: TerminalEvent;
 }
+interface PersistedTerminalStateStoreState {
+  terminalStateByThreadKey?: Record<string, ThreadTerminalState>;
+}
+export declare function migratePersistedTerminalStateStoreState(
+  persistedState: unknown,
+  version: number,
+): PersistedTerminalStateStoreState;
 export declare function selectThreadTerminalState(
-  terminalStateByThreadId: Record<ThreadId, ThreadTerminalState>,
-  threadId: ThreadId,
+  terminalStateByThreadKey: Record<string, ThreadTerminalState>,
+  threadRef: ScopedThreadRef | null | undefined,
 ): ThreadTerminalState;
 export declare function selectTerminalEventEntries(
   terminalEventEntriesByKey: Record<string, ReadonlyArray<TerminalEventEntry>>,
-  threadId: ThreadId,
+  threadRef: ScopedThreadRef | null | undefined,
   terminalId: string,
 ): ReadonlyArray<TerminalEventEntry>;
 interface TerminalStateStoreState {
-  terminalStateByThreadId: Record<ThreadId, ThreadTerminalState>;
-  terminalLaunchContextByThreadId: Record<ThreadId, ThreadTerminalLaunchContext>;
+  terminalStateByThreadKey: Record<string, ThreadTerminalState>;
+  terminalLaunchContextByThreadKey: Record<string, ThreadTerminalLaunchContext>;
   terminalEventEntriesByKey: Record<string, ReadonlyArray<TerminalEventEntry>>;
   nextTerminalEventId: number;
-  setTerminalOpen: (threadId: ThreadId, open: boolean) => void;
-  setTerminalHeight: (threadId: ThreadId, height: number) => void;
-  splitTerminal: (threadId: ThreadId, terminalId: string) => void;
-  newTerminal: (threadId: ThreadId, terminalId: string) => void;
+  setTerminalOpen: (threadRef: ScopedThreadRef, open: boolean) => void;
+  setTerminalHeight: (threadRef: ScopedThreadRef, height: number) => void;
+  splitTerminal: (threadRef: ScopedThreadRef, terminalId: string) => void;
+  newTerminal: (threadRef: ScopedThreadRef, terminalId: string) => void;
   ensureTerminal: (
-    threadId: ThreadId,
+    threadRef: ScopedThreadRef,
     terminalId: string,
     options?: {
       open?: boolean;
       active?: boolean;
     },
   ) => void;
-  setActiveTerminal: (threadId: ThreadId, terminalId: string) => void;
-  closeTerminal: (threadId: ThreadId, terminalId: string) => void;
-  setTerminalLaunchContext: (threadId: ThreadId, context: ThreadTerminalLaunchContext) => void;
-  clearTerminalLaunchContext: (threadId: ThreadId) => void;
+  setActiveTerminal: (threadRef: ScopedThreadRef, terminalId: string) => void;
+  closeTerminal: (threadRef: ScopedThreadRef, terminalId: string) => void;
+  setTerminalLaunchContext: (
+    threadRef: ScopedThreadRef,
+    context: ThreadTerminalLaunchContext,
+  ) => void;
+  clearTerminalLaunchContext: (threadRef: ScopedThreadRef) => void;
   setTerminalActivity: (
-    threadId: ThreadId,
+    threadRef: ScopedThreadRef,
     terminalId: string,
     hasRunningSubprocess: boolean,
   ) => void;
-  recordTerminalEvent: (event: TerminalEvent) => void;
-  applyTerminalEvent: (event: TerminalEvent) => void;
-  clearTerminalState: (threadId: ThreadId) => void;
-  removeTerminalState: (threadId: ThreadId) => void;
-  removeOrphanedTerminalStates: (activeThreadIds: Set<ThreadId>) => void;
+  recordTerminalEvent: (threadRef: ScopedThreadRef, event: TerminalEvent) => void;
+  applyTerminalEvent: (threadRef: ScopedThreadRef, event: TerminalEvent) => void;
+  clearTerminalState: (threadRef: ScopedThreadRef) => void;
+  removeTerminalState: (threadRef: ScopedThreadRef) => void;
+  removeOrphanedTerminalStates: (activeThreadKeys: Set<string>) => void;
 }
 export declare const useTerminalStateStore: import("zustand").UseBoundStore<
   Omit<import("zustand").StoreApi<TerminalStateStoreState>, "setState" | "persist"> & {

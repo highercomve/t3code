@@ -1,4 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { scopeThreadRef } from "@t3tools/client-runtime";
 import { memo } from "react";
 import GitActionsControl from "../GitActionsControl";
 import { DiffIcon, TerminalSquareIcon } from "lucide-react";
@@ -9,7 +10,9 @@ import { Toggle } from "../ui/toggle";
 import { SidebarTrigger } from "../ui/sidebar";
 import { OpenInPicker } from "./OpenInPicker";
 export const ChatHeader = memo(function ChatHeader({
+  activeThreadEnvironmentId,
   activeThreadId,
+  draftId,
   activeThreadTitle,
   activeProjectName,
   isGitRepo,
@@ -81,7 +84,11 @@ export const ChatHeader = memo(function ChatHeader({
               openInCwd: openInCwd,
             }),
           activeProjectName &&
-            _jsx(GitActionsControl, { gitCwd: gitCwd, activeThreadId: activeThreadId }),
+            _jsx(GitActionsControl, {
+              gitCwd: gitCwd,
+              activeThreadRef: scopeThreadRef(activeThreadEnvironmentId, activeThreadId),
+              ...(draftId ? { draftId } : {}),
+            }),
           _jsxs(Tooltip, {
             children: [
               _jsx(TooltipTrigger, {

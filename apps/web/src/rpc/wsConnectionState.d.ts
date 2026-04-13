@@ -38,9 +38,6 @@ export declare function recordWsConnectionClosed(details?: {
 }): WsConnectionStatus;
 export declare function setBrowserOnlineStatus(online: boolean): WsConnectionStatus;
 export declare function resetWsReconnectBackoff(): WsConnectionStatus;
-export declare function exhaustWsReconnectIfStillWaiting(
-  expectedNextRetryAt: string,
-): WsConnectionStatus;
 export declare function resetWsConnectionStateForTests(): void;
 export declare function useWsConnectionStatus(): WsConnectionStatus;
 export declare function getWsReconnectDelayMsForRetry(retryIndex: number): number | null;

@@ -174,7 +174,7 @@ const makeCopilotAdapter = Effect.fn("makeCopilotAdapter")(function* () {
         catch: (error) => toRequestError(threadId, "thread_read", error),
       }).pipe(
         Effect.map((result) => ({
-          threadId: ThreadId.makeUnsafe(result.threadId),
+          threadId: ThreadId.make(result.threadId),
           turns: result.turns,
         })),
       );
@@ -201,7 +201,7 @@ const makeCopilotAdapter = Effect.fn("makeCopilotAdapter")(function* () {
         catch: (error) => toRequestError(threadId, "thread_read", error),
       }).pipe(
         Effect.map((result) => ({
-          threadId: ThreadId.makeUnsafe(result.threadId),
+          threadId: ThreadId.make(result.threadId),
           turns: result.turns,
         })),
       );
@@ -270,7 +270,7 @@ const makeCopilotAdapter = Effect.fn("makeCopilotAdapter")(function* () {
   });
 
   const registerListener = Effect.fn("registerListener")(function* () {
-    const services = yield* Effect.services<never>();
+    const services = yield* Effect.context<never>();
     const listenerEffect = Effect.fn("listener")(function* (event: ProviderEvent) {
       const runtimeEvents = mapAcpEventToRuntimeEvents(event, event.threadId, COPILOT_RAW_SOURCES);
       if (runtimeEvents.length === 0) {

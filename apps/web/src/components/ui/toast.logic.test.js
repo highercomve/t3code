@@ -1,5 +1,9 @@
 import { assert, describe, it } from "vitest";
-import { buildVisibleToastLayout, shouldHideCollapsedToastContent } from "./toast.logic";
+import {
+  buildVisibleToastLayout,
+  shouldHideCollapsedToastContent,
+  shouldRenderThreadScopedToast,
+} from "./toast.logic";
 describe("shouldHideCollapsedToastContent", () => {
   it("keeps a single visible toast readable", () => {
     assert.equal(shouldHideCollapsedToastContent(0, 1), false);
@@ -50,6 +54,48 @@ describe("buildVisibleToastLayout", () => {
         { id: "b", offsetY: 0 },
         { id: "c", offsetY: 0 },
       ],
+    );
+  });
+});
+describe("shouldRenderThreadScopedToast", () => {
+  const activeThreadRef = {
+    environmentId: "environment-a",
+    threadId: "thread-1",
+  };
+  it("renders a toast scoped to the active thread ref", () => {
+    assert.equal(
+      shouldRenderThreadScopedToast(
+        {
+          threadRef: activeThreadRef,
+        },
+        activeThreadRef,
+      ),
+      true,
+    );
+  });
+  it("hides a scoped toast when the environment differs", () => {
+    assert.equal(
+      shouldRenderThreadScopedToast(
+        {
+          threadRef: {
+            environmentId: "environment-b",
+            threadId: "thread-1",
+          },
+        },
+        activeThreadRef,
+      ),
+      false,
+    );
+  });
+  it("keeps legacy thread-id scoped toasts working", () => {
+    assert.equal(
+      shouldRenderThreadScopedToast(
+        {
+          threadId: "thread-1",
+        },
+        activeThreadRef,
+      ),
+      true,
     );
   });
 });

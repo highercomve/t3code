@@ -1,7 +1,7 @@
 import { MessageId } from "@t3tools/contracts";
 import { describe, expect, it } from "vitest";
 import { buildBootstrapInput } from "./historyBootstrap";
-const messageId = (value) => MessageId.makeUnsafe(value);
+const messageId = (value) => MessageId.make(value);
 describe("buildBootstrapInput", () => {
   it("includes full transcript when under budget", () => {
     const result = buildBootstrapInput(

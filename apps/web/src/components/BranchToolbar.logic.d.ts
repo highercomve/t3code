@@ -1,11 +1,26 @@
-import type { GitBranch } from "@t3tools/contracts";
+import type { EnvironmentId, GitBranch, ProjectId } from "@t3tools/contracts";
 import { Schema } from "effect";
 export {
   dedupeRemoteBranchesWithLocalMatches,
   deriveLocalBranchNameFromRemoteRef,
 } from "@t3tools/shared/git";
+export interface EnvironmentOption {
+  environmentId: EnvironmentId;
+  projectId: ProjectId;
+  label: string;
+  isPrimary: boolean;
+}
 export declare const EnvMode: Schema.Literals<readonly ["local", "worktree"]>;
 export type EnvMode = typeof EnvMode.Type;
+export declare function resolveEnvironmentOptionLabel(input: {
+  isPrimary: boolean;
+  environmentId: EnvironmentId;
+  runtimeLabel?: string | null;
+  savedLabel?: string | null;
+}): string;
+export declare function resolveEnvModeLabel(mode: EnvMode): string;
+export declare function resolveCurrentWorkspaceLabel(activeWorktreePath: string | null): string;
+export declare function resolveLockedWorkspaceLabel(activeWorktreePath: string | null): string;
 export declare function resolveEffectiveEnvMode(input: {
   activeWorktreePath: string | null;
   hasServerThread: boolean;

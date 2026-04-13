@@ -1,42 +1,31 @@
-import { type MessageId, type TurnId } from "@t3tools/contracts";
+import { type EnvironmentId, type MessageId, type TurnId } from "@t3tools/contracts";
+import { type LegendListRef } from "@legendapp/list/react";
 import { deriveTimelineEntries } from "../../session-logic";
 import { type TurnDiffSummary } from "../../types";
 import { ExpandedImagePreview } from "./ExpandedImagePreview";
-import { type MessagesTimelineRow } from "./MessagesTimeline.logic";
 import { type TimestampFormat } from "@t3tools/contracts/settings";
 interface MessagesTimelineProps {
-  hasMessages: boolean;
   isWorking: boolean;
   activeTurnInProgress: boolean;
+  activeTurnId?: TurnId | null;
   activeTurnStartedAt: string | null;
-  scrollContainer: HTMLDivElement | null;
+  listRef: React.RefObject<LegendListRef | null>;
   timelineEntries: ReturnType<typeof deriveTimelineEntries>;
   completionDividerBeforeEntryId: string | null;
   completionSummary: string | null;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
-  nowIso: string;
-  expandedWorkGroups: Record<string, boolean>;
-  onToggleWorkGroup: (groupId: string) => void;
+  routeThreadKey: string;
   onOpenTurnDiff: (turnId: TurnId, filePath?: string) => void;
   revertTurnCountByUserMessageId: Map<MessageId, number>;
   onRevertUserMessage: (messageId: MessageId) => void;
   isRevertingCheckpoint: boolean;
   onImageExpand: (preview: ExpandedImagePreview) => void;
+  activeThreadEnvironmentId: EnvironmentId;
   markdownCwd: string | undefined;
   resolvedTheme: "light" | "dark";
   timestampFormat: TimestampFormat;
   workspaceRoot: string | undefined;
-  onVirtualizerSnapshot?: (snapshot: {
-    totalSize: number;
-    measurements: ReadonlyArray<{
-      id: string;
-      kind: MessagesTimelineRow["kind"];
-      index: number;
-      size: number;
-      start: number;
-      end: number;
-    }>;
-  }) => void;
+  onIsAtEndChange: (isAtEnd: boolean) => void;
 }
 export declare const MessagesTimeline: import("react").NamedExoticComponent<MessagesTimelineProps>;
 export {};

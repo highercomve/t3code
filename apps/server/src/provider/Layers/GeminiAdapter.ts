@@ -21,7 +21,7 @@ import {
   ThreadId,
   TurnId,
 } from "@t3tools/contracts";
-import { Effect, FileSystem, Layer, Queue, Schema, ServiceMap, Stream } from "effect";
+import { Effect, FileSystem, Layer, Queue, Schema, Context, Stream } from "effect";
 
 import {
   ProviderAdapterProcessError,
@@ -44,7 +44,7 @@ const PROVIDER = "gemini" as const;
 
 export interface GeminiAdapterLiveOptions {
   readonly manager?: GeminiAppServerManager;
-  readonly makeManager?: (services?: ServiceMap.ServiceMap<never>) => GeminiAppServerManager;
+  readonly makeManager?: (services?: Context.Context<never>) => GeminiAppServerManager;
   readonly nativeEventLogPath?: string;
   readonly nativeEventLogger?: EventNdjsonLogger;
 }
@@ -172,6 +172,8 @@ function itemTitle(itemType: CanonicalItemType): string | undefined {
       return "MCP tool call";
     case "dynamic_tool_call":
       return "Tool call";
+    case "collab_agent_tool_call":
+      return "Sub-agent task";
     case "web_search":
       return "Web search";
     case "image_view":
@@ -189,16 +191,20 @@ function itemDetail(
 ): string | undefined {
   const nestedResult = asObject(item.result);
   const candidates = [
+    asString(item.description),
     asString(item.command),
     asString(item.title),
     asString(item.summary),
     asString(item.text),
     asString(item.path),
     asString(item.prompt),
+    asString(item.task),
+    asString(item.task_name),
     asString(nestedResult?.command),
     asString(payload.command),
     asString(payload.message),
     asString(payload.prompt),
+    asString(payload.description),
   ];
   for (const candidate of candidates) {
     if (!candidate) continue;
@@ -393,15 +399,15 @@ function extractProposedPlanMarkdown(text: string | undefined): string | undefin
 }
 
 function asRuntimeItemId(itemId: ProviderItemId): RuntimeItemId {
-  return RuntimeItemId.makeUnsafe(itemId);
+  return RuntimeItemId.make(itemId);
 }
 
 function asRuntimeRequestId(requestId: string): RuntimeRequestId {
-  return RuntimeRequestId.makeUnsafe(requestId);
+  return RuntimeRequestId.make(requestId);
 }
 
 function asRuntimeTaskId(taskId: string): RuntimeTaskId {
-  return RuntimeTaskId.makeUnsafe(taskId);
+  return RuntimeTaskId.make(taskId);
 }
 
 function geminiEventMessage(
@@ -424,19 +430,19 @@ function geminiEventBase(
     ? {
         ...base.providerRefs,
         ...(turnId ? { providerTurnId: turnId } : {}),
-        ...(itemId ? { providerItemId: ProviderItemId.makeUnsafe(itemId) } : {}),
+        ...(itemId ? { providerItemId: ProviderItemId.make(itemId) } : {}),
         ...(requestId ? { providerRequestId: requestId } : {}),
       }
     : {
         ...(turnId ? { providerTurnId: turnId } : {}),
-        ...(itemId ? { providerItemId: ProviderItemId.makeUnsafe(itemId) } : {}),
+        ...(itemId ? { providerItemId: ProviderItemId.make(itemId) } : {}),
         ...(requestId ? { providerRequestId: requestId } : {}),
       };
 
   return {
     ...base,
-    ...(turnId ? { turnId: TurnId.makeUnsafe(turnId) } : {}),
-    ...(itemId ? { itemId: asRuntimeItemId(ProviderItemId.makeUnsafe(itemId)) } : {}),
+    ...(turnId ? { turnId: TurnId.make(turnId) } : {}),
+    ...(itemId ? { itemId: asRuntimeItemId(ProviderItemId.make(itemId)) } : {}),
     ...(requestId ? { requestId: asRuntimeRequestId(requestId) } : {}),
     ...(Object.keys(providerRefs).length > 0 ? { providerRefs } : {}),
   };
@@ -1278,7 +1284,7 @@ const makeGeminiAdapter = (options?: GeminiAdapterLiveOptions) =>
         if (options?.manager) {
           return options.manager;
         }
-        const services = yield* Effect.services<never>();
+        const services = yield* Effect.context<never>();
         return options?.makeManager?.(services) ?? new GeminiAppServerManager(services);
       }),
       (manager) =>
@@ -1454,7 +1460,7 @@ const makeGeminiAdapter = (options?: GeminiAdapterLiveOptions) =>
             yield* nativeEventLogger.write(event, event.threadId);
           });
 
-        const services = yield* Effect.services<never>();
+        const services = yield* Effect.context<never>();
         const listener = (event: ProviderEvent) =>
           Effect.gen(function* () {
             yield* writeNativeEvent(event);

@@ -1,6 +1,7 @@
-import type { ThreadId } from "@t3tools/contracts";
+import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
 interface PullRequestThreadDialogProps {
   open: boolean;
+  environmentId: EnvironmentId;
   threadId: ThreadId;
   cwd: string | null;
   initialReference: string | null;
@@ -9,6 +10,7 @@ interface PullRequestThreadDialogProps {
 }
 export declare function PullRequestThreadDialog({
   open,
+  environmentId,
   threadId,
   cwd,
   initialReference,

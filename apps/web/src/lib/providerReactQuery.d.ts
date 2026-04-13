@@ -1,5 +1,6 @@
-import { ThreadId } from "@t3tools/contracts";
+import { type EnvironmentId, ThreadId } from "@t3tools/contracts";
 interface CheckpointDiffQueryInput {
+  environmentId: EnvironmentId | null;
   threadId: ThreadId | null;
   fromTurnCount: number | null;
   toTurnCount: number | null;
@@ -13,6 +14,7 @@ export declare const providerQueryKeys: {
   ) => readonly [
     "providers",
     "checkpointDiff",
+    (string & import("effect/Brand").Brand<"EnvironmentId">) | null,
     (string & import("effect/Brand").Brand<"ThreadId">) | null,
     number | null,
     number | null,
@@ -25,20 +27,21 @@ export declare function checkpointDiffQueryOptions(
   import("@tanstack/react-query").UseQueryOptions<
     {
       readonly threadId: string & import("effect/Brand").Brand<"ThreadId">;
-      readonly diff: string;
-      readonly toTurnCount: number;
       readonly fromTurnCount: number;
+      readonly toTurnCount: number;
+      readonly diff: string;
     },
     Error,
     {
       readonly threadId: string & import("effect/Brand").Brand<"ThreadId">;
-      readonly diff: string;
-      readonly toTurnCount: number;
       readonly fromTurnCount: number;
+      readonly toTurnCount: number;
+      readonly diff: string;
     },
     readonly [
       "providers",
       "checkpointDiff",
+      (string & import("effect/Brand").Brand<"EnvironmentId">) | null,
       (string & import("effect/Brand").Brand<"ThreadId">) | null,
       number | null,
       number | null,
@@ -50,13 +53,14 @@ export declare function checkpointDiffQueryOptions(
   queryFn?: import("@tanstack/react-query").QueryFunction<
     {
       readonly threadId: string & import("effect/Brand").Brand<"ThreadId">;
-      readonly diff: string;
-      readonly toTurnCount: number;
       readonly fromTurnCount: number;
+      readonly toTurnCount: number;
+      readonly diff: string;
     },
     readonly [
       "providers",
       "checkpointDiff",
+      (string & import("effect/Brand").Brand<"EnvironmentId">) | null,
       (string & import("effect/Brand").Brand<"ThreadId">) | null,
       number | null,
       number | null,
@@ -68,6 +72,7 @@ export declare function checkpointDiffQueryOptions(
   queryKey: readonly [
     "providers",
     "checkpointDiff",
+    (string & import("effect/Brand").Brand<"EnvironmentId">) | null,
     (string & import("effect/Brand").Brand<"ThreadId">) | null,
     number | null,
     number | null,
@@ -75,9 +80,9 @@ export declare function checkpointDiffQueryOptions(
   ] & {
     [dataTagSymbol]: {
       readonly threadId: string & import("effect/Brand").Brand<"ThreadId">;
-      readonly diff: string;
-      readonly toTurnCount: number;
       readonly fromTurnCount: number;
+      readonly toTurnCount: number;
+      readonly diff: string;
     };
     [dataTagErrorSymbol]: Error;
   };

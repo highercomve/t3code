@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Option, Schema } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { TrimmedNonEmptyString } from "@t3tools/contracts";
 import {
   getDefaultModel,
@@ -23,8 +23,8 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER = {
 };
 const withDefaults = (fallback) => (schema) =>
   schema.pipe(
-    Schema.withConstructorDefault(() => Option.some(fallback())),
-    Schema.withDecodingDefault(() => fallback()),
+    Schema.withConstructorDefault(Effect.succeed(Option.some(fallback()))),
+    Schema.withDecodingDefault(Effect.succeed(fallback())),
   );
 export const AppSettingsSchema = Schema.Struct({
   claudeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
@@ -44,7 +44,7 @@ export const AppSettingsSchema = Schema.Struct({
   geminiApiKey: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
 });
-const DEFAULT_APP_SETTINGS = AppSettingsSchema.makeUnsafe({});
+const DEFAULT_APP_SETTINGS = Schema.decodeSync(AppSettingsSchema)({});
 const PROVIDER_CUSTOM_MODEL_CONFIG = {
   codex: {
     provider: "codex",

@@ -19,5 +19,11 @@ interface ComposerPrimaryActionsProps {
   onInterrupt: () => void;
   onImplementPlanInNewThread: () => void;
 }
+export declare const formatPendingPrimaryActionLabel: (input: {
+  compact: boolean;
+  isLastQuestion: boolean;
+  isResponding: boolean;
+  questionIndex: number;
+}) => "Submit answers" | "Submitting..." | "Submit" | "Next" | "Next question" | "Submit answer";
 export declare const ComposerPrimaryActions: import("react").NamedExoticComponent<ComposerPrimaryActionsProps>;
 export {};

@@ -31,72 +31,115 @@ const DEFAULT_OPENCODE_MODEL_CAPABILITIES: ModelCapabilities = {
 
 const PROVIDER = "opencode" as const;
 
+const OPENCODE_MODEL_CAPABILITIES: ServerProviderModel["capabilities"] = {
+  reasoningEffortLevels: [
+    { value: "low", label: "Low" },
+    { value: "medium", label: "Medium", isDefault: true },
+    { value: "high", label: "High" },
+    { value: "xhigh", label: "Extra High" },
+  ],
+  supportsFastMode: false,
+  supportsThinkingToggle: false,
+  contextWindowOptions: [],
+  promptInjectedEffortLevels: [],
+};
+
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
-  { slug: "opencode/big-pickle", name: "Big Pickle", isCustom: false, capabilities: null },
-  { slug: "opencode/glm-5", name: "GLM-5", isCustom: false, capabilities: null },
-  { slug: "opencode/kimi-k2.5", name: "Kimi K2.5", isCustom: false, capabilities: null },
+  {
+    slug: "opencode/big-pickle",
+    name: "Big Pickle",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
+    slug: "opencode/glm-5",
+    name: "GLM-5",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
+    slug: "opencode/kimi-k2.5",
+    name: "Kimi K2.5",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
   {
     slug: "opencode/mimo-v2-omni-free",
     name: "MiMo V2 Omni Free",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
     slug: "opencode/mimo-v2-pro-free",
     name: "MiMo V2 Pro Free",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
-  { slug: "opencode/minimax-m2.5", name: "MiniMax M2.5", isCustom: false, capabilities: null },
+  {
+    slug: "opencode/minimax-m2.5",
+    name: "MiniMax M2.5",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
   {
     slug: "opencode/minimax-m2.5-free",
     name: "MiniMax M2.5 Free",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
     slug: "opencode/nemotron-3-super-free",
     name: "Nemotron 3 Super Free",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
     slug: "opencode/qwen3.6-plus-free",
     name: "Qwen 3.6 Plus Free",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
-  { slug: "opencode-go/glm-5", name: "GLM-5 (Go)", isCustom: false, capabilities: null },
-  { slug: "opencode-go/kimi-k2.5", name: "Kimi K2.5 (Go)", isCustom: false, capabilities: null },
+  {
+    slug: "opencode-go/glm-5",
+    name: "GLM-5 (Go)",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
+    slug: "opencode-go/kimi-k2.5",
+    name: "Kimi K2.5 (Go)",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
   {
     slug: "opencode-go/minimax-m2.5",
     name: "MiniMax M2.5 (Go)",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
     slug: "opencode-go/minimax-m2.7",
     name: "MiniMax M2.7 (Go)",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
     slug: "ollama/glm-5:cloud",
     name: "GLM-5 (Ollama Cloud)",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
     slug: "ollama/kimi-k2.5:cloud",
     name: "Kimi K2.5 (Ollama Cloud)",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
     slug: "ollama/qwen3-coder-next:cloud",
     name: "Qwen3 Coder Next (Ollama Cloud)",
     isCustom: false,
-    capabilities: null,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
 ];
 
@@ -108,6 +151,63 @@ function countCredentials(output: string): number {
   const lines = output.split("\n");
   return lines.filter((line) => line.includes("\u25CF")).length;
 }
+
+/**
+ * Parse `opencode models` output into ServerProviderModel entries.
+ * Each line is a model slug like "opencode/big-pickle" or "local_ollama/qwen3:8b".
+ */
+function parseDiscoveredModels(output: string): ReadonlyArray<ServerProviderModel> {
+  return output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((slug) => slug.length > 0)
+    .map((slug) => ({
+      slug,
+      name: slugToDisplayName(slug),
+      isCustom: false,
+      capabilities: OPENCODE_MODEL_CAPABILITIES,
+    }));
+}
+
+function slugToDisplayName(slug: string): string {
+  const slashIndex = slug.indexOf("/");
+  const modelPart = slashIndex >= 0 ? slug.slice(slashIndex + 1) : slug;
+  const prefix = slashIndex >= 0 ? slug.slice(0, slashIndex) : "";
+  const name = modelPart
+    .split(/[-_]/)
+    .map((word) => (word.length > 0 ? word[0]!.toUpperCase() + word.slice(1) : word))
+    .join(" ");
+  if (prefix && prefix !== "opencode") {
+    const providerLabel = prefix
+      .split(/[-_]/)
+      .map((w) => (w.length > 0 ? w[0]!.toUpperCase() + w.slice(1) : w))
+      .join(" ");
+    return `${name} (${providerLabel})`;
+  }
+  return name;
+}
+
+/**
+ * Discover available models by running `opencode models`.
+ * Returns discovered models merged with built-in models (discovered take priority).
+ */
+const discoverOpencodeModels = Effect.gen(function* () {
+  const result = yield* runOpencodeCommand(["models"]).pipe(
+    Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
+    Effect.result,
+  );
+
+  if (Result.isFailure(result) || Option.isNone(result.success)) {
+    return null;
+  }
+
+  const commandResult = result.success.value;
+  if (commandResult.code !== 0) {
+    return null;
+  }
+
+  return parseDiscoveredModels(commandResult.stdout);
+});
 
 const runOpencodeCommand = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
@@ -249,11 +349,21 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
       authLabel = "API Key";
     }
 
+    // ── Dynamic model discovery ──────────────────────────────────────
+    const discoveredModels = yield* discoverOpencodeModels;
+    let finalModels = models;
+    if (discoveredModels && discoveredModels.length > 0) {
+      // Merge: discovered models as base, then add any custom models not already present
+      const discoveredSlugs = new Set(discoveredModels.map((m) => m.slug));
+      const customOnly = [...models].filter((m) => m.isCustom && !discoveredSlugs.has(m.slug));
+      finalModels = [...discoveredModels, ...customOnly];
+    }
+
     return buildServerProvider({
       provider: PROVIDER,
       enabled: opencodeSettings.enabled,
       checkedAt,
-      models,
+      models: finalModels,
       probe: {
         installed: true,
         version: parsedVersion,

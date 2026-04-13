@@ -1,10 +1,11 @@
-import { EditorId, NativeApi } from "@t3tools/contracts";
+import { EditorId, LocalApi } from "@t3tools/contracts";
 export declare function usePreferredEditor(
   availableEditors: ReadonlyArray<EditorId>,
 ): readonly [
   (
     | "cursor"
     | "trae"
+    | "kiro"
     | "vscode"
     | "vscode-insiders"
     | "vscodium"
@@ -18,6 +19,7 @@ export declare function usePreferredEditor(
     value:
       | "cursor"
       | "trae"
+      | "kiro"
       | "vscode"
       | "vscode-insiders"
       | "vscodium"
@@ -29,6 +31,7 @@ export declare function usePreferredEditor(
           val:
             | "cursor"
             | "trae"
+            | "kiro"
             | "vscode"
             | "vscode-insiders"
             | "vscodium"
@@ -40,6 +43,7 @@ export declare function usePreferredEditor(
         ) =>
           | "cursor"
           | "trae"
+          | "kiro"
           | "vscode"
           | "vscode-insiders"
           | "vscodium"
@@ -54,7 +58,4 @@ export declare function usePreferredEditor(
 export declare function resolveAndPersistPreferredEditor(
   availableEditors: readonly EditorId[],
 ): EditorId | null;
-export declare function openInPreferredEditor(
-  api: NativeApi,
-  targetPath: string,
-): Promise<EditorId>;
+export declare function openInPreferredEditor(api: LocalApi, targetPath: string): Promise<EditorId>;

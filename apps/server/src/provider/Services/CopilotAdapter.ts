@@ -5,12 +5,12 @@
  * Copilot provider events. It does not perform cross-provider routing, shared
  * event fan-out, or checkpoint orchestration.
  *
- * Uses Effect `ServiceMap.Service` for dependency injection and returns the
+ * Uses Effect `Context.Service` for dependency injection and returns the
  * shared provider-adapter error channel with `provider: "copilotAgent"` context.
  *
  * @module CopilotAdapter
  */
-import { ServiceMap } from "effect";
+import { Context } from "effect";
 
 import type { ProviderAdapterError } from "../Errors.ts";
 import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
@@ -25,6 +25,6 @@ export interface CopilotAdapterShape extends ProviderAdapterShape<ProviderAdapte
 /**
  * CopilotAdapter - Service tag for Copilot provider adapter operations.
  */
-export class CopilotAdapter extends ServiceMap.Service<CopilotAdapter, CopilotAdapterShape>()(
+export class CopilotAdapter extends Context.Service<CopilotAdapter, CopilotAdapterShape>()(
   "t3/provider/Services/CopilotAdapter",
 ) {}

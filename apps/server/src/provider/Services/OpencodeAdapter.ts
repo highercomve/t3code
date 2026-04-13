@@ -5,12 +5,12 @@
  * It does not perform cross-provider routing, shared event fan-out, or
  * checkpoint orchestration.
  *
- * Uses Effect `ServiceMap.Service` for dependency injection and returns the
+ * Uses Effect `Context.Service` for dependency injection and returns the
  * shared provider-adapter error channel with `provider: "opencode"` context.
  *
  * @module OpencodeAdapter
  */
-import { ServiceMap } from "effect";
+import { Context } from "effect";
 
 import type { ProviderAdapterError } from "../Errors.ts";
 import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
@@ -25,6 +25,6 @@ export interface OpencodeAdapterShape extends ProviderAdapterShape<ProviderAdapt
 /**
  * OpencodeAdapter - Service tag for OpenCode provider adapter operations.
  */
-export class OpencodeAdapter extends ServiceMap.Service<OpencodeAdapter, OpencodeAdapterShape>()(
+export class OpencodeAdapter extends Context.Service<OpencodeAdapter, OpencodeAdapterShape>()(
   "t3/provider/Services/OpencodeAdapter",
 ) {}

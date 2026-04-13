@@ -1,6 +1,5 @@
 import { splitPromptIntoComposerSegments } from "./composer-editor-mentions";
 import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
-const SLASH_COMMANDS = ["model", "plan", "default"];
 const isInlineTokenSegment = (segment) => segment.type !== "text";
 function clampCursor(text, cursor) {
   if (!Number.isFinite(cursor)) return text.length;
@@ -33,6 +32,15 @@ export function expandCollapsedComposerCursor(text, cursorInput) {
   for (const segment of segments) {
     if (segment.type === "mention") {
       const expandedLength = segment.path.length + 1;
+      if (remaining <= 1) {
+        return expandedCursor + (remaining === 0 ? 0 : expandedLength);
+      }
+      remaining -= 1;
+      expandedCursor += expandedLength;
+      continue;
+    }
+    if (segment.type === "skill") {
+      const expandedLength = segment.name.length + 1;
       if (remaining <= 1) {
         return expandedCursor + (remaining === 0 ? 0 : expandedLength);
       }
@@ -100,6 +108,18 @@ export function collapseExpandedComposerCursor(text, cursorInput) {
       collapsedCursor += 1;
       continue;
     }
+    if (segment.type === "skill") {
+      const expandedLength = segment.name.length + 1;
+      if (remaining === 0) {
+        return collapsedCursor;
+      }
+      if (remaining <= expandedLength) {
+        return collapsedCursor + 1;
+      }
+      remaining -= expandedLength;
+      collapsedCursor += 1;
+      continue;
+    }
     if (segment.type === "terminal-context") {
       if (remaining <= 1) {
         return collapsedCursor + remaining;
@@ -154,15 +174,12 @@ export function detectComposerTrigger(text, cursorInput) {
           rangeEnd: cursor,
         };
       }
-      if (SLASH_COMMANDS.some((command) => command.startsWith(commandQuery.toLowerCase()))) {
-        return {
-          kind: "slash-command",
-          query: commandQuery,
-          rangeStart: lineStart,
-          rangeEnd: cursor,
-        };
-      }
-      return null;
+      return {
+        kind: "slash-command",
+        query: commandQuery,
+        rangeStart: lineStart,
+        rangeEnd: cursor,
+      };
     }
     const modelMatch = /^\/model(?:\s+(.*))?$/.exec(linePrefix);
     if (modelMatch) {
@@ -176,6 +193,14 @@ export function detectComposerTrigger(text, cursorInput) {
   }
   const tokenStart = tokenStartForCursor(text, cursor);
   const token = text.slice(tokenStart, cursor);
+  if (token.startsWith("$")) {
+    return {
+      kind: "skill",
+      query: token.slice(1),
+      rangeStart: tokenStart,
+      rangeEnd: cursor,
+    };
+  }
   if (!token.startsWith("@")) {
     return null;
   }

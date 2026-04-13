@@ -1,32 +1,43 @@
 import { queryOptions } from "@tanstack/react-query";
-import { ensureNativeApi } from "~/nativeApi";
+import { ensureEnvironmentApi } from "~/environmentApi";
 export const projectQueryKeys = {
-    all: ["projects"],
-    searchEntries: (cwd, query, limit) => ["projects", "search-entries", cwd, query, limit],
+  all: ["projects"],
+  searchEntries: (environmentId, cwd, query, limit) => [
+    "projects",
+    "search-entries",
+    environmentId ?? null,
+    cwd,
+    query,
+    limit,
+  ],
 };
 const DEFAULT_SEARCH_ENTRIES_LIMIT = 80;
 const DEFAULT_SEARCH_ENTRIES_STALE_TIME = 15_000;
 const EMPTY_SEARCH_ENTRIES_RESULT = {
-    entries: [],
-    truncated: false,
+  entries: [],
+  truncated: false,
 };
 export function projectSearchEntriesQueryOptions(input) {
-    const limit = input.limit ?? DEFAULT_SEARCH_ENTRIES_LIMIT;
-    return queryOptions({
-        queryKey: projectQueryKeys.searchEntries(input.cwd, input.query, limit),
-        queryFn: async () => {
-            const api = ensureNativeApi();
-            if (!input.cwd) {
-                throw new Error("Workspace entry search is unavailable.");
-            }
-            return api.projects.searchEntries({
-                cwd: input.cwd,
-                query: input.query,
-                limit,
-            });
-        },
-        enabled: (input.enabled ?? true) && input.cwd !== null && input.query.length > 0,
-        staleTime: input.staleTime ?? DEFAULT_SEARCH_ENTRIES_STALE_TIME,
-        placeholderData: (previous) => previous ?? EMPTY_SEARCH_ENTRIES_RESULT,
-    });
+  const limit = input.limit ?? DEFAULT_SEARCH_ENTRIES_LIMIT;
+  return queryOptions({
+    queryKey: projectQueryKeys.searchEntries(input.environmentId, input.cwd, input.query, limit),
+    queryFn: async () => {
+      if (!input.cwd || !input.environmentId) {
+        throw new Error("Workspace entry search is unavailable.");
+      }
+      const api = ensureEnvironmentApi(input.environmentId);
+      return api.projects.searchEntries({
+        cwd: input.cwd,
+        query: input.query,
+        limit,
+      });
+    },
+    enabled:
+      (input.enabled ?? true) &&
+      input.environmentId !== null &&
+      input.cwd !== null &&
+      input.query.length > 0,
+    staleTime: input.staleTime ?? DEFAULT_SEARCH_ENTRIES_STALE_TIME,
+    placeholderData: (previous) => previous ?? EMPTY_SEARCH_ENTRIES_RESULT,
+  });
 }

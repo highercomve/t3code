@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getComposerProviderState } from "./composerProviderRegistry";
+import {
+  getComposerProviderState,
+  renderProviderTraitsMenuContent,
+  renderProviderTraitsPicker,
+} from "./composerProviderRegistry";
 const CODEX_MODELS = [
   {
     slug: "gpt-5.4",
@@ -381,5 +385,29 @@ describe("getComposerProviderState", () => {
       },
     });
     expect(state.modelOptionsForDispatch).not.toHaveProperty("fastMode");
+  });
+});
+describe("provider traits render guards", () => {
+  it("returns null for codex traits picker when no thread target is provided", () => {
+    const content = renderProviderTraitsPicker({
+      provider: "codex",
+      model: "gpt-5.4",
+      models: CODEX_MODELS,
+      modelOptions: undefined,
+      prompt: "",
+      onPromptChange: () => {},
+    });
+    expect(content).toBeNull();
+  });
+  it("returns null for claude traits menu content when no thread target is provided", () => {
+    const content = renderProviderTraitsMenuContent({
+      provider: "claudeAgent",
+      model: "claude-sonnet-4-6",
+      models: CLAUDE_MODELS,
+      modelOptions: undefined,
+      prompt: "",
+      onPromptChange: () => {},
+    });
+    expect(content).toBeNull();
   });
 });

@@ -21,6 +21,8 @@ const TEST_PROVIDERS = [
     status: "ready",
     auth: { status: "authenticated" },
     checkedAt: new Date().toISOString(),
+    slashCommands: [],
+    skills: [],
     models: [
       {
         slug: "gpt-5-codex",
@@ -56,6 +58,8 @@ const TEST_PROVIDERS = [
     status: "ready",
     auth: { status: "authenticated" },
     checkedAt: new Date().toISOString(),
+    slashCommands: [],
+    skills: [],
     models: [
       {
         slug: "claude-opus-4-6",
@@ -116,6 +120,8 @@ function buildCodexProvider(models) {
     auth: { status: "authenticated" },
     checkedAt: new Date().toISOString(),
     models,
+    slashCommands: [],
+    skills: [],
   };
 }
 async function mountPicker(props) {

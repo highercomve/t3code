@@ -45,12 +45,12 @@ export function deriveOrchestrationBatchEffects(events) {
       }
     }
   }
-  const clearPromotedDraftThreadIds = [];
+  const promoteDraftThreadIds = [];
   const clearDeletedThreadIds = [];
   const removeTerminalStateThreadIds = [];
   for (const [threadId, effect] of threadLifecycleEffects) {
     if (effect.clearPromotedDraft) {
-      clearPromotedDraftThreadIds.push(threadId);
+      promoteDraftThreadIds.push(threadId);
     }
     if (effect.clearDeletedThread) {
       clearDeletedThreadIds.push(threadId);
@@ -60,7 +60,7 @@ export function deriveOrchestrationBatchEffects(events) {
     }
   }
   return {
-    clearPromotedDraftThreadIds,
+    promoteDraftThreadIds,
     clearDeletedThreadIds,
     removeTerminalStateThreadIds,
     needsProviderInvalidation,

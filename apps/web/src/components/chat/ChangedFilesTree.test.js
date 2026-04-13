@@ -38,7 +38,7 @@ describe("ChangedFilesTree", () => {
     ({ files, visibleLabels, hiddenLabels }) => {
       const markup = renderToStaticMarkup(
         _jsx(ChangedFilesTree, {
-          turnId: TurnId.makeUnsafe("turn-1"),
+          turnId: TurnId.make("turn-1"),
           files: files,
           allDirectoriesExpanded: false,
           resolvedTheme: "light",
@@ -97,7 +97,7 @@ describe("ChangedFilesTree", () => {
     ({ files, visibleLabels }) => {
       const markup = renderToStaticMarkup(
         _jsx(ChangedFilesTree, {
-          turnId: TurnId.makeUnsafe("turn-1"),
+          turnId: TurnId.make("turn-1"),
           files: files,
           allDirectoriesExpanded: true,
           resolvedTheme: "light",

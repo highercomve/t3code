@@ -1,14 +1,13 @@
-import type { ThreadId } from "@t3tools/contracts";
 interface TerminalRetentionThread {
-  id: ThreadId;
+  key: string;
   deletedAt: string | null;
   archivedAt: string | null;
 }
 interface CollectActiveTerminalThreadIdsInput {
   snapshotThreads: readonly TerminalRetentionThread[];
-  draftThreadIds: Iterable<ThreadId>;
+  draftThreadKeys: Iterable<string>;
 }
 export declare function collectActiveTerminalThreadIds(
   input: CollectActiveTerminalThreadIdsInput,
-): Set<ThreadId>;
+): Set<string>;
 export {};

@@ -1,0 +1,76 @@
+- generic [ref=e1]:
+    - generic [ref=e3]:
+        - generic [ref=e6]:
+            - link "Go to threads" [ref=e9] [cursor=pointer]:
+                - /url: /
+                - img "T3" [ref=e10]
+                - generic [ref=e12]: Code
+                - generic [ref=e13]: Dev
+            - generic [ref=e15]:
+                - list [ref=e17]:
+                    - listitem [ref=e18]:
+                        - button "Search" [ref=e19] [cursor=pointer]:
+                            - img [ref=e20]
+                            - generic [ref=e23]: Search
+                - generic [ref=e24]:
+                    - generic [ref=e25]:
+                        - generic [ref=e26]: Projects
+                        - generic [ref=e27]:
+                            - button [ref=e28] [cursor=pointer]:
+                                - img [ref=e29]
+                            - button "Add project" [ref=e32] [cursor=pointer]:
+                                - img [ref=e33]
+                    - list
+                    - generic [ref=e34]: No projects yet
+            - separator [ref=e35]
+            - list [ref=e37]:
+                - listitem [ref=e38]:
+                    - button "Settings" [ref=e39] [cursor=pointer]:
+                        - img [ref=e40]
+                        - generic [ref=e43]: Settings
+            - button "Resize Sidebar" [ref=e44]
+        - main [ref=e45]:
+            - generic [ref=e46]:
+                - generic [ref=e48]:
+                    - heading "New thread" [level=2] [ref=e50]
+                    - generic [ref=e51]:
+                        - button "Toggle terminal drawer" [disabled]:
+                            - img
+                        - button "Toggle diff panel" [ref=e52] [cursor=pointer]:
+                            - img
+                - generic [ref=e54]:
+                    - paragraph [ref=e57]: Send a message to start the conversation.
+                    - generic [ref=e61]:
+                        - generic [ref=e63]:
+                            - textbox [active] [ref=e64]:
+                                - paragraph [ref=e65]
+                            - generic: Ask for follow-up changes or attach images
+                        - generic [ref=e66]:
+                            - generic [ref=e67]:
+                                - button "gpt-5.4" [ref=e68] [cursor=pointer]:
+                                    - generic [ref=e69]:
+                                        - img
+                                        - generic [ref=e70]: gpt-5.4
+                                        - img
+                                - separator [ref=e71]
+                                - button [ref=e72] [cursor=pointer]:
+                                    - generic [ref=e73]:
+                                        - img
+                                - separator [ref=e74]
+                                - button "Build" [ref=e75] [cursor=pointer]:
+                                    - img
+                                    - generic [ref=e76]: Build
+                                - separator [ref=e77]
+                                - combobox "Runtime mode" [ref=e78] [cursor=pointer]:
+                                    - img
+                                    - generic [ref=e79]: Full access
+                                    - generic [ref=e80]:
+                                        - img
+                                - textbox [ref=e81]: full-access
+                            - generic [ref=e82]:
+                                - button "Send message" [disabled]:
+                                    - img
+    - generic:
+        - region "Notifications"
+    - generic:
+        - region "Notifications"

@@ -1,10 +1,11 @@
 import {
   type ProviderKind,
   type ProviderModelOptions,
+  type ScopedThreadRef,
   type ServerProviderModel,
-  type ThreadId,
 } from "@t3tools/contracts";
 import type { ReactNode } from "react";
+import type { DraftId } from "../../composerDraftStore";
 export type ComposerProviderStateInput = {
   provider: ProviderKind;
   model: string;
@@ -25,7 +26,8 @@ export declare function getComposerProviderState(
 ): ComposerProviderState;
 export declare function renderProviderTraitsMenuContent(input: {
   provider: ProviderKind;
-  threadId: ThreadId;
+  threadRef?: ScopedThreadRef;
+  draftId?: DraftId;
   model: string;
   models: ReadonlyArray<ServerProviderModel>;
   modelOptions: ProviderModelOptions[ProviderKind] | undefined;
@@ -34,7 +36,8 @@ export declare function renderProviderTraitsMenuContent(input: {
 }): ReactNode;
 export declare function renderProviderTraitsPicker(input: {
   provider: ProviderKind;
-  threadId: ThreadId;
+  threadRef?: ScopedThreadRef;
+  draftId?: DraftId;
   model: string;
   models: ReadonlyArray<ServerProviderModel>;
   modelOptions: ProviderModelOptions[ProviderKind] | undefined;

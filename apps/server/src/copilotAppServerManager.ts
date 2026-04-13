@@ -332,10 +332,10 @@ export class CopilotAppServerManager extends EventEmitter {
     }
 
     // Generate a turnId locally since Copilot doesn't return one
-    const turnId = TurnId.makeUnsafe(randomUUID());
+    const turnId = TurnId.make(randomUUID());
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -390,7 +390,7 @@ export class CopilotAppServerManager extends EventEmitter {
       const turnStatus = stopReason === "end_turn" ? "completed" : "cancelled";
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -417,7 +417,7 @@ export class CopilotAppServerManager extends EventEmitter {
       const message = error instanceof Error ? error.message : "Prompt failed";
 
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -533,7 +533,7 @@ export class CopilotAppServerManager extends EventEmitter {
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -570,7 +570,7 @@ export class CopilotAppServerManager extends EventEmitter {
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "notification",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -752,7 +752,7 @@ export class CopilotAppServerManager extends EventEmitter {
     // For non-session/update notifications, emit as-is
     if (notification.method !== "session/update") {
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -779,7 +779,7 @@ export class CopilotAppServerManager extends EventEmitter {
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -798,7 +798,7 @@ export class CopilotAppServerManager extends EventEmitter {
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -817,7 +817,7 @@ export class CopilotAppServerManager extends EventEmitter {
         const text = asString(content?.text);
         if (text) {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -837,7 +837,7 @@ export class CopilotAppServerManager extends EventEmitter {
         const title = asString(update.title);
         const kind = asString(update.kind);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
         const canonicalItemKind =
           kind === "read" || kind === "search"
@@ -848,7 +848,7 @@ export class CopilotAppServerManager extends EventEmitter {
 
         if (status === "in_progress" || status === "pending") {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -869,7 +869,7 @@ export class CopilotAppServerManager extends EventEmitter {
           });
         } else {
           this.emitEvent({
-            id: EventId.makeUnsafe(randomUUID()),
+            id: EventId.make(randomUUID()),
             kind: "notification",
             provider: PROVIDER,
             threadId: context.session.threadId,
@@ -896,10 +896,10 @@ export class CopilotAppServerManager extends EventEmitter {
         const toolCallId = asString(update.toolCallId);
         const status = asString(update.status);
         const contentBlocks = asArray(update.content);
-        const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+        const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "notification",
           provider: PROVIDER,
           threadId: context.session.threadId,
@@ -920,7 +920,7 @@ export class CopilotAppServerManager extends EventEmitter {
 
       default: {
         this.emitEvent({
-          id: EventId.makeUnsafe(randomUUID()),
+          id: EventId.make(randomUUID()),
           kind: "notification",
           provider: PROVIDER,
           threadId: context.session.threadId,
@@ -983,11 +983,11 @@ export class CopilotAppServerManager extends EventEmitter {
       })
       .filter((o): o is AcpPermissionOption => o !== undefined);
 
-    const requestId = ApprovalRequestId.makeUnsafe(randomUUID());
+    const requestId = ApprovalRequestId.make(randomUUID());
     const requestKind = acpToolKindToRequestKind(toolKind);
     const approvalMethod = acpToolKindToApprovalMethod(toolKind);
     const turnId = context.session.activeTurnId;
-    const itemId = toolCallId ? ProviderItemId.makeUnsafe(toolCallId) : undefined;
+    const itemId = toolCallId ? ProviderItemId.make(toolCallId) : undefined;
 
     // In full-access mode, auto-approve all permission requests immediately
     if (context.session.runtimeMode === "full-access") {
@@ -1004,7 +1004,7 @@ export class CopilotAppServerManager extends EventEmitter {
         },
       });
       this.emitEvent({
-        id: EventId.makeUnsafe(randomUUID()),
+        id: EventId.make(randomUUID()),
         kind: "notification",
         provider: PROVIDER,
         threadId: context.session.threadId,
@@ -1055,7 +1055,7 @@ export class CopilotAppServerManager extends EventEmitter {
     }
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "request",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -1073,9 +1073,9 @@ export class CopilotAppServerManager extends EventEmitter {
     const params = asObject(request.params);
     const turnId = context.session.activeTurnId;
     const itemIdRaw = asString(params?.itemId);
-    const itemId = itemIdRaw ? ProviderItemId.makeUnsafe(itemIdRaw) : undefined;
+    const itemId = itemIdRaw ? ProviderItemId.make(itemIdRaw) : undefined;
 
-    const requestId = ApprovalRequestId.makeUnsafe(randomUUID());
+    const requestId = ApprovalRequestId.make(randomUUID());
     context.pendingApprovals.set(requestId, {
       requestId,
       jsonRpcId: request.id,
@@ -1088,7 +1088,7 @@ export class CopilotAppServerManager extends EventEmitter {
     });
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "request",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -1108,7 +1108,7 @@ export class CopilotAppServerManager extends EventEmitter {
     requestKind: ProviderRequestKind,
   ): void {
     const route = this.readRouteFields(request.params);
-    const requestId = ApprovalRequestId.makeUnsafe(randomUUID());
+    const requestId = ApprovalRequestId.make(randomUUID());
 
     const pendingRequest: PendingApprovalRequest = {
       requestId,
@@ -1128,7 +1128,7 @@ export class CopilotAppServerManager extends EventEmitter {
     context.pendingApprovals.set(requestId, pendingRequest);
 
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "request",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -1165,10 +1165,10 @@ export class CopilotAppServerManager extends EventEmitter {
     const itemIdRaw = asString(obj?.itemId) ?? asString(asObject(obj?.item)?.id);
 
     if (turnIdRaw) {
-      route.turnId = TurnId.makeUnsafe(turnIdRaw);
+      route.turnId = TurnId.make(turnIdRaw);
     }
     if (itemIdRaw) {
-      route.itemId = ProviderItemId.makeUnsafe(itemIdRaw);
+      route.itemId = ProviderItemId.make(itemIdRaw);
     }
     return route;
   }
@@ -1187,7 +1187,7 @@ export class CopilotAppServerManager extends EventEmitter {
     message: string,
   ): void {
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "session",
       provider: PROVIDER,
       threadId: context.session.threadId,
@@ -1199,7 +1199,7 @@ export class CopilotAppServerManager extends EventEmitter {
 
   private emitErrorEvent(context: CopilotSessionContext, method: string, message: string): void {
     this.emitEvent({
-      id: EventId.makeUnsafe(randomUUID()),
+      id: EventId.make(randomUUID()),
       kind: "error",
       provider: PROVIDER,
       threadId: context.session.threadId,

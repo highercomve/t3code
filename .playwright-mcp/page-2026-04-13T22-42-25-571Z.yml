@@ -1,0 +1,215 @@
+- generic [ref=e1]:
+    - generic [ref=e3]:
+        - generic [ref=e6]:
+            - link "Go to threads" [ref=e9] [cursor=pointer]:
+                - /url: /
+                - img "T3" [ref=e10]
+                - generic [ref=e12]: Code
+                - generic [ref=e13]: Dev
+            - generic [ref=e276]:
+                - list [ref=e278]:
+                    - listitem [ref=e279]:
+                        - button "Search Ctrl+K" [ref=e280] [cursor=pointer]:
+                            - img [ref=e281]
+                            - generic [ref=e284]: Search
+                            - generic: Ctrl+K
+                - generic [ref=e285]:
+                    - generic [ref=e286]:
+                        - generic [ref=e287]: Projects
+                        - generic [ref=e288]:
+                            - button [ref=e289] [cursor=pointer]:
+                                - img [ref=e290]
+                            - button "Add project" [ref=e293] [cursor=pointer]:
+                                - img [ref=e294]
+                    - list [ref=e295]:
+                        - listitem [ref=e296]:
+                            - generic [ref=e297]:
+                                - button "t3code" [ref=e298] [cursor=pointer]:
+                                    - img [ref=e299]
+                                    - generic [ref=e301]: t3code
+                                - generic:
+                                    - button "Create new thread in t3code":
+                                        - img
+                            - list [ref=e302]:
+                                - listitem [ref=e303]:
+                                    - button "New thread Archive New thread 3m ago" [ref=e304] [cursor=pointer]:
+                                        - generic [ref=e306]: New thread
+                                        - generic [ref=e308]:
+                                            - generic:
+                                                - button "Archive New thread":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 3m ago
+                                - listitem [ref=e309]:
+                                    - button "Invalid input provided Archive Invalid input provided 7d ago" [ref=e310] [cursor=pointer]:
+                                        - generic [ref=e312]: Invalid input provided
+                                        - generic [ref=e314]:
+                                            - generic:
+                                                - button "Archive Invalid input provided":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e315]:
+                                    - button "Agent self-test Archive Agent self-test 7d ago" [ref=e316] [cursor=pointer]:
+                                        - generic [ref=e318]: Agent self-test
+                                        - generic [ref=e320]:
+                                            - generic:
+                                                - button "Archive Agent self-test":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e321]:
+                                    - button "Quick Test Archive Quick Test 7d ago" [ref=e322] [cursor=pointer]:
+                                        - generic [ref=e324]: Quick Test
+                                        - generic [ref=e326]:
+                                            - generic:
+                                                - button "Archive Quick Test":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e327]:
+                                    - button "Node.js path provided Archive Node.js path provided 7d ago" [ref=e328] [cursor=pointer]:
+                                        - generic [ref=e330]: Node.js path provided
+                                        - generic [ref=e332]:
+                                            - generic:
+                                                - button "Archive Node.js path provided":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e333]:
+                                    - button "User greeting message Archive User greeting message 7d ago" [ref=e334] [cursor=pointer]:
+                                        - generic [ref=e336]: User greeting message
+                                        - generic [ref=e338]:
+                                            - generic:
+                                                - button "Archive User greeting message":
+                                                    - img
+                                            - generic:
+                                                - generic:
+                                                    - generic: 7d ago
+                                - listitem [ref=e339]:
+                                    - button "Show more" [ref=e340] [cursor=pointer]:
+                                        - generic [ref=e342]: Show more
+                        - listitem [ref=e343]:
+                            - generic [ref=e344]:
+                                - button "fleet" [ref=e345] [cursor=pointer]:
+                                    - img [ref=e346]
+                                    - generic [ref=e348]: fleet
+                                - generic:
+                                    - button "Create new thread in fleet":
+                                        - img
+                            - list
+            - separator [ref=e349]
+            - list [ref=e351]:
+                - listitem [ref=e352]:
+                    - button "Settings" [ref=e353] [cursor=pointer]:
+                        - img [ref=e354]
+                        - generic [ref=e357]: Settings
+            - button "Resize Sidebar" [ref=e44]
+        - main [ref=e458]:
+            - generic [ref=e459]:
+                - generic [ref=e461]:
+                    - generic [ref=e462]:
+                        - heading "New thread" [level=2] [ref=e463]
+                        - generic [ref=e465]: fleet
+                    - generic [ref=e466]:
+                        - button "Add action" [ref=e467] [cursor=pointer]:
+                            - img
+                            - generic [ref=e468]: Add action
+                        - group "Subscription actions" [ref=e469]:
+                            - button "Open" [ref=e470] [cursor=pointer]:
+                                - img
+                                - generic [ref=e471]: Open
+                            - separator
+                            - button "Copy options" [ref=e472] [cursor=pointer]:
+                                - img
+                        - group "Git actions" [ref=e473]:
+                            - button "Commit, push & PR" [ref=e474] [cursor=pointer]:
+                                - img
+                                - generic [ref=e475]: Commit, push & PR
+                            - separator
+                            - button "Git action options" [ref=e476] [cursor=pointer]:
+                                - img
+                        - button "Toggle terminal drawer" [ref=e477] [cursor=pointer]:
+                            - img
+                        - button "Toggle diff panel" [ref=e478] [cursor=pointer]:
+                            - img
+                - generic [ref=e480]:
+                    - paragraph [ref=e483]: Send a message to start the conversation.
+                    - generic [ref=e487]:
+                        - generic [ref=e489]:
+                            - textbox [ref=e490]:
+                                - paragraph [ref=e491]
+                            - generic: Ask for follow-up changes or attach images
+                        - generic [ref=e492]:
+                            - generic [ref=e493]:
+                                - button "gemini-3.1-pro-preview" [expanded] [ref=e494] [cursor=pointer]:
+                                    - generic [ref=e495]:
+                                        - img
+                                        - generic [ref=e496]: gemini-3.1-pro-preview
+                                        - img
+                                - menu "gemini-3.1-pro-preview" [active] [ref=e522]:
+                                    - generic [ref=e523]:
+                                        - menuitem "Codex" [ref=e524]:
+                                            - img
+                                            - text: Codex
+                                            - img
+                                        - menuitem "Gemini" [ref=e525]:
+                                            - img
+                                            - text: Gemini
+                                            - img
+                                        - menuitem "Claude" [ref=e526]:
+                                            - img
+                                            - text: Claude
+                                            - img
+                                        - menuitem "OpenCode" [ref=e527]:
+                                            - img
+                                            - text: OpenCode
+                                            - img
+                                        - menuitem "Copilot" [ref=e528]:
+                                            - img
+                                            - text: Copilot
+                                            - img
+                                        - separator [ref=e529]
+                                        - menuitem "Cursor Coming soon" [disabled]:
+                                            - img
+                                            - generic: Cursor
+                                            - generic: Coming soon
+                                - separator [ref=e497]
+                                - button [ref=e498] [cursor=pointer]:
+                                    - generic [ref=e499]:
+                                        - img
+                                - separator [ref=e500]
+                                - button "Build" [ref=e501] [cursor=pointer]:
+                                    - img
+                                    - generic [ref=e502]: Build
+                                - separator [ref=e503]
+                                - combobox "Runtime mode" [ref=e504] [cursor=pointer]:
+                                    - img
+                                    - generic [ref=e505]: Full access
+                                    - generic [ref=e506]:
+                                        - img
+                                - textbox [ref=e507]: full-access
+                            - generic [ref=e508]:
+                                - button "Send message" [disabled]:
+                                    - img
+                    - generic [ref=e509]:
+                        - generic [ref=e510]:
+                            - combobox "Workspace" [ref=e511] [cursor=pointer]:
+                                - img
+                                - generic [ref=e512]: Current checkout
+                                - generic [ref=e513]:
+                                    - img
+                            - textbox [ref=e514]: local
+                        - combobox [ref=e515] [cursor=pointer]:
+                            - generic [ref=e516]: feature/environment_support
+                            - img
+                        - textbox [ref=e517]: feature/environment_support
+    - generic:
+        - region "Notifications"
+    - generic:
+        - region "Notifications"

@@ -22,3 +22,17 @@ export function buildVisibleToastLayout(visibleToasts) {
 function normalizeToastHeight(height) {
   return typeof height === "number" && Number.isFinite(height) && height > 0 ? height : 0;
 }
+export function shouldRenderThreadScopedToast(data, activeThreadRef) {
+  if (data?.threadRef) {
+    return (
+      activeThreadRef !== null &&
+      data.threadRef.environmentId === activeThreadRef.environmentId &&
+      data.threadRef.threadId === activeThreadRef.threadId
+    );
+  }
+  const toastThreadId = data?.threadId;
+  if (!toastThreadId) {
+    return true;
+  }
+  return activeThreadRef?.threadId === toastThreadId;
+}

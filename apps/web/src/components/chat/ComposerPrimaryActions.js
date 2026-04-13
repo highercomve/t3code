@@ -4,14 +4,17 @@ import { ChevronDownIcon, ChevronLeftIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
-const formatPendingPrimaryActionLabel = (input) => {
+export const formatPendingPrimaryActionLabel = (input) => {
   if (input.isResponding) {
     return "Submitting...";
   }
   if (input.compact) {
     return input.isLastQuestion ? "Submit" : "Next";
   }
-  return input.isLastQuestion ? "Submit answers" : "Next question";
+  if (!input.isLastQuestion) {
+    return "Next question";
+  }
+  return input.questionIndex > 0 ? "Submit answers" : "Submit answer";
 };
 export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   compact,
@@ -62,6 +65,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
             compact,
             isLastQuestion: pendingAction.isLastQuestion,
             isResponding: pendingAction.isResponding,
+            questionIndex: pendingAction.questionIndex,
           }),
         }),
       ],
@@ -101,7 +105,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
         _jsx(Button, {
           type: "submit",
           size: "sm",
-          className: cn("h-9 rounded-l-full rounded-r-none sm:h-8", compact ? "px-3" : "px-4"),
+          className: "h-9 rounded-l-full rounded-r-none px-4 sm:h-8",
           disabled: isSendBusy || isConnecting,
           children: isConnecting || isSendBusy ? "Sending..." : "Implement",
         }),

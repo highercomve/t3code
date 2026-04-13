@@ -47,6 +47,11 @@ export interface WorkLogEntry {
   toolTitle?: string;
   itemType?: ToolLifecycleItemType | "reasoning";
   requestKind?: PendingApproval["requestKind"];
+  input?: Record<string, unknown>;
+  output?: string;
+  status?: "pending" | "running" | "completed" | "error";
+  startedAt?: string;
+  completedAt?: string;
 }
 
 interface DerivedWorkLogEntry extends WorkLogEntry {
@@ -148,6 +153,14 @@ export function deriveActiveWorkStartedAt(
   session: SessionActivityState | null,
   sendStartedAt: string | null,
 ): string | null {
+  const runningTurnId =
+    session?.orchestrationStatus === "running" ? (session.activeTurnId ?? null) : null;
+  if (runningTurnId !== null) {
+    if (latestTurn?.turnId === runningTurnId) {
+      return latestTurn.startedAt ?? sendStartedAt;
+    }
+    return sendStartedAt;
+  }
   if (!isLatestTurnSettled(latestTurn, session)) {
     return latestTurn?.startedAt ?? sendStartedAt;
   }
@@ -196,7 +209,7 @@ export function derivePendingApprovals(
         : null;
     const requestId =
       payload && typeof payload.requestId === "string"
-        ? ApprovalRequestId.makeUnsafe(payload.requestId)
+        ? ApprovalRequestId.make(payload.requestId)
         : null;
     const requestKind =
       payload &&
@@ -302,7 +315,7 @@ export function derivePendingUserInputs(
         : null;
     const requestId =
       payload && typeof payload.requestId === "string"
-        ? ApprovalRequestId.makeUnsafe(payload.requestId)
+        ? ApprovalRequestId.make(payload.requestId)
         : null;
     const detail = payload && typeof payload.detail === "string" ? payload.detail : undefined;
 

@@ -1,5 +1,6 @@
 import { CommandId, MessageId, ProjectId, ThreadId } from "@t3tools/contracts";
 import { type CxOptions } from "class-variance-authority";
+import { DraftId } from "../composerDraftStore";
 export declare function cn(...inputs: CxOptions): string;
 export declare function isMacPlatform(platform: string): boolean;
 export declare function isWindowsPlatform(platform: string): boolean;
@@ -8,10 +9,5 @@ export declare function randomUUID(): string;
 export declare const newCommandId: () => CommandId;
 export declare const newProjectId: () => ProjectId;
 export declare const newThreadId: () => ThreadId;
+export declare const newDraftId: () => DraftId;
 export declare const newMessageId: () => MessageId;
-export declare const resolveServerUrl: (options?: {
-  url?: string | undefined;
-  protocol?: "http" | "https" | "ws" | "wss" | undefined;
-  pathname?: string | undefined;
-  searchParams?: Record<string, string> | undefined;
-}) => string;

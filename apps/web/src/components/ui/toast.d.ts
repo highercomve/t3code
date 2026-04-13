@@ -1,6 +1,7 @@
 import { Toast } from "@base-ui/react/toast";
-import { ThreadId } from "@t3tools/contracts";
+import { type ScopedThreadRef, type ThreadId } from "@t3tools/contracts";
 export type ThreadToastData = {
+  threadRef?: ScopedThreadRef | null;
   threadId?: ThreadId | null;
   tooltipStyle?: boolean;
   dismissAfterVisibleMs?: number;

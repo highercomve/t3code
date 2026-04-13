@@ -1,4 +1,4 @@
-import { type TerminalEvent, type ThreadId } from "@t3tools/contracts";
+import { type ScopedThreadRef, type TerminalEvent, type ThreadId } from "@t3tools/contracts";
 import { type TerminalContextSelection } from "~/lib/terminalContext";
 import { type ThreadTerminalGroup } from "../types";
 export declare function selectTerminalEventEntriesAfterSnapshot(
@@ -49,7 +49,38 @@ export declare function shouldHandleTerminalSelectionMouseUp(
   selectionGestureActive: boolean,
   button: number,
 ): boolean;
+interface TerminalViewportProps {
+  threadRef: ScopedThreadRef;
+  threadId: ThreadId;
+  terminalId: string;
+  terminalLabel: string;
+  cwd: string;
+  worktreePath?: string | null;
+  runtimeEnv?: Record<string, string>;
+  onSessionExited: () => void;
+  onAddTerminalContext: (selection: TerminalContextSelection) => void;
+  focusRequestId: number;
+  autoFocus: boolean;
+  resizeEpoch: number;
+  drawerHeight: number;
+}
+export declare function TerminalViewport({
+  threadRef,
+  threadId,
+  terminalId,
+  terminalLabel,
+  cwd,
+  worktreePath,
+  runtimeEnv,
+  onSessionExited,
+  onAddTerminalContext,
+  focusRequestId,
+  autoFocus,
+  resizeEpoch,
+  drawerHeight,
+}: TerminalViewportProps): import("react/jsx-runtime").JSX.Element;
 interface ThreadTerminalDrawerProps {
+  threadRef: ScopedThreadRef;
   threadId: ThreadId;
   cwd: string;
   worktreePath?: string | null;
@@ -72,6 +103,7 @@ interface ThreadTerminalDrawerProps {
   onAddTerminalContext: (selection: TerminalContextSelection) => void;
 }
 export default function ThreadTerminalDrawer({
+  threadRef,
   threadId,
   cwd,
   worktreePath,

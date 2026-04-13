@@ -1,10 +1,13 @@
-import type { ThreadId } from "@t3tools/contracts";
+import { type ScopedThreadRef } from "@t3tools/contracts";
+import { type DraftId } from "~/composerDraftStore";
 interface GitActionsControlProps {
   gitCwd: string | null;
-  activeThreadId: ThreadId | null;
+  activeThreadRef: ScopedThreadRef | null;
+  draftId?: DraftId;
 }
 export default function GitActionsControl({
   gitCwd,
-  activeThreadId,
+  activeThreadRef,
+  draftId,
 }: GitActionsControlProps): import("react/jsx-runtime").JSX.Element | null;
 export {};

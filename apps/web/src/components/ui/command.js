@@ -23,7 +23,7 @@ function CommandDialogTrigger(props) {
 function CommandDialogBackdrop({ className, ...props }) {
   return _jsx(CommandDialogPrimitive.Backdrop, {
     className: cn(
-      "fixed inset-0 z-50 bg-black/32 backdrop-blur-sm transition-all duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0",
+      "fixed inset-0 z-50 bg-background/60 transition-all duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0",
       className,
     ),
     "data-slot": "command-dialog-backdrop",
@@ -67,9 +67,9 @@ function Command({ autoHighlight = "always", keepHighlight = true, ...props }) {
     ...props,
   });
 }
-function CommandInput({ className, placeholder = undefined, ...props }) {
+function CommandInput({ className, wrapperClassName, placeholder = undefined, ...props }) {
   return _jsx("div", {
-    className: "px-2.5 py-1.5",
+    className: cn("px-2.5 py-1.5", wrapperClassName),
     children: _jsx(AutocompleteInput, {
       autoFocus: true,
       className: cn(

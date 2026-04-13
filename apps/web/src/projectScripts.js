@@ -15,7 +15,7 @@ function normalizeScriptId(value) {
   return cleaned.slice(0, MAX_SCRIPT_ID_LENGTH).replace(/-+$/g, "") || "script";
 }
 export const commandForProjectScript = (scriptId) =>
-  SCRIPT_RUN_COMMAND_PATTERN.makeUnsafe(`script.${scriptId}.run`);
+  SCRIPT_RUN_COMMAND_PATTERN.make(`script.${scriptId}.run`);
 export function projectScriptIdFromCommand(command) {
   const trimmed = command.trim();
   if (!Schema.is(SCRIPT_RUN_COMMAND_PATTERN)(trimmed)) {

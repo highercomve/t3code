@@ -1,3 +1,4 @@
+import { type ServerProviderSkill } from "@t3tools/contracts";
 import { type ClipboardEventHandler } from "react";
 import { type TerminalContextDraft } from "~/lib/terminalContext";
 export interface ComposerPromptEditorHandle {
@@ -15,6 +16,7 @@ interface ComposerPromptEditorProps {
   value: string;
   cursor: number;
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
+  skills: ReadonlyArray<ServerProviderSkill>;
   disabled: boolean;
   placeholder: string;
   className?: string;

@@ -1,20 +1,20 @@
 export function collectActiveTerminalThreadIds(input) {
   const activeThreadIds = new Set();
-  const snapshotThreadById = new Map(input.snapshotThreads.map((thread) => [thread.id, thread]));
+  const snapshotThreadById = new Map(input.snapshotThreads.map((thread) => [thread.key, thread]));
   for (const thread of input.snapshotThreads) {
     if (thread.deletedAt !== null) continue;
     if (thread.archivedAt !== null) continue;
-    activeThreadIds.add(thread.id);
+    activeThreadIds.add(thread.key);
   }
-  for (const draftThreadId of input.draftThreadIds) {
-    const snapshotThread = snapshotThreadById.get(draftThreadId);
+  for (const draftThreadKey of input.draftThreadKeys) {
+    const snapshotThread = snapshotThreadById.get(draftThreadKey);
     if (
       snapshotThread &&
       (snapshotThread.deletedAt !== null || snapshotThread.archivedAt !== null)
     ) {
       continue;
     }
-    activeThreadIds.add(draftThreadId);
+    activeThreadIds.add(draftThreadKey);
   }
   return activeThreadIds;
 }

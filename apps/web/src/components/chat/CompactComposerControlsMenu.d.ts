@@ -8,5 +8,5 @@ export declare const CompactComposerControlsMenu: import("react").NamedExoticCom
   traitsMenuContent?: ReactNode;
   onToggleInteractionMode: () => void;
   onTogglePlanSidebar: () => void;
-  onToggleRuntimeMode: () => void;
+  onRuntimeModeChange: (mode: RuntimeMode) => void;
 }>;

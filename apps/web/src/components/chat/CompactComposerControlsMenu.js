@@ -53,10 +53,11 @@ export const CompactComposerControlsMenu = memo(function CompactComposerControls
             value: props.runtimeMode,
             onValueChange: (value) => {
               if (!value || value === props.runtimeMode) return;
-              props.onToggleRuntimeMode();
+              props.onRuntimeModeChange(value);
             },
             children: [
               _jsx(MenuRadioItem, { value: "approval-required", children: "Supervised" }),
+              _jsx(MenuRadioItem, { value: "auto-accept-edits", children: "Auto-accept edits" }),
               _jsx(MenuRadioItem, { value: "full-access", children: "Full access" }),
             ],
           }),

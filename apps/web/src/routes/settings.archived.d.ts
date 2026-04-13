@@ -9,7 +9,17 @@ export declare const Route: import("@tanstack/router-core").Route<
         queryClient: import("@tanstack/react-query").QueryClient;
       },
       import("@tanstack/router-core").AnyContext,
-      import("@tanstack/router-core").AnyContext,
+      () => Promise<{
+        authGateState:
+          | {
+              status: "authenticated";
+            }
+          | {
+              status: "requires-auth";
+              auth: import("@t3tools/contracts").AuthSessionState["auth"];
+              errorMessage?: string;
+            };
+      }>,
       {},
       undefined,
       unknown,
@@ -27,6 +37,7 @@ export declare const Route: import("@tanstack/router-core").Route<
     import("@tanstack/router-core").AnyContext,
     import("@tanstack/router-core").AnyContext,
     ({
+      context,
       location,
     }: import("@tanstack/router-core").BeforeLoadContextOptions<
       import("@tanstack/react-router").Register,
@@ -37,7 +48,17 @@ export declare const Route: import("@tanstack/router-core").Route<
           queryClient: import("@tanstack/react-query").QueryClient;
         },
         import("@tanstack/router-core").AnyContext,
-        import("@tanstack/router-core").AnyContext,
+        () => Promise<{
+          authGateState:
+            | {
+                status: "authenticated";
+              }
+            | {
+                status: "requires-auth";
+                auth: import("@t3tools/contracts").AuthSessionState["auth"];
+                errorMessage?: string;
+              };
+        }>,
         {},
         undefined,
         unknown,
@@ -53,7 +74,7 @@ export declare const Route: import("@tanstack/router-core").Route<
       "/settings",
       unknown,
       undefined
-    >) => void,
+    >) => Promise<void>,
     {},
     undefined,
     unknown,

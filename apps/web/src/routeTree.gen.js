@@ -6,14 +6,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 import { Route as rootRouteImport } from "./routes/__root";
 import { Route as SettingsRouteImport } from "./routes/settings";
+import { Route as PairRouteImport } from "./routes/pair";
 import { Route as ChatRouteImport } from "./routes/_chat";
 import { Route as ChatIndexRouteImport } from "./routes/_chat.index";
 import { Route as SettingsGeneralRouteImport } from "./routes/settings.general";
+import { Route as SettingsConnectionsRouteImport } from "./routes/settings.connections";
 import { Route as SettingsArchivedRouteImport } from "./routes/settings.archived";
-import { Route as ChatThreadIdRouteImport } from "./routes/_chat.$threadId";
+import { Route as ChatDraftDraftIdRouteImport } from "./routes/_chat.draft.$draftId";
+import { Route as ChatEnvironmentIdThreadIdRouteImport } from "./routes/_chat.$environmentId.$threadId";
 const SettingsRoute = SettingsRouteImport.update({
   id: "/settings",
   path: "/settings",
+  getParentRoute: () => rootRouteImport,
+});
+const PairRoute = PairRouteImport.update({
+  id: "/pair",
+  path: "/pair",
   getParentRoute: () => rootRouteImport,
 });
 const ChatRoute = ChatRouteImport.update({
@@ -30,28 +38,41 @@ const SettingsGeneralRoute = SettingsGeneralRouteImport.update({
   path: "/general",
   getParentRoute: () => SettingsRoute,
 });
+const SettingsConnectionsRoute = SettingsConnectionsRouteImport.update({
+  id: "/connections",
+  path: "/connections",
+  getParentRoute: () => SettingsRoute,
+});
 const SettingsArchivedRoute = SettingsArchivedRouteImport.update({
   id: "/archived",
   path: "/archived",
   getParentRoute: () => SettingsRoute,
 });
-const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
-  id: "/$threadId",
-  path: "/$threadId",
+const ChatDraftDraftIdRoute = ChatDraftDraftIdRouteImport.update({
+  id: "/draft/$draftId",
+  path: "/draft/$draftId",
+  getParentRoute: () => ChatRoute,
+});
+const ChatEnvironmentIdThreadIdRoute = ChatEnvironmentIdThreadIdRouteImport.update({
+  id: "/$environmentId/$threadId",
+  path: "/$environmentId/$threadId",
   getParentRoute: () => ChatRoute,
 });
 const ChatRouteChildren = {
-  ChatThreadIdRoute: ChatThreadIdRoute,
   ChatIndexRoute: ChatIndexRoute,
+  ChatEnvironmentIdThreadIdRoute: ChatEnvironmentIdThreadIdRoute,
+  ChatDraftDraftIdRoute: ChatDraftDraftIdRoute,
 };
 const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren);
 const SettingsRouteChildren = {
   SettingsArchivedRoute: SettingsArchivedRoute,
+  SettingsConnectionsRoute: SettingsConnectionsRoute,
   SettingsGeneralRoute: SettingsGeneralRoute,
 };
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(SettingsRouteChildren);
 const rootRouteChildren = {
   ChatRoute: ChatRouteWithChildren,
+  PairRoute: PairRoute,
   SettingsRoute: SettingsRouteWithChildren,
 };
 export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren)._addFileTypes();

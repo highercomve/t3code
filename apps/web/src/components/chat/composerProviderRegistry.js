@@ -11,6 +11,9 @@ import {
   normalizeOpencodeModelOptionsWithCapabilities,
 } from "../../providerModels";
 import { TraitsMenuContent, TraitsPicker } from "./TraitsPicker";
+function hasComposerTraitsTarget(input) {
+  return input.threadRef !== undefined || input.draftId !== undefined;
+}
 function getProviderStateFromCapabilities(input) {
   const { provider, model, models, prompt, modelOptions } = input;
   const caps = getProviderModelCapabilities(models, model, provider);
@@ -57,26 +60,48 @@ function getProviderStateFromCapabilities(input) {
 function makeCapabilitiesRegistryEntry(provider) {
   return {
     getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: ({ threadId, model, models, modelOptions, prompt, onPromptChange }) =>
-      _jsx(TraitsMenuContent, {
-        provider: provider,
-        models: models,
-        threadId: threadId,
-        model: model,
-        modelOptions: modelOptions,
-        prompt: prompt,
-        onPromptChange: onPromptChange,
-      }),
-    renderTraitsPicker: ({ threadId, model, models, modelOptions, prompt, onPromptChange }) =>
-      _jsx(TraitsPicker, {
-        provider: provider,
-        models: models,
-        threadId: threadId,
-        model: model,
-        modelOptions: modelOptions,
-        prompt: prompt,
-        onPromptChange: onPromptChange,
-      }),
+    renderTraitsMenuContent: ({
+      threadRef,
+      draftId,
+      model,
+      models,
+      modelOptions,
+      prompt,
+      onPromptChange,
+    }) =>
+      !hasComposerTraitsTarget({ threadRef, draftId })
+        ? null
+        : _jsx(TraitsMenuContent, {
+            provider: provider,
+            models: models,
+            ...(threadRef ? { threadRef } : {}),
+            ...(draftId ? { draftId } : {}),
+            model: model,
+            modelOptions: modelOptions,
+            prompt: prompt,
+            onPromptChange: onPromptChange,
+          }),
+    renderTraitsPicker: ({
+      threadRef,
+      draftId,
+      model,
+      models,
+      modelOptions,
+      prompt,
+      onPromptChange,
+    }) =>
+      !hasComposerTraitsTarget({ threadRef, draftId })
+        ? null
+        : _jsx(TraitsPicker, {
+            provider: provider,
+            models: models,
+            ...(threadRef ? { threadRef } : {}),
+            ...(draftId ? { draftId } : {}),
+            model: model,
+            modelOptions: modelOptions,
+            prompt: prompt,
+            onPromptChange: onPromptChange,
+          }),
   };
 }
 const composerProviderRegistry = {
@@ -91,7 +116,8 @@ export function getComposerProviderState(input) {
 }
 export function renderProviderTraitsMenuContent(input) {
   return composerProviderRegistry[input.provider].renderTraitsMenuContent({
-    threadId: input.threadId,
+    ...(input.threadRef ? { threadRef: input.threadRef } : {}),
+    ...(input.draftId ? { draftId: input.draftId } : {}),
     model: input.model,
     models: input.models,
     modelOptions: input.modelOptions,
@@ -101,7 +127,8 @@ export function renderProviderTraitsMenuContent(input) {
 }
 export function renderProviderTraitsPicker(input) {
   return composerProviderRegistry[input.provider].renderTraitsPicker({
-    threadId: input.threadId,
+    ...(input.threadRef ? { threadRef: input.threadRef } : {}),
+    ...(input.draftId ? { draftId: input.draftId } : {}),
     model: input.model,
     models: input.models,
     modelOptions: input.modelOptions,

@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { ArchiveIcon, ArrowLeftIcon, Settings2Icon } from "lucide-react";
+import { ArchiveIcon, ArrowLeftIcon, Link2Icon, Settings2Icon } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   SidebarContent,
@@ -12,6 +12,7 @@ import {
 } from "../ui/sidebar";
 export const SETTINGS_NAV_ITEMS = [
   { label: "General", to: "/settings/general", icon: Settings2Icon },
+  { label: "Connections", to: "/settings/connections", icon: Link2Icon },
   { label: "Archive", to: "/settings/archived", icon: ArchiveIcon },
 ];
 export function SettingsSidebarNav({ pathname }) {
@@ -33,14 +34,14 @@ export function SettingsSidebarNav({ pathname }) {
                     size: "sm",
                     isActive: isActive,
                     className: isActive
-                      ? "gap-2 px-2 py-2 text-left text-xs text-foreground"
-                      : "gap-2 px-2 py-2 text-left text-xs text-muted-foreground hover:text-foreground/80",
+                      ? "gap-2.5 px-2.5 py-2 text-left text-[13px] font-medium text-foreground"
+                      : "gap-2.5 px-2.5 py-2 text-left text-[13px] text-muted-foreground/70 hover:text-foreground/80",
                     onClick: () => void navigate({ to: item.to, replace: true }),
                     children: [
                       _jsx(Icon, {
                         className: isActive
                           ? "size-4 shrink-0 text-foreground"
-                          : "size-4 shrink-0 text-muted-foreground",
+                          : "size-4 shrink-0 text-muted-foreground/60",
                       }),
                       _jsx("span", { className: "truncate", children: item.label }),
                     ],
