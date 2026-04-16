@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   extractPathFromShellOutput,
+  listLoginShellCandidates,
+  mergePathEntries,
   readEnvironmentFromLoginShell,
+  readPathFromLaunchctl,
   readPathFromLoginShell,
 } from "./shell";
 
@@ -100,6 +103,38 @@ describe("readPathFromLoginShell", () => {
   });
 });
 
+describe("readPathFromLaunchctl", () => {
+  it("returns a trimmed PATH value from launchctl", () => {
+    const execFile = vi.fn<
+      (
+        file: string,
+        args: ReadonlyArray<string>,
+        options: { encoding: "utf8"; timeout: number },
+      ) => string
+    >(() => "  /opt/homebrew/bin:/usr/bin  \n");
+
+    expect(readPathFromLaunchctl(execFile)).toBe("/opt/homebrew/bin:/usr/bin");
+    expect(execFile).toHaveBeenCalledWith("/bin/launchctl", ["getenv", "PATH"], {
+      encoding: "utf8",
+      timeout: 2000,
+    });
+  });
+
+  it("returns undefined when launchctl is unavailable", () => {
+    const execFile = vi.fn<
+      (
+        file: string,
+        args: ReadonlyArray<string>,
+        options: { encoding: "utf8"; timeout: number },
+      ) => string
+    >(() => {
+      throw new Error("spawn /bin/launchctl ENOENT");
+    });
+
+    expect(readPathFromLaunchctl(execFile)).toBeUndefined();
+  });
+});
+
 describe("readEnvironmentFromLoginShell", () => {
   it("extracts multiple environment variables from a login shell command", () => {
     const execFile = vi.fn<
@@ -164,5 +199,32 @@ describe("readEnvironmentFromLoginShell", () => {
     expect(readEnvironmentFromLoginShell("/bin/zsh", ["CUSTOM_VAR"], execFile)).toEqual({
       CUSTOM_VAR: "  padded value  ",
     });
+  });
+});
+
+describe("listLoginShellCandidates", () => {
+  it("returns env shell, user shell, then the platform fallback without duplicates", () => {
+    expect(listLoginShellCandidates("darwin", " /opt/homebrew/bin/nu ", "/bin/zsh")).toEqual([
+      "/opt/homebrew/bin/nu",
+      "/bin/zsh",
+    ]);
+  });
+
+  it("falls back to the platform default when no shells are available", () => {
+    expect(listLoginShellCandidates("linux", undefined, "")).toEqual(["/bin/bash"]);
+  });
+});
+
+describe("mergePathEntries", () => {
+  it("prefers login-shell PATH entries and keeps inherited extras", () => {
+    expect(
+      mergePathEntries("/opt/homebrew/bin:/usr/bin", "/Users/test/.local/bin:/usr/bin", "darwin"),
+    ).toBe("/opt/homebrew/bin:/usr/bin:/Users/test/.local/bin");
+  });
+
+  it("uses the platform-specific delimiter", () => {
+    expect(mergePathEntries("C:\\Tools;C:\\Windows", "C:\\Windows;C:\\Git", "win32")).toBe(
+      "C:\\Tools;C:\\Windows;C:\\Git",
+    );
   });
 });

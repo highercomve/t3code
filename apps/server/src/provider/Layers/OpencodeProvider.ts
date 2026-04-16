@@ -380,6 +380,46 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
   },
 );
 
+const makePendingOpencodeProvider = (opencodeSettings: OpencodeSettings): ServerProvider => {
+  const checkedAt = new Date().toISOString();
+  const models = providerModelsFromSettings(
+    BUILT_IN_MODELS,
+    PROVIDER,
+    opencodeSettings.customModels,
+    DEFAULT_OPENCODE_MODEL_CAPABILITIES,
+  );
+
+  if (!opencodeSettings.enabled) {
+    return buildServerProvider({
+      provider: PROVIDER,
+      enabled: false,
+      checkedAt,
+      models,
+      probe: {
+        installed: false,
+        version: null,
+        status: "warning",
+        auth: { status: "unknown" },
+        message: "OpenCode is disabled in T3 Code settings.",
+      },
+    });
+  }
+
+  return buildServerProvider({
+    provider: PROVIDER,
+    enabled: true,
+    checkedAt,
+    models,
+    probe: {
+      installed: false,
+      version: null,
+      status: "warning",
+      auth: { status: "unknown" },
+      message: "OpenCode provider status has not been checked in this session yet.",
+    },
+  });
+};
+
 export const OpencodeProviderLive = Layer.effect(
   OpencodeProvider,
   Effect.gen(function* () {
@@ -404,6 +444,7 @@ export const OpencodeProviderLive = Layer.effect(
         Stream.map((settings) => settings.providers.opencode),
       ),
       haveSettingsChanged: (previous, next) => !Equal.equals(previous, next),
+      initialSnapshot: makePendingOpencodeProvider,
       checkProvider,
     });
   }),

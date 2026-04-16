@@ -1,23 +1,19 @@
 import {
+  listLoginShellCandidates,
+  mergePathEntries,
+  readPathFromLaunchctl,
   readEnvironmentFromLoginShell,
-  resolveLoginShell,
   ShellEnvironmentReader,
 } from "@t3tools/shared/shell";
 
-/**
- * Environment variables to sync from the user's login shell.
- *
- * When the desktop app is launched from a file manager or .desktop shortcut
- * (rather than a terminal), the process environment does not include variables
- * set in the user's shell profile (.bashrc, .zshrc, .profile, etc.).
- *
- * We sync PATH (so provider binaries are found), SSH_AUTH_SOCK (for git),
- * and provider API keys that the spawned CLI processes may need for
- * authentication.
- */
-const SYNC_ENV_NAMES = [
+const LOGIN_SHELL_ENV_NAMES = [
   "PATH",
   "SSH_AUTH_SOCK",
+  "HOMEBREW_PREFIX",
+  "HOMEBREW_CELLAR",
+  "HOMEBREW_REPOSITORY",
+  "XDG_CONFIG_HOME",
+  "XDG_DATA_HOME",
   // Provider API keys used by spawned CLI processes (codex, opencode, etc.)
   "OPENCODE_API_KEY",
   "OPENAI_API_KEY",
@@ -26,42 +22,71 @@ const SYNC_ENV_NAMES = [
   "GOOGLE_API_KEY",
 ] as const;
 
+const SHELL_ONLY_ENV_NAMES = [
+  "HOMEBREW_PREFIX",
+  "HOMEBREW_CELLAR",
+  "HOMEBREW_REPOSITORY",
+  "XDG_CONFIG_HOME",
+  "XDG_DATA_HOME",
+  "OPENCODE_API_KEY",
+  "OPENAI_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "GEMINI_API_KEY",
+  "GOOGLE_API_KEY",
+] as const;
+
+function logShellEnvironmentWarning(message: string, error?: unknown): void {
+  console.warn(`[desktop] ${message}`, error instanceof Error ? error.message : (error ?? ""));
+}
+
 export function syncShellEnvironment(
   env: NodeJS.ProcessEnv = process.env,
   options: {
     platform?: NodeJS.Platform;
     readEnvironment?: ShellEnvironmentReader;
+    readLaunchctlPath?: typeof readPathFromLaunchctl;
+    userShell?: string;
+    logWarning?: (message: string, error?: unknown) => void;
   } = {},
 ): void {
   const platform = options.platform ?? process.platform;
   if (platform !== "darwin" && platform !== "linux") return;
 
+  const logWarning = options.logWarning ?? logShellEnvironmentWarning;
+  const readEnvironment = options.readEnvironment ?? readEnvironmentFromLoginShell;
+  const shellEnvironment: Partial<Record<string, string>> = {};
+
   try {
-    const shell = resolveLoginShell(platform, env.SHELL);
-    if (!shell) return;
+    for (const shell of listLoginShellCandidates(platform, env.SHELL, options.userShell)) {
+      try {
+        Object.assign(shellEnvironment, readEnvironment(shell, LOGIN_SHELL_ENV_NAMES));
+        if (shellEnvironment.PATH) {
+          break;
+        }
+      } catch (error) {
+        logWarning(`Failed to read login shell environment from ${shell}.`, error);
+      }
+    }
 
-    const shellEnvironment = (options.readEnvironment ?? readEnvironmentFromLoginShell)(
-      shell,
-      SYNC_ENV_NAMES as unknown as string[],
-    );
-
-    if (shellEnvironment.PATH) {
-      env.PATH = shellEnvironment.PATH;
+    const launchctlPath =
+      platform === "darwin" && !shellEnvironment.PATH
+        ? (options.readLaunchctlPath ?? readPathFromLaunchctl)()
+        : undefined;
+    const mergedPath = mergePathEntries(shellEnvironment.PATH ?? launchctlPath, env.PATH, platform);
+    if (mergedPath) {
+      env.PATH = mergedPath;
     }
 
     if (!env.SSH_AUTH_SOCK && shellEnvironment.SSH_AUTH_SOCK) {
       env.SSH_AUTH_SOCK = shellEnvironment.SSH_AUTH_SOCK;
     }
 
-    // Sync provider API keys — only set if the shell provides them and
-    // the current environment does not already have them.
-    for (const name of SYNC_ENV_NAMES) {
-      if (name === "PATH" || name === "SSH_AUTH_SOCK") continue;
+    for (const name of SHELL_ONLY_ENV_NAMES) {
       if (!env[name] && shellEnvironment[name]) {
         env[name] = shellEnvironment[name];
       }
     }
-  } catch {
-    // Keep inherited environment if shell lookup fails.
+  } catch (error) {
+    logWarning("Failed to synchronize the desktop shell environment.", error);
   }
 }

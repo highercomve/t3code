@@ -23,6 +23,7 @@ import type {
   GitSuggestCommitMessageInput,
   GitSuggestCommitMessageResult,
 } from "./git";
+import type { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
 import type {
   ProjectSearchEntriesInput,
   ProjectSearchEntriesResult,
@@ -78,6 +79,14 @@ export type DesktopUpdateStatus =
 
 export type DesktopRuntimeArch = "arm64" | "x64" | "other";
 export type DesktopTheme = "light" | "dark" | "system";
+export type DesktopUpdateChannel = "latest" | "nightly";
+export type DesktopAppStageLabel = "Alpha" | "Dev" | "Nightly";
+
+export interface DesktopAppBranding {
+  baseName: string;
+  stageLabel: DesktopAppStageLabel;
+  displayName: string;
+}
 
 export interface DesktopRuntimeInfo {
   hostArch: DesktopRuntimeArch;
@@ -88,6 +97,7 @@ export interface DesktopRuntimeInfo {
 export interface DesktopUpdateState {
   enabled: boolean;
   status: DesktopUpdateStatus;
+  channel: DesktopUpdateChannel;
   currentVersion: string;
   hostArch: DesktopRuntimeArch;
   appArch: DesktopRuntimeArch;
@@ -136,7 +146,12 @@ export interface DesktopServerExposureState {
   advertisedHost: string | null;
 }
 
+export interface PickFolderOptions {
+  initialPath?: string | null;
+}
+
 export interface DesktopBridge {
+  getAppBranding: () => DesktopAppBranding | null;
   getLocalEnvironmentBootstrap: () => DesktopEnvironmentBootstrap | null;
   getClientSettings: () => Promise<ClientSettings | null>;
   setClientSettings: (settings: ClientSettings) => Promise<void>;
@@ -149,7 +164,7 @@ export interface DesktopBridge {
   removeSavedEnvironmentSecret: (environmentId: EnvironmentId) => Promise<void>;
   getServerExposureState: () => Promise<DesktopServerExposureState>;
   setServerExposureMode: (mode: DesktopServerExposureMode) => Promise<DesktopServerExposureState>;
-  pickFolder: () => Promise<string | null>;
+  pickFolder: (options?: PickFolderOptions) => Promise<string | null>;
   confirm: (message: string) => Promise<boolean>;
   setTheme: (theme: DesktopTheme) => Promise<void>;
   showContextMenu: <T extends string>(
@@ -159,6 +174,7 @@ export interface DesktopBridge {
   openExternal: (url: string) => Promise<boolean>;
   onMenuAction: (listener: (action: string) => void) => () => void;
   getUpdateState: () => Promise<DesktopUpdateState>;
+  setUpdateChannel: (channel: DesktopUpdateChannel) => Promise<DesktopUpdateState>;
   checkForUpdate: () => Promise<DesktopUpdateCheckResult>;
   downloadUpdate: () => Promise<DesktopUpdateActionResult>;
   installUpdate: () => Promise<DesktopUpdateActionResult>;
@@ -177,7 +193,7 @@ export interface DesktopBridge {
  */
 export interface LocalApi {
   dialogs: {
-    pickFolder: () => Promise<string | null>;
+    pickFolder: (options?: PickFolderOptions) => Promise<string | null>;
     confirm: (message: string) => Promise<boolean>;
   };
   shell: {
@@ -232,6 +248,9 @@ export interface EnvironmentApi {
   projects: {
     searchEntries: (input: ProjectSearchEntriesInput) => Promise<ProjectSearchEntriesResult>;
     writeFile: (input: ProjectWriteFileInput) => Promise<ProjectWriteFileResult>;
+  };
+  filesystem: {
+    browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;
   };
   git: {
     listBranches: (input: GitListBranchesInput) => Promise<GitListBranchesResult>;

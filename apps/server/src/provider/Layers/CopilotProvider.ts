@@ -282,6 +282,46 @@ export const checkCopilotProviderStatus = Effect.fn("checkCopilotProviderStatus"
   },
 );
 
+const makePendingCopilotProvider = (copilotSettings: CopilotSettings): ServerProvider => {
+  const checkedAt = new Date().toISOString();
+  const models = providerModelsFromSettings(
+    BUILT_IN_MODELS,
+    PROVIDER,
+    copilotSettings.customModels,
+    DEFAULT_COPILOT_MODEL_CAPABILITIES,
+  );
+
+  if (!copilotSettings.enabled) {
+    return buildServerProvider({
+      provider: PROVIDER,
+      enabled: false,
+      checkedAt,
+      models,
+      probe: {
+        installed: false,
+        version: null,
+        status: "warning",
+        auth: { status: "unknown" },
+        message: "Copilot is disabled in T3 Code settings.",
+      },
+    });
+  }
+
+  return buildServerProvider({
+    provider: PROVIDER,
+    enabled: true,
+    checkedAt,
+    models,
+    probe: {
+      installed: false,
+      version: null,
+      status: "warning",
+      auth: { status: "unknown" },
+      message: "Copilot provider status has not been checked in this session yet.",
+    },
+  });
+};
+
 export const CopilotProviderLive = Layer.effect(
   CopilotProvider,
   Effect.gen(function* () {
@@ -306,6 +346,7 @@ export const CopilotProviderLive = Layer.effect(
         Stream.map((settings) => settings.providers.copilotAgent),
       ),
       haveSettingsChanged: (previous, next) => !Equal.equals(previous, next),
+      initialSnapshot: makePendingCopilotProvider,
       checkProvider,
     });
   }),

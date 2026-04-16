@@ -248,6 +248,46 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
   },
 );
 
+const makePendingGeminiProvider = (geminiSettings: GeminiSettings): ServerProvider => {
+  const checkedAt = new Date().toISOString();
+  const models = providerModelsFromSettings(
+    BUILT_IN_MODELS,
+    PROVIDER,
+    geminiSettings.customModels,
+    DEFAULT_GEMINI_MODEL_CAPABILITIES,
+  );
+
+  if (!geminiSettings.enabled) {
+    return buildServerProvider({
+      provider: PROVIDER,
+      enabled: false,
+      checkedAt,
+      models,
+      probe: {
+        installed: false,
+        version: null,
+        status: "warning",
+        auth: { status: "unknown" },
+        message: "Gemini is disabled in T3 Code settings.",
+      },
+    });
+  }
+
+  return buildServerProvider({
+    provider: PROVIDER,
+    enabled: true,
+    checkedAt,
+    models,
+    probe: {
+      installed: false,
+      version: null,
+      status: "warning",
+      auth: { status: "unknown" },
+      message: "Gemini provider status has not been checked in this session yet.",
+    },
+  });
+};
+
 export const GeminiProviderLive = Layer.effect(
   GeminiProvider,
   Effect.gen(function* () {
@@ -272,6 +312,7 @@ export const GeminiProviderLive = Layer.effect(
         Stream.map((settings) => settings.providers.gemini),
       ),
       haveSettingsChanged: (previous, next) => !Equal.equals(previous, next),
+      initialSnapshot: makePendingGeminiProvider,
       checkProvider,
     });
   }),
