@@ -21,13 +21,20 @@ import { GeminiProvider } from "../Services/GeminiProvider";
 import { ServerSettingsError } from "@t3tools/contracts";
 import { ServerSettingsService } from "../../serverSettings";
 
-const DEFAULT_GEMINI_MODEL_CAPABILITIES: ModelCapabilities = {
-  reasoningEffortLevels: [],
+const GEMINI_EFFORT_CAPABILITIES: ModelCapabilities = {
+  reasoningEffortLevels: [
+    { value: "low", label: "Low" },
+    { value: "medium", label: "Medium" },
+    { value: "high", label: "High", isDefault: true },
+    { value: "xhigh", label: "Extra High" },
+  ],
   supportsFastMode: false,
   supportsThinkingToggle: false,
   contextWindowOptions: [],
   promptInjectedEffortLevels: [],
 };
+
+const DEFAULT_GEMINI_MODEL_CAPABILITIES: ModelCapabilities = GEMINI_EFFORT_CAPABILITIES;
 
 const PROVIDER = "gemini" as const;
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
@@ -35,16 +42,26 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     slug: "gemini-3.1-pro-preview",
     name: "Gemini 3.1 Pro Preview",
     isCustom: false,
-    capabilities: null,
+    capabilities: GEMINI_EFFORT_CAPABILITIES,
   },
   {
     slug: "gemini-3-flash-preview",
     name: "Gemini 3 Flash Preview",
     isCustom: false,
-    capabilities: null,
+    capabilities: GEMINI_EFFORT_CAPABILITIES,
   },
-  { slug: "gemini-2.5-pro", name: "Gemini 2.5 Pro", isCustom: false, capabilities: null },
-  { slug: "gemini-2.5-flash", name: "Gemini 2.5 Flash", isCustom: false, capabilities: null },
+  {
+    slug: "gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
+    isCustom: false,
+    capabilities: GEMINI_EFFORT_CAPABILITIES,
+  },
+  {
+    slug: "gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    isCustom: false,
+    capabilities: GEMINI_EFFORT_CAPABILITIES,
+  },
   {
     slug: "gemini-2.5-flash-lite",
     name: "Gemini 2.5 Flash Lite",

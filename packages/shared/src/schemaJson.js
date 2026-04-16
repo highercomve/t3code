@@ -1,39 +1,29 @@
-import {
-  Cause,
-  Effect,
-  Exit,
-  Option,
-  Result,
-  Schema,
-  SchemaGetter,
-  SchemaIssue,
-  SchemaTransformation,
-} from "effect";
+import { Cause, Effect, Exit, Option, Result, Schema, SchemaGetter, SchemaIssue, SchemaTransformation, } from "effect";
 export const decodeJsonResult = (schema) => {
-  const decode = Schema.decodeExit(Schema.fromJsonString(schema));
-  return (input) => {
-    const result = decode(input);
-    if (Exit.isFailure(result)) {
-      return Result.fail(result.cause);
-    }
-    return Result.succeed(result.value);
-  };
+    const decode = Schema.decodeExit(Schema.fromJsonString(schema));
+    return (input) => {
+        const result = decode(input);
+        if (Exit.isFailure(result)) {
+            return Result.fail(result.cause);
+        }
+        return Result.succeed(result.value);
+    };
 };
 export const decodeUnknownJsonResult = (schema) => {
-  const decode = Schema.decodeUnknownExit(Schema.fromJsonString(schema));
-  return (input) => {
-    const result = decode(input);
-    if (Exit.isFailure(result)) {
-      return Result.fail(result.cause);
-    }
-    return Result.succeed(result.value);
-  };
+    const decode = Schema.decodeUnknownExit(Schema.fromJsonString(schema));
+    return (input) => {
+        const result = decode(input);
+        if (Exit.isFailure(result)) {
+            return Result.fail(result.cause);
+        }
+        return Result.succeed(result.value);
+    };
 };
 export const formatSchemaError = (cause) => {
-  const squashed = Cause.squash(cause);
-  return Schema.isSchemaError(squashed)
-    ? SchemaIssue.makeFormatterDefault()(squashed.issue)
-    : Cause.pretty(cause);
+    const squashed = Cause.squash(cause);
+    return Schema.isSchemaError(squashed)
+        ? SchemaIssue.makeFormatterDefault()(squashed.issue)
+        : Cause.pretty(cause);
 };
 /**
  * A `Getter` that parses a lenient JSON string (tolerating trailing commas
@@ -42,24 +32,18 @@ export const formatSchemaError = (cause) => {
  * Mirrors `SchemaGetter.parseJson()` but uses `parseLenientJson` instead
  * of `JSON.parse`.
  */
-const parseLenientJsonGetter = SchemaGetter.onSome((input) =>
-  Effect.try({
+const parseLenientJsonGetter = SchemaGetter.onSome((input) => Effect.try({
     try: () => {
-      // Strip single-line comments — alternation preserves quoted strings.
-      let stripped = input.replace(/("(?:[^"\\]|\\.)*")|\/\/[^\n]*/g, (match, stringLiteral) =>
-        stringLiteral ? match : "",
-      );
-      // Strip multi-line comments.
-      stripped = stripped.replace(/("(?:[^"\\]|\\.)*")|\/\*[\s\S]*?\*\//g, (match, stringLiteral) =>
-        stringLiteral ? match : "",
-      );
-      // Strip trailing commas before `}` or `]`.
-      stripped = stripped.replace(/,(\s*[}\]])/g, "$1");
-      return Option.some(JSON.parse(stripped));
+        // Strip single-line comments — alternation preserves quoted strings.
+        let stripped = input.replace(/("(?:[^"\\]|\\.)*")|\/\/[^\n]*/g, (match, stringLiteral) => (stringLiteral ? match : ""));
+        // Strip multi-line comments.
+        stripped = stripped.replace(/("(?:[^"\\]|\\.)*")|\/\*[\s\S]*?\*\//g, (match, stringLiteral) => (stringLiteral ? match : ""));
+        // Strip trailing commas before `}` or `]`.
+        stripped = stripped.replace(/,(\s*[}\]])/g, "$1");
+        return Option.some(JSON.parse(stripped));
     },
     catch: (e) => new SchemaIssue.InvalidValue(Option.some(input), { message: String(e) }),
-  }),
-);
+}));
 /**
  * Schema transformation: lenient JSONC string ↔ unknown.
  *
@@ -67,15 +51,11 @@ const parseLenientJsonGetter = SchemaGetter.onSome((input) =>
  * strips trailing commas and JS-style comments before parsing.
  * Encoding produces strict JSON via `JSON.stringify`.
  */
-export const fromLenientJsonString = new SchemaTransformation.Transformation(
-  parseLenientJsonGetter,
-  SchemaGetter.stringifyJson(),
-);
+export const fromLenientJsonString = new SchemaTransformation.Transformation(parseLenientJsonGetter, SchemaGetter.stringifyJson());
 /**
  * Build a schema that decodes a lenient JSON string into `A`.
  *
  * Drop-in replacement for `Schema.fromJsonString(schema)` that tolerates
  * trailing commas and comments in the input.
  */
-export const fromLenientJson = (schema) =>
-  Schema.String.pipe(Schema.decodeTo(schema, fromLenientJsonString));
+export const fromLenientJson = (schema) => Schema.String.pipe(Schema.decodeTo(schema, fromLenientJsonString));

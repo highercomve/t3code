@@ -2,6 +2,7 @@ import {
   CODEX_REASONING_EFFORT_OPTIONS,
   type ClaudeCodeEffort,
   type CodexReasoningEffort,
+  type GeminiEffort,
   DEFAULT_MODEL_BY_PROVIDER,
   type EnvironmentId,
   isProviderKind,
@@ -626,8 +627,20 @@ function normalizeProviderModelOptions(
     typeof geminiCandidate?.thinkingBudget === "number"
       ? geminiCandidate.thinkingBudget
       : undefined;
+  const geminiReasoningEffort: GeminiEffort | undefined =
+    geminiCandidate?.reasoningEffort === "low" ||
+    geminiCandidate?.reasoningEffort === "medium" ||
+    geminiCandidate?.reasoningEffort === "high" ||
+    geminiCandidate?.reasoningEffort === "xhigh"
+      ? geminiCandidate.reasoningEffort
+      : undefined;
   const gemini =
-    geminiThinkingBudget !== undefined ? { thinkingBudget: geminiThinkingBudget } : undefined;
+    geminiThinkingBudget !== undefined || geminiReasoningEffort !== undefined
+      ? {
+          ...(geminiThinkingBudget !== undefined ? { thinkingBudget: geminiThinkingBudget } : {}),
+          ...(geminiReasoningEffort !== undefined ? { reasoningEffort: geminiReasoningEffort } : {}),
+        }
+      : undefined;
 
   // ── OpenCode options ─────────────────────────────────────────
   const opencodeCandidate =

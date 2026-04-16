@@ -52,32 +52,8 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "opencode/glm-5",
-    name: "GLM-5",
-    isCustom: false,
-    capabilities: OPENCODE_MODEL_CAPABILITIES,
-  },
-  {
-    slug: "opencode/kimi-k2.5",
-    name: "Kimi K2.5",
-    isCustom: false,
-    capabilities: OPENCODE_MODEL_CAPABILITIES,
-  },
-  {
-    slug: "opencode/mimo-v2-omni-free",
-    name: "MiMo V2 Omni Free",
-    isCustom: false,
-    capabilities: OPENCODE_MODEL_CAPABILITIES,
-  },
-  {
-    slug: "opencode/mimo-v2-pro-free",
-    name: "MiMo V2 Pro Free",
-    isCustom: false,
-    capabilities: OPENCODE_MODEL_CAPABILITIES,
-  },
-  {
-    slug: "opencode/minimax-m2.5",
-    name: "MiniMax M2.5",
+    slug: "opencode/gpt-5-nano",
+    name: "GPT-5 Nano",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
@@ -94,20 +70,32 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "opencode/qwen3.6-plus-free",
-    name: "Qwen 3.6 Plus Free",
-    isCustom: false,
-    capabilities: OPENCODE_MODEL_CAPABILITIES,
-  },
-  {
     slug: "opencode-go/glm-5",
     name: "GLM-5 (Go)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
+    slug: "opencode-go/glm-5.1",
+    name: "GLM-5.1 (Go)",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
     slug: "opencode-go/kimi-k2.5",
     name: "Kimi K2.5 (Go)",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
+    slug: "opencode-go/mimo-v2-omni",
+    name: "MiMo V2 Omni (Go)",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
+    slug: "opencode-go/mimo-v2-pro",
+    name: "MiMo V2 Pro (Go)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
@@ -124,20 +112,20 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "ollama/glm-5:cloud",
-    name: "GLM-5 (Ollama Cloud)",
+    slug: "ollama/gemma4",
+    name: "Gemma 4 (Ollama Cloud)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "ollama/kimi-k2.5:cloud",
-    name: "Kimi K2.5 (Ollama Cloud)",
+    slug: "ollama/gemma4:31b-cloud",
+    name: "Gemma 4 31B (Ollama Cloud)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "ollama/qwen3-coder-next:cloud",
-    name: "Qwen3 Coder Next (Ollama Cloud)",
+    slug: "ollama/nemotron-3-super",
+    name: "Nemotron 3 Super (Ollama Cloud)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
@@ -353,10 +341,17 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
     const discoveredModels = yield* discoverOpencodeModels;
     let finalModels = models;
     if (discoveredModels && discoveredModels.length > 0) {
-      // Merge: discovered models as base, then add any custom models not already present
-      const discoveredSlugs = new Set(discoveredModels.map((m) => m.slug));
-      const customOnly = [...models].filter((m) => m.isCustom && !discoveredSlugs.has(m.slug));
-      finalModels = [...discoveredModels, ...customOnly];
+      // Built-in models are authoritative for known prefixes (opencode/, opencode-go/, ollama/).
+      // Only append discovered models from prefixes NOT covered by the built-in list
+      // (e.g. local_ollama/ or other user-specific providers).
+      const builtInPrefixes = new Set(
+        BUILT_IN_MODELS.map((m) => m.slug.split("/")[0]!),
+      );
+      const newDiscovered = discoveredModels.filter((m) => {
+        const prefix = m.slug.split("/")[0]!;
+        return !builtInPrefixes.has(prefix);
+      });
+      finalModels = [...models, ...newDiscovered];
     }
 
     return buildServerProvider({

@@ -115,7 +115,7 @@ export function normalizeClaudeModelOptionsWithCapabilities(
 }
 
 export function normalizeGeminiModelOptionsWithCapabilities(
-  _caps: ModelCapabilities,
+  caps: ModelCapabilities,
   modelOptions: GeminiModelOptions | null | undefined,
 ): GeminiModelOptions | undefined {
   const thinkingBudget =
@@ -123,7 +123,14 @@ export function normalizeGeminiModelOptionsWithCapabilities(
     Number.isInteger(modelOptions.thinkingBudget)
       ? modelOptions.thinkingBudget
       : undefined;
-  return thinkingBudget !== undefined ? { thinkingBudget } : undefined;
+  const reasoningEffort = resolveEffort(caps, modelOptions?.reasoningEffort);
+  const nextOptions: GeminiModelOptions = {
+    ...(thinkingBudget !== undefined ? { thinkingBudget } : {}),
+    ...(reasoningEffort
+      ? { reasoningEffort: reasoningEffort as GeminiModelOptions["reasoningEffort"] }
+      : {}),
+  };
+  return Object.keys(nextOptions).length > 0 ? nextOptions : undefined;
 }
 
 export function normalizeOpencodeModelOptionsWithCapabilities(

@@ -62,6 +62,9 @@ function getRawEffort(
   if (provider === "claudeAgent") {
     return trimOrNull((modelOptions as ClaudeModelOptions | undefined)?.effort);
   }
+  if (provider === "gemini") {
+    return trimOrNull((modelOptions as GeminiModelOptions | undefined)?.reasoningEffort);
+  }
   return null;
 }
 
@@ -223,7 +226,10 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         onPromptChange(stripped);
       }
       const effortKey =
-        provider === "codex" || provider === "opencode" || provider === "copilotAgent"
+        provider === "codex" ||
+        provider === "opencode" ||
+        provider === "copilotAgent" ||
+        provider === "gemini"
           ? "reasoningEffort"
           : "effort";
       updateModelOptions(

@@ -13,6 +13,7 @@ import {
   type ProviderRuntimeEvent,
   type ProviderUserInputAnswers,
   type ThreadTokenUsageSnapshot,
+  GEMINI_EFFORT_TO_THINKING_BUDGET,
   RuntimeItemId,
   RuntimeRequestId,
   RuntimeTaskId,
@@ -1362,6 +1363,12 @@ const makeGeminiAdapter = (options?: GeminiAdapterLiveOptions) =>
         const modelSelection = input.modelSelection;
         const geminiOptions =
           modelSelection?.provider === "gemini" ? modelSelection.options : undefined;
+        const resolvedThinkingBudget =
+          geminiOptions?.thinkingBudget !== undefined
+            ? geminiOptions.thinkingBudget
+            : geminiOptions?.reasoningEffort !== undefined
+              ? GEMINI_EFFORT_TO_THINKING_BUDGET[geminiOptions.reasoningEffort]
+              : undefined;
 
         return yield* Effect.tryPromise({
           try: () => {
@@ -1369,8 +1376,8 @@ const makeGeminiAdapter = (options?: GeminiAdapterLiveOptions) =>
               threadId: input.threadId,
               ...(input.input !== undefined ? { input: input.input } : {}),
               ...(modelSelection?.model !== undefined ? { model: modelSelection.model } : {}),
-              ...(geminiOptions?.thinkingBudget !== undefined
-                ? { thinkingBudget: geminiOptions.thinkingBudget }
+              ...(resolvedThinkingBudget !== undefined
+                ? { thinkingBudget: resolvedThinkingBudget }
                 : {}),
               ...(input.interactionMode !== undefined
                 ? { interactionMode: input.interactionMode }

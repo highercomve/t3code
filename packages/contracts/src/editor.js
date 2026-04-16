@@ -2,28 +2,29 @@ import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
 export const EditorLaunchStyle = Schema.Literals(["direct-path", "goto", "line-column"]);
 export const EDITORS = [
-  { id: "cursor", label: "Cursor", commands: ["cursor"], launchStyle: "goto" },
-  { id: "trae", label: "Trae", commands: ["trae"], launchStyle: "goto" },
-  { id: "kiro", label: "Kiro", commands: ["kiro"], baseArgs: ["ide"], launchStyle: "goto" },
-  { id: "vscode", label: "VS Code", commands: ["code"], launchStyle: "goto" },
-  {
-    id: "vscode-insiders",
-    label: "VS Code Insiders",
-    commands: ["code-insiders"],
-    launchStyle: "goto",
-  },
-  { id: "vscodium", label: "VSCodium", commands: ["codium"], launchStyle: "goto" },
-  { id: "zed", label: "Zed", commands: ["zed", "zeditor"], launchStyle: "direct-path" },
-  { id: "antigravity", label: "Antigravity", commands: ["agy"], launchStyle: "goto" },
-  { id: "idea", label: "IntelliJ IDEA", commands: ["idea"], launchStyle: "line-column" },
-  { id: "file-manager", label: "File Manager", commands: null, launchStyle: "direct-path" },
+    { id: "cursor", label: "Cursor", commands: ["cursor"], launchStyle: "goto" },
+    { id: "trae", label: "Trae", commands: ["trae"], launchStyle: "goto" },
+    { id: "kiro", label: "Kiro", commands: ["kiro"], baseArgs: ["ide"], launchStyle: "goto" },
+    { id: "vscode", label: "VS Code", commands: ["code"], launchStyle: "goto" },
+    {
+        id: "vscode-insiders",
+        label: "VS Code Insiders",
+        commands: ["code-insiders"],
+        launchStyle: "goto",
+    },
+    { id: "vscodium", label: "VSCodium", commands: ["codium"], launchStyle: "goto" },
+    { id: "zed", label: "Zed", commands: ["zed", "zeditor"], launchStyle: "direct-path" },
+    { id: "antigravity", label: "Antigravity", commands: ["agy"], launchStyle: "goto" },
+    { id: "idea", label: "IntelliJ IDEA", commands: ["idea"], launchStyle: "line-column" },
+    { id: "file-manager", label: "File Manager", commands: null, launchStyle: "direct-path" },
 ];
 export const EditorId = Schema.Literals(EDITORS.map((e) => e.id));
 export const OpenInEditorInput = Schema.Struct({
-  cwd: TrimmedNonEmptyString,
-  editor: EditorId,
+    cwd: TrimmedNonEmptyString,
+    editor: EditorId,
 });
 export class OpenError extends Schema.TaggedErrorClass()("OpenError", {
-  message: Schema.String,
-  cause: Schema.optional(Schema.Defect),
-}) {}
+    message: Schema.String,
+    cause: Schema.optional(Schema.Defect),
+}) {
+}

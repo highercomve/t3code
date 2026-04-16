@@ -8,28 +8,11 @@ import { Effect, TxQueue, TxRef } from "effect";
  * @param process - The effect to run for each queued item.
  * @returns A `DrainableWorker` with `queue` and `drain`.
  */
-export const makeDrainableWorker = (process) =>
-  Effect.gen(function* () {
+export const makeDrainableWorker = (process) => Effect.gen(function* () {
     const queue = yield* Effect.acquireRelease(TxQueue.unbounded(), TxQueue.shutdown);
     const outstanding = yield* TxRef.make(0);
-    yield* TxQueue.take(queue).pipe(
-      Effect.tap((a) =>
-        Effect.ensuring(
-          process(a),
-          TxRef.update(outstanding, (n) => n - 1),
-        ),
-      ),
-      Effect.forever,
-      Effect.forkScoped,
-    );
-    const drain = TxRef.get(outstanding).pipe(
-      Effect.tap((n) => (n > 0 ? Effect.txRetry : Effect.void)),
-      Effect.tx,
-    );
-    const enqueue = (element) =>
-      TxQueue.offer(queue, element).pipe(
-        Effect.tap(() => TxRef.update(outstanding, (n) => n + 1)),
-        Effect.tx,
-      );
+    yield* TxQueue.take(queue).pipe(Effect.tap((a) => Effect.ensuring(process(a), TxRef.update(outstanding, (n) => n - 1))), Effect.forever, Effect.forkScoped);
+    const drain = TxRef.get(outstanding).pipe(Effect.tap((n) => (n > 0 ? Effect.txRetry : Effect.void)), Effect.tx);
+    const enqueue = (element) => TxQueue.offer(queue, element).pipe(Effect.tap(() => TxRef.update(outstanding, (n) => n + 1)), Effect.tx);
     return { enqueue, drain };
-  });
+});

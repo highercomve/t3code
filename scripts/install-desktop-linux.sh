@@ -50,10 +50,10 @@ if [[ -f "$ICON_SOURCE" ]]; then
   for size in 16 32 48 64 128 256 512; do
     ICON_DIR="${ICONS_DIR}/${size}x${size}/apps"
     mkdir -p "$ICON_DIR"
-    if command -v convert &>/dev/null; then
-      convert "$ICON_SOURCE" -resize "${size}x${size}" "${ICON_DIR}/${APP_NAME}.png"
-    elif command -v magick &>/dev/null; then
+    if command -v magick &>/dev/null; then
       magick "$ICON_SOURCE" -resize "${size}x${size}" "${ICON_DIR}/${APP_NAME}.png"
+    elif command -v convert &>/dev/null; then
+      convert "$ICON_SOURCE" -resize "${size}x${size}" "${ICON_DIR}/${APP_NAME}.png"
     else
       # Fallback: copy the full-size icon for all sizes
       cp "$ICON_SOURCE" "${ICON_DIR}/${APP_NAME}.png"

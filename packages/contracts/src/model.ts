@@ -14,10 +14,21 @@ export const CodexModelOptions = Schema.Struct({
 });
 export type CodexModelOptions = typeof CodexModelOptions.Type;
 
+export const GEMINI_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
+export type GeminiEffort = (typeof GEMINI_EFFORT_OPTIONS)[number];
+
 export const GeminiModelOptions = Schema.Struct({
   thinkingBudget: Schema.optional(Schema.Int),
+  reasoningEffort: Schema.optional(Schema.Literals(GEMINI_EFFORT_OPTIONS)),
 });
 export type GeminiModelOptions = typeof GeminiModelOptions.Type;
+
+export const GEMINI_EFFORT_TO_THINKING_BUDGET: Record<GeminiEffort, number> = {
+  low: 1024,
+  medium: 8192,
+  high: 16384,
+  xhigh: 24576,
+};
 
 export const ClaudeModelOptions = Schema.Struct({
   thinking: Schema.optional(Schema.Boolean),
@@ -82,27 +93,26 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     { slug: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite" },
   ],
   claudeAgent: [
+    { slug: "claude-opus-4-7", name: "Claude Opus 4.7" },
     { slug: "claude-opus-4-6", name: "Claude Opus 4.6" },
     { slug: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
     { slug: "claude-haiku-4-5", name: "Claude Haiku 4.5" },
   ],
   opencode: [
     { slug: "opencode/big-pickle", name: "Big Pickle" },
-    { slug: "opencode/glm-5", name: "GLM-5" },
-    { slug: "opencode/kimi-k2.5", name: "Kimi K2.5" },
-    { slug: "opencode/mimo-v2-omni-free", name: "MiMo V2 Omni Free" },
-    { slug: "opencode/mimo-v2-pro-free", name: "MiMo V2 Pro Free" },
-    { slug: "opencode/minimax-m2.5", name: "MiniMax M2.5" },
+    { slug: "opencode/gpt-5-nano", name: "GPT-5 Nano" },
     { slug: "opencode/minimax-m2.5-free", name: "MiniMax M2.5 Free" },
     { slug: "opencode/nemotron-3-super-free", name: "Nemotron 3 Super Free" },
-    { slug: "opencode/qwen3.6-plus-free", name: "Qwen 3.6 Plus Free" },
     { slug: "opencode-go/glm-5", name: "GLM-5 (Go)" },
+    { slug: "opencode-go/glm-5.1", name: "GLM-5.1 (Go)" },
     { slug: "opencode-go/kimi-k2.5", name: "Kimi K2.5 (Go)" },
+    { slug: "opencode-go/mimo-v2-omni", name: "MiMo V2 Omni (Go)" },
+    { slug: "opencode-go/mimo-v2-pro", name: "MiMo V2 Pro (Go)" },
     { slug: "opencode-go/minimax-m2.5", name: "MiniMax M2.5 (Go)" },
     { slug: "opencode-go/minimax-m2.7", name: "MiniMax M2.7 (Go)" },
-    { slug: "ollama/glm-5:cloud", name: "GLM-5 (Ollama Cloud)" },
-    { slug: "ollama/kimi-k2.5:cloud", name: "Kimi K2.5 (Ollama Cloud)" },
-    { slug: "ollama/qwen3-coder-next:cloud", name: "Qwen3 Coder Next (Ollama Cloud)" },
+    { slug: "ollama/gemma4", name: "Gemma 4 (Ollama Cloud)" },
+    { slug: "ollama/gemma4:31b-cloud", name: "Gemma 4 31B (Ollama Cloud)" },
+    { slug: "ollama/nemotron-3-super", name: "Nemotron 3 Super (Ollama Cloud)" },
   ],
   copilotAgent: [
     { slug: "claude-sonnet-4.6", name: "Claude Sonnet 4.6" },
@@ -183,7 +193,9 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "flash-lite": "gemini-2.5-flash-lite",
   },
   claudeAgent: {
-    opus: "claude-opus-4-6",
+    opus: "claude-opus-4-7",
+    "opus-4.7": "claude-opus-4-7",
+    "claude-opus-4.7": "claude-opus-4-7",
     "opus-4.6": "claude-opus-4-6",
     "claude-opus-4.6": "claude-opus-4-6",
     "claude-opus-4-6-20251117": "claude-opus-4-6",
@@ -198,17 +210,18 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
   },
   opencode: {
     "big-pickle": "opencode/big-pickle",
-    "mimo-v2-omni": "opencode/mimo-v2-omni-free",
-    "mimo-v2-pro": "opencode/mimo-v2-pro-free",
-    "glm-5": "opencode/glm-5",
-    kimi: "opencode/kimi-k2.5",
-    "kimi-k2.5": "opencode/kimi-k2.5",
-    minimax: "opencode/minimax-m2.5",
-    "minimax-m2.5": "opencode/minimax-m2.5",
+    "gpt-5-nano": "opencode/gpt-5-nano",
+    nano: "opencode/gpt-5-nano",
     "minimax-m2.5-free": "opencode/minimax-m2.5-free",
-    qwen: "opencode/qwen3.6-plus-free",
-    "qwen3.6-plus-free": "opencode/qwen3.6-plus-free",
+    minimax: "opencode/minimax-m2.5-free",
     nemotron: "opencode/nemotron-3-super-free",
+    "glm-5": "opencode-go/glm-5",
+    "glm-5.1": "opencode-go/glm-5.1",
+    kimi: "opencode-go/kimi-k2.5",
+    "kimi-k2.5": "opencode-go/kimi-k2.5",
+    "mimo-v2-omni": "opencode-go/mimo-v2-omni",
+    "mimo-v2-pro": "opencode-go/mimo-v2-pro",
+    gemma4: "ollama/gemma4",
   },
   copilotAgent: {
     "claude-sonnet-4.6": "claude-sonnet-4.6",
