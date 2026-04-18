@@ -8,7 +8,7 @@ export const IsoDateTime = Schema.String;
  * Construct a branded identifier. Enforces non-empty trimmed strings
  */
 const makeEntityId = (brand) => {
-    return TrimmedNonEmptyString.pipe(Schema.brand(brand));
+  return TrimmedNonEmptyString.pipe(Schema.brand(brand));
 };
 export const ThreadId = makeEntityId("ThreadId");
 export const ProjectId = makeEntityId("ProjectId");

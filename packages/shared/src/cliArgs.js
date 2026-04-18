@@ -20,40 +20,38 @@
  *     → { flags: { root: "/path", "github-output": null }, positionals: ["1.2.3"] }
  */
 export function parseCliArgs(args, options) {
-    const tokens = typeof args === "string" ? args.trim().split(/\s+/).filter(Boolean) : Array.from(args);
-    const booleanSet = options?.booleanFlags ? new Set(options.booleanFlags) : undefined;
-    const flags = {};
-    const positionals = [];
-    for (let i = 0; i < tokens.length; i++) {
-        const token = tokens[i];
-        if (token.startsWith("--")) {
-            const rest = token.slice(2);
-            if (!rest)
-                continue;
-            // Handle --key=value syntax
-            const eqIndex = rest.indexOf("=");
-            if (eqIndex !== -1) {
-                flags[rest.slice(0, eqIndex)] = rest.slice(eqIndex + 1);
-                continue;
-            }
-            // Known boolean flag — never consumes next token
-            if (booleanSet?.has(rest)) {
-                flags[rest] = null;
-                continue;
-            }
-            // Handle --key value or --flag (boolean)
-            const next = tokens[i + 1];
-            if (next !== undefined && !next.startsWith("--")) {
-                flags[rest] = next;
-                i++;
-            }
-            else {
-                flags[rest] = null;
-            }
-        }
-        else {
-            positionals.push(token);
-        }
+  const tokens =
+    typeof args === "string" ? args.trim().split(/\s+/).filter(Boolean) : Array.from(args);
+  const booleanSet = options?.booleanFlags ? new Set(options.booleanFlags) : undefined;
+  const flags = {};
+  const positionals = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.startsWith("--")) {
+      const rest = token.slice(2);
+      if (!rest) continue;
+      // Handle --key=value syntax
+      const eqIndex = rest.indexOf("=");
+      if (eqIndex !== -1) {
+        flags[rest.slice(0, eqIndex)] = rest.slice(eqIndex + 1);
+        continue;
+      }
+      // Known boolean flag — never consumes next token
+      if (booleanSet?.has(rest)) {
+        flags[rest] = null;
+        continue;
+      }
+      // Handle --key value or --flag (boolean)
+      const next = tokens[i + 1];
+      if (next !== undefined && !next.startsWith("--")) {
+        flags[rest] = next;
+        i++;
+      } else {
+        flags[rest] = null;
+      }
+    } else {
+      positionals.push(token);
     }
-    return { flags, positionals };
+  }
+  return { flags, positionals };
 }

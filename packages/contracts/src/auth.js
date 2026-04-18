@@ -24,10 +24,10 @@ import { AuthSessionId, TrimmedNonEmptyString } from "./baseSchemas";
  *   unsafe escape hatch, not a normal deployment mode
  */
 export const ServerAuthPolicy = Schema.Literals([
-    "desktop-managed-local",
-    "loopback-browser",
-    "remote-reachable",
-    "unsafe-no-auth",
+  "desktop-managed-local",
+  "loopback-browser",
+  "remote-reachable",
+  "unsafe-no-auth",
 ]);
 /**
  * A credential type that can be exchanged for a real authenticated session.
@@ -58,8 +58,8 @@ export const ServerAuthBootstrapMethod = Schema.Literals(["desktop-bootstrap", "
  *   non-browser clients
  */
 export const ServerAuthSessionMethod = Schema.Literals([
-    "browser-session-cookie",
-    "bearer-session-token",
+  "browser-session-cookie",
+  "bearer-session-token",
 ]);
 export const AuthSessionRole = Schema.Literals(["owner", "client"]);
 /**
@@ -83,131 +83,131 @@ export const AuthSessionRole = Schema.Literals(["owner", "client"]);
  * single access method.
  */
 export const ServerAuthDescriptor = Schema.Struct({
-    policy: ServerAuthPolicy,
-    bootstrapMethods: Schema.Array(ServerAuthBootstrapMethod),
-    sessionMethods: Schema.Array(ServerAuthSessionMethod),
-    sessionCookieName: TrimmedNonEmptyString,
+  policy: ServerAuthPolicy,
+  bootstrapMethods: Schema.Array(ServerAuthBootstrapMethod),
+  sessionMethods: Schema.Array(ServerAuthSessionMethod),
+  sessionCookieName: TrimmedNonEmptyString,
 });
 export const AuthBootstrapInput = Schema.Struct({
-    credential: TrimmedNonEmptyString,
+  credential: TrimmedNonEmptyString,
 });
 export const AuthBootstrapResult = Schema.Struct({
-    authenticated: Schema.Literal(true),
-    role: AuthSessionRole,
-    sessionMethod: ServerAuthSessionMethod,
-    expiresAt: Schema.DateTimeUtc,
+  authenticated: Schema.Literal(true),
+  role: AuthSessionRole,
+  sessionMethod: ServerAuthSessionMethod,
+  expiresAt: Schema.DateTimeUtc,
 });
 export const AuthBearerBootstrapResult = Schema.Struct({
-    authenticated: Schema.Literal(true),
-    role: AuthSessionRole,
-    sessionMethod: Schema.Literal("bearer-session-token"),
-    expiresAt: Schema.DateTimeUtc,
-    sessionToken: TrimmedNonEmptyString,
+  authenticated: Schema.Literal(true),
+  role: AuthSessionRole,
+  sessionMethod: Schema.Literal("bearer-session-token"),
+  expiresAt: Schema.DateTimeUtc,
+  sessionToken: TrimmedNonEmptyString,
 });
 export const AuthWebSocketTokenResult = Schema.Struct({
-    token: TrimmedNonEmptyString,
-    expiresAt: Schema.DateTimeUtc,
+  token: TrimmedNonEmptyString,
+  expiresAt: Schema.DateTimeUtc,
 });
 export const AuthPairingCredentialResult = Schema.Struct({
-    id: TrimmedNonEmptyString,
-    credential: TrimmedNonEmptyString,
-    label: Schema.optionalKey(TrimmedNonEmptyString),
-    expiresAt: Schema.DateTimeUtc,
+  id: TrimmedNonEmptyString,
+  credential: TrimmedNonEmptyString,
+  label: Schema.optionalKey(TrimmedNonEmptyString),
+  expiresAt: Schema.DateTimeUtc,
 });
 export const AuthPairingLink = Schema.Struct({
-    id: TrimmedNonEmptyString,
-    credential: TrimmedNonEmptyString,
-    role: AuthSessionRole,
-    subject: TrimmedNonEmptyString,
-    label: Schema.optionalKey(TrimmedNonEmptyString),
-    createdAt: Schema.DateTimeUtc,
-    expiresAt: Schema.DateTimeUtc,
+  id: TrimmedNonEmptyString,
+  credential: TrimmedNonEmptyString,
+  role: AuthSessionRole,
+  subject: TrimmedNonEmptyString,
+  label: Schema.optionalKey(TrimmedNonEmptyString),
+  createdAt: Schema.DateTimeUtc,
+  expiresAt: Schema.DateTimeUtc,
 });
 export const AuthClientMetadataDeviceType = Schema.Literals([
-    "desktop",
-    "mobile",
-    "tablet",
-    "bot",
-    "unknown",
+  "desktop",
+  "mobile",
+  "tablet",
+  "bot",
+  "unknown",
 ]);
 export const AuthClientMetadata = Schema.Struct({
-    label: Schema.optionalKey(TrimmedNonEmptyString),
-    ipAddress: Schema.optionalKey(TrimmedNonEmptyString),
-    userAgent: Schema.optionalKey(TrimmedNonEmptyString),
-    deviceType: AuthClientMetadataDeviceType,
-    os: Schema.optionalKey(TrimmedNonEmptyString),
-    browser: Schema.optionalKey(TrimmedNonEmptyString),
+  label: Schema.optionalKey(TrimmedNonEmptyString),
+  ipAddress: Schema.optionalKey(TrimmedNonEmptyString),
+  userAgent: Schema.optionalKey(TrimmedNonEmptyString),
+  deviceType: AuthClientMetadataDeviceType,
+  os: Schema.optionalKey(TrimmedNonEmptyString),
+  browser: Schema.optionalKey(TrimmedNonEmptyString),
 });
 export const AuthClientSession = Schema.Struct({
-    sessionId: AuthSessionId,
-    subject: TrimmedNonEmptyString,
-    role: AuthSessionRole,
-    method: ServerAuthSessionMethod,
-    client: AuthClientMetadata,
-    issuedAt: Schema.DateTimeUtc,
-    expiresAt: Schema.DateTimeUtc,
-    lastConnectedAt: Schema.NullOr(Schema.DateTimeUtc),
-    connected: Schema.Boolean,
-    current: Schema.Boolean,
+  sessionId: AuthSessionId,
+  subject: TrimmedNonEmptyString,
+  role: AuthSessionRole,
+  method: ServerAuthSessionMethod,
+  client: AuthClientMetadata,
+  issuedAt: Schema.DateTimeUtc,
+  expiresAt: Schema.DateTimeUtc,
+  lastConnectedAt: Schema.NullOr(Schema.DateTimeUtc),
+  connected: Schema.Boolean,
+  current: Schema.Boolean,
 });
 export const AuthAccessSnapshot = Schema.Struct({
-    pairingLinks: Schema.Array(AuthPairingLink),
-    clientSessions: Schema.Array(AuthClientSession),
+  pairingLinks: Schema.Array(AuthPairingLink),
+  clientSessions: Schema.Array(AuthClientSession),
 });
 export const AuthAccessStreamSnapshotEvent = Schema.Struct({
-    version: Schema.Literal(1),
-    revision: Schema.Number,
-    type: Schema.Literal("snapshot"),
-    payload: AuthAccessSnapshot,
+  version: Schema.Literal(1),
+  revision: Schema.Number,
+  type: Schema.Literal("snapshot"),
+  payload: AuthAccessSnapshot,
 });
 export const AuthAccessStreamPairingLinkUpsertedEvent = Schema.Struct({
-    version: Schema.Literal(1),
-    revision: Schema.Number,
-    type: Schema.Literal("pairingLinkUpserted"),
-    payload: AuthPairingLink,
+  version: Schema.Literal(1),
+  revision: Schema.Number,
+  type: Schema.Literal("pairingLinkUpserted"),
+  payload: AuthPairingLink,
 });
 export const AuthAccessStreamPairingLinkRemovedEvent = Schema.Struct({
-    version: Schema.Literal(1),
-    revision: Schema.Number,
-    type: Schema.Literal("pairingLinkRemoved"),
-    payload: Schema.Struct({
-        id: TrimmedNonEmptyString,
-    }),
+  version: Schema.Literal(1),
+  revision: Schema.Number,
+  type: Schema.Literal("pairingLinkRemoved"),
+  payload: Schema.Struct({
+    id: TrimmedNonEmptyString,
+  }),
 });
 export const AuthAccessStreamClientUpsertedEvent = Schema.Struct({
-    version: Schema.Literal(1),
-    revision: Schema.Number,
-    type: Schema.Literal("clientUpserted"),
-    payload: AuthClientSession,
+  version: Schema.Literal(1),
+  revision: Schema.Number,
+  type: Schema.Literal("clientUpserted"),
+  payload: AuthClientSession,
 });
 export const AuthAccessStreamClientRemovedEvent = Schema.Struct({
-    version: Schema.Literal(1),
-    revision: Schema.Number,
-    type: Schema.Literal("clientRemoved"),
-    payload: Schema.Struct({
-        sessionId: AuthSessionId,
-    }),
+  version: Schema.Literal(1),
+  revision: Schema.Number,
+  type: Schema.Literal("clientRemoved"),
+  payload: Schema.Struct({
+    sessionId: AuthSessionId,
+  }),
 });
 export const AuthAccessStreamEvent = Schema.Union([
-    AuthAccessStreamSnapshotEvent,
-    AuthAccessStreamPairingLinkUpsertedEvent,
-    AuthAccessStreamPairingLinkRemovedEvent,
-    AuthAccessStreamClientUpsertedEvent,
-    AuthAccessStreamClientRemovedEvent,
+  AuthAccessStreamSnapshotEvent,
+  AuthAccessStreamPairingLinkUpsertedEvent,
+  AuthAccessStreamPairingLinkRemovedEvent,
+  AuthAccessStreamClientUpsertedEvent,
+  AuthAccessStreamClientRemovedEvent,
 ]);
 export const AuthRevokePairingLinkInput = Schema.Struct({
-    id: TrimmedNonEmptyString,
+  id: TrimmedNonEmptyString,
 });
 export const AuthRevokeClientSessionInput = Schema.Struct({
-    sessionId: AuthSessionId,
+  sessionId: AuthSessionId,
 });
 export const AuthCreatePairingCredentialInput = Schema.Struct({
-    label: Schema.optionalKey(TrimmedNonEmptyString),
+  label: Schema.optionalKey(TrimmedNonEmptyString),
 });
 export const AuthSessionState = Schema.Struct({
-    authenticated: Schema.Boolean,
-    auth: ServerAuthDescriptor,
-    role: Schema.optionalKey(AuthSessionRole),
-    sessionMethod: Schema.optionalKey(ServerAuthSessionMethod),
-    expiresAt: Schema.optionalKey(Schema.DateTimeUtc),
+  authenticated: Schema.Boolean,
+  auth: ServerAuthDescriptor,
+  role: Schema.optionalKey(AuthSessionRole),
+  sessionMethod: Schema.optionalKey(ServerAuthSessionMethod),
+  expiresAt: Schema.optionalKey(Schema.DateTimeUtc),
 });
