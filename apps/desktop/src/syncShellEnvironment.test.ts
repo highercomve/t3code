@@ -167,11 +167,7 @@ describe("syncShellEnvironment", () => {
       "/opt/homebrew/bin/nu",
       EXPECTED_LOGIN_SHELL_ENV_NAMES,
     );
-    expect(readEnvironment).toHaveBeenNthCalledWith(
-      2,
-      "/bin/zsh",
-      EXPECTED_LOGIN_SHELL_ENV_NAMES,
-    );
+    expect(readEnvironment).toHaveBeenNthCalledWith(2, "/bin/zsh", EXPECTED_LOGIN_SHELL_ENV_NAMES);
     expect(readLaunchctlPath).toHaveBeenCalledTimes(1);
     expect(logWarning).toHaveBeenCalledWith(
       "Failed to read login shell environment from /opt/homebrew/bin/nu.",

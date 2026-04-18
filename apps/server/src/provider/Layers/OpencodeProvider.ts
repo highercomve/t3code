@@ -344,9 +344,7 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
       // Built-in models are authoritative for known prefixes (opencode/, opencode-go/, ollama/).
       // Only append discovered models from prefixes NOT covered by the built-in list
       // (e.g. local_ollama/ or other user-specific providers).
-      const builtInPrefixes = new Set(
-        BUILT_IN_MODELS.map((m) => m.slug.split("/")[0]!),
-      );
+      const builtInPrefixes = new Set(BUILT_IN_MODELS.map((m) => m.slug.split("/")[0]!));
       const newDiscovered = discoveredModels.filter((m) => {
         const prefix = m.slug.split("/")[0]!;
         return !builtInPrefixes.has(prefix);

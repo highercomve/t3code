@@ -225,6 +225,20 @@ function getEffectiveClaudeCodeEffort(
   return effort === "ultrathink" ? null : effort;
 }
 
+/**
+ * The `@anthropic-ai/claude-agent-sdk` types currently constrain `effort`
+ * to `'low' | 'medium' | 'high' | 'max'`, but the Claude Code CLI accepts
+ * `'xhigh'` at runtime (it shows up in the CLI's own effort picker between
+ * `high` and `max`). This cast bridges the type gap until the SDK types
+ * catch up. Keep this helper in one place so the unsafe cast is easy to
+ * audit/remove.
+ */
+function toSdkEffort(
+  effort: Exclude<ClaudeCodeEffort, "ultrathink">,
+): "low" | "medium" | "high" | "max" {
+  return effort as "low" | "medium" | "high" | "max";
+}
+
 function isClaudeInterruptedMessage(message: string): boolean {
   const normalized = message.toLowerCase();
   return (
@@ -2771,7 +2785,7 @@ const makeClaudeAdapter = Effect.fn("makeClaudeAdapter")(function* (
         ...(apiModelId ? { model: apiModelId } : {}),
         pathToClaudeCodeExecutable: claudeBinaryPath,
         settingSources: [...CLAUDE_SETTING_SOURCES],
-        ...(effectiveEffort ? { effort: effectiveEffort } : {}),
+        ...(effectiveEffort ? { effort: toSdkEffort(effectiveEffort) } : {}),
         ...(permissionMode ? { permissionMode } : {}),
         ...(permissionMode === "bypassPermissions"
           ? { allowDangerouslySkipPermissions: true }

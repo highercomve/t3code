@@ -638,7 +638,9 @@ function normalizeProviderModelOptions(
     geminiThinkingBudget !== undefined || geminiReasoningEffort !== undefined
       ? {
           ...(geminiThinkingBudget !== undefined ? { thinkingBudget: geminiThinkingBudget } : {}),
-          ...(geminiReasoningEffort !== undefined ? { reasoningEffort: geminiReasoningEffort } : {}),
+          ...(geminiReasoningEffort !== undefined
+            ? { reasoningEffort: geminiReasoningEffort }
+            : {}),
         }
       : undefined;
 
