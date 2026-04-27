@@ -94,7 +94,7 @@ const makeClaudeTextGeneration = Effect.gen(function* () {
     const caps = getClaudeModelCapabilities(modelSelection.model);
     const descriptors = getProviderOptionDescriptors({
       caps,
-      selections: modelSelection.options,
+      selections: modelSelection.options as never,
     });
     const findDescriptor = (id: string) => descriptors.find((descriptor) => descriptor.id === id);
     const rawEffortSelection = getModelSelectionStringOptionValue(modelSelection, "effort");

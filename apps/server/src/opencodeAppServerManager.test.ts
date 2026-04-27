@@ -5,7 +5,7 @@ import {
   classifyOpencodeStderrChunk,
   classifyOpencodeStderrLine,
   OpencodeAppServerManager,
-} from "./opencodeAppServerManager";
+} from "./opencodeAppServerManager.ts";
 
 const asThreadId = (value: string): ThreadId => value as ThreadId;
 

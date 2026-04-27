@@ -15,11 +15,11 @@ import {
   parseGenericCliVersion,
   providerModelsFromSettings,
   spawnAndCollect,
-} from "../providerSnapshot";
-import { makeManagedServerProvider } from "../makeManagedServerProvider";
-import { GeminiProvider } from "../Services/GeminiProvider";
+} from "../providerSnapshot.ts";
+import { makeManagedServerProvider } from "../makeManagedServerProvider.ts";
+import { GeminiProvider } from "../Services/GeminiProvider.ts";
 import { ServerSettingsError } from "@t3tools/contracts";
-import { ServerSettingsService } from "../../serverSettings";
+import { ServerSettingsService } from "../../serverSettings.ts";
 
 const GEMINI_EFFORT_CAPABILITIES: ModelCapabilities = {
   reasoningEffortLevels: [
@@ -37,6 +37,10 @@ const GEMINI_EFFORT_CAPABILITIES: ModelCapabilities = {
 const DEFAULT_GEMINI_MODEL_CAPABILITIES: ModelCapabilities = GEMINI_EFFORT_CAPABILITIES;
 
 const PROVIDER = "gemini" as const;
+const GEMINI_PRESENTATION = {
+  displayName: "Gemini",
+  showInteractionModeToggle: true,
+} as const;
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
   {
     slug: "gemini-3.1-pro-preview",
@@ -151,6 +155,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
     if (!geminiSettings.enabled) {
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: GEMINI_PRESENTATION,
         enabled: false,
         checkedAt,
         models,
@@ -175,6 +180,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
       const error = versionProbe.failure;
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: GEMINI_PRESENTATION,
         enabled: geminiSettings.enabled,
         checkedAt,
         models,
@@ -193,6 +199,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
     if (Option.isNone(versionProbe.success)) {
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: GEMINI_PRESENTATION,
         enabled: geminiSettings.enabled,
         checkedAt,
         models,
@@ -212,6 +219,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
       const detail = detailFromResult(version);
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: GEMINI_PRESENTATION,
         enabled: geminiSettings.enabled,
         checkedAt,
         models,
@@ -236,6 +244,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
     if (authenticated) {
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: GEMINI_PRESENTATION,
         enabled: geminiSettings.enabled,
         checkedAt,
         models,
@@ -251,6 +260,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
 
     return buildServerProvider({
       provider: PROVIDER,
+      presentation: GEMINI_PRESENTATION,
       enabled: geminiSettings.enabled,
       checkedAt,
       models,
@@ -277,6 +287,7 @@ const makePendingGeminiProvider = (geminiSettings: GeminiSettings): ServerProvid
   if (!geminiSettings.enabled) {
     return buildServerProvider({
       provider: PROVIDER,
+      presentation: GEMINI_PRESENTATION,
       enabled: false,
       checkedAt,
       models,
@@ -292,6 +303,7 @@ const makePendingGeminiProvider = (geminiSettings: GeminiSettings): ServerProvid
 
   return buildServerProvider({
     provider: PROVIDER,
+    presentation: GEMINI_PRESENTATION,
     enabled: true,
     checkedAt,
     models,

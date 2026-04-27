@@ -1,8 +1,12 @@
-import { ServerSettings, type ServerSettingsPatch } from "@t3tools/contracts";
+import {
+  ServerSettings,
+  type ModelSelection,
+  type ProviderOptionSelection,
+  type ServerSettingsPatch,
+} from "@t3tools/contracts";
 import { Schema } from "effect";
 import { deepMerge } from "./Struct.ts";
 import { fromLenientJson } from "./schemaJson.ts";
-import { createModelSelection } from "./model.ts";
 
 const ServerSettingsJson = fromLenientJson(ServerSettings);
 
@@ -82,15 +86,20 @@ export function applyServerSettingsPatch(
 
   const provider = selectionPatch.provider ?? current.textGenerationModelSelection.provider;
   const model = selectionPatch.model ?? current.textGenerationModelSelection.model;
+  const currentOptions = current.textGenerationModelSelection.options as
+    | ReadonlyArray<ProviderOptionSelection>
+    | undefined;
+  const patchOptions = selectionPatch.options as ReadonlyArray<ProviderOptionSelection> | undefined;
   const options = shouldReplaceTextGenerationModelSelection(selectionPatch)
-    ? selectionPatch.options
-    : mergeModelSelectionOptionsById({
-        current: current.textGenerationModelSelection.options,
-        patch: selectionPatch.options,
-      });
+    ? patchOptions
+    : mergeModelSelectionOptionsById({ current: currentOptions, patch: patchOptions });
 
   return {
     ...next,
-    textGenerationModelSelection: createModelSelection(provider, model, options),
+    textGenerationModelSelection: {
+      provider,
+      model,
+      ...(options && options.length > 0 ? { options } : {}),
+    } as ModelSelection,
   };
 }

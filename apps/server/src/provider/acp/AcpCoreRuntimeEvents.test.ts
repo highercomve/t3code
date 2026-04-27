@@ -30,7 +30,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpRequestOpenedEvent({
         stamp,
-        provider: "cursor",
+        provider: "claudeAgent",
         threadId: "thread-1" as never,
         turnId,
         requestId: RuntimeRequestId.make("request-1"),
@@ -52,7 +52,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpRequestResolvedEvent({
         stamp,
-        provider: "cursor",
+        provider: "claudeAgent",
         threadId: "thread-1" as never,
         turnId,
         requestId: RuntimeRequestId.make("request-1"),
@@ -75,7 +75,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpPlanUpdatedEvent({
         stamp,
-        provider: "cursor",
+        provider: "claudeAgent",
         threadId: "thread-1" as never,
         turnId,
         payload: {
@@ -95,7 +95,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpToolCallEvent({
         stamp,
-        provider: "cursor",
+        provider: "claudeAgent",
         threadId: "thread-1" as never,
         turnId,
         toolCall: {
@@ -119,7 +119,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpContentDeltaEvent({
         stamp,
-        provider: "cursor",
+        provider: "claudeAgent",
         threadId: "thread-1" as never,
         turnId,
         itemId: "assistant:session-1:segment:0",
@@ -137,7 +137,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpAssistantItemEvent({
         stamp,
-        provider: "cursor",
+        provider: "claudeAgent",
         threadId: "thread-1" as never,
         turnId,
         itemId: "assistant:session-1:segment:0",

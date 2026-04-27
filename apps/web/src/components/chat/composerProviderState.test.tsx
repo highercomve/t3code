@@ -44,7 +44,19 @@ function modelWith(
   descriptors: ReadonlyArray<ProviderOptionDescriptor>,
 ): ReadonlyArray<ServerProviderModel> {
   return [
-    { slug: MODEL, name: MODEL, isCustom: false, capabilities: { optionDescriptors: descriptors } },
+    {
+      slug: MODEL,
+      name: MODEL,
+      isCustom: false,
+      capabilities: {
+        optionDescriptors: descriptors,
+        reasoningEffortLevels: [],
+        contextWindowOptions: [],
+        promptInjectedEffortLevels: [],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+      },
+    },
   ];
 }
 

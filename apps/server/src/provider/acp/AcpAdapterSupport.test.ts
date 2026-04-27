@@ -12,7 +12,7 @@ describe("AcpAdapterSupport", () => {
 
   it("maps ACP request errors to provider adapter request errors", () => {
     const error = mapAcpToAdapterError(
-      "cursor",
+      "opencode",
       "thread-1" as never,
       "session/prompt",
       new EffectAcpErrors.AcpRequestError({

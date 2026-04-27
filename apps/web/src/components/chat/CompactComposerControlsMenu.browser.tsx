@@ -62,7 +62,11 @@ async function mountMenu(props?: { modelSelection?: ModelSelection; prompt?: str
         persistedAttachments: [],
         terminalContexts: [],
         modelSelectionByProvider: {
-          [provider]: createModelSelection(provider, model, props?.modelSelection?.options),
+          [provider]: createModelSelection(
+            provider,
+            model,
+            props?.modelSelection?.options as never,
+          ),
         },
         activeProvider: provider,
         runtimeMode: null,
@@ -143,7 +147,7 @@ async function mountMenu(props?: { modelSelection?: ModelSelection; prompt?: str
           threadRef={threadRef}
           model={model}
           prompt={props?.prompt ?? ""}
-          modelOptions={providerOptions}
+          modelOptions={providerOptions as never}
           onPromptChange={onPromptChange}
         />
       }

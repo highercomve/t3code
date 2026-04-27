@@ -1,7 +1,7 @@
 import { type ProviderKind, type ServerProvider } from "@t3tools/contracts";
 import { memo } from "react";
 import { Clock3Icon, SparklesIcon, StarIcon } from "lucide-react";
-import { Gemini, GithubCopilotIcon } from "../Icons";
+import { Gemini, CopilotIcon } from "../Icons";
 import { AVAILABLE_PROVIDER_OPTIONS, PROVIDER_ICON_BY_PROVIDER } from "./providerIconUtils";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "~/lib/utils";
@@ -193,7 +193,7 @@ export const ModelPickerSidebar = memo(function ModelPickerSidebar(props: {
                 data-model-picker-provider="github-copilot-coming-soon"
                 aria-label="Github Copilot — coming soon"
               >
-                <GithubCopilotIcon className="size-5 text-muted-foreground/85" aria-hidden />
+                <CopilotIcon className="size-5 text-muted-foreground/85" aria-hidden />
                 <span className={SOON_BADGE_CLASS} aria-hidden>
                   <Clock3Icon className="size-2" />
                 </span>

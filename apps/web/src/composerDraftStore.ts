@@ -400,13 +400,32 @@ interface ComposerDraftModelState {
   modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
 }
 
+function modelSelectionOptionsAsArray(
+  options: ModelSelection["options"] | null | undefined,
+): ReadonlyArray<ProviderOptionSelection> | null {
+  if (!options) return null;
+  if (Array.isArray(options)) {
+    return options as ReadonlyArray<ProviderOptionSelection>;
+  }
+  if (typeof options === "object") {
+    const entries: ProviderOptionSelection[] = [];
+    for (const [id, value] of Object.entries(options as Record<string, unknown>)) {
+      if (typeof value === "string" || typeof value === "boolean") {
+        entries.push({ id, value });
+      }
+    }
+    return entries.length > 0 ? entries : null;
+  }
+  return null;
+}
+
 function providerSelectionsFromModelSelection(
   modelSelection: ModelSelection | null | undefined,
 ): ProviderOptionSelectionsByProvider | null {
   if (!modelSelection) {
     return null;
   }
-  const options = modelSelection.options;
+  const options = modelSelectionOptionsAsArray(modelSelection.options);
   if (!options || options.length === 0) {
     return null;
   }
@@ -419,17 +438,19 @@ function modelSelectionByProviderToOptions(
   if (!map) return null;
   const result: Partial<Record<ProviderKind, ReadonlyArray<ProviderOptionSelection>>> = {};
   for (const [provider, selection] of Object.entries(map)) {
-    if (selection?.options && selection.options.length > 0) {
-      result[provider as ProviderKind] = selection.options;
+    const options = modelSelectionOptionsAsArray(selection?.options);
+    if (options && options.length > 0) {
+      result[provider as ProviderKind] = options;
     }
   }
   return Object.keys(result).length > 0 ? result : null;
 }
 
 function cloneModelSelection(selection: ModelSelection): DeepMutable<ModelSelection> {
+  const optionsArray = modelSelectionOptionsAsArray(selection.options);
   return {
     ...selection,
-    ...(selection.options ? { options: selection.options.map((option) => ({ ...option })) } : {}),
+    ...(optionsArray ? { options: optionsArray.map((option) => ({ ...option })) } : {}),
   } as DeepMutable<ModelSelection>;
 }
 
@@ -757,13 +778,41 @@ function normalizeProviderModelOptions(
   if (!codex && !claude && !gemini && !opencode && !copilotAgent) {
     return null;
   }
-  return {
-    ...(codex ? { codex } : {}),
-    ...(claude ? { claudeAgent: claude } : {}),
-    ...(gemini ? { gemini } : {}),
-    ...(opencode ? { opencode } : {}),
-    ...(copilotAgent ? { copilotAgent } : {}),
+  const structToArray = (
+    obj: Record<string, unknown>,
+  ): ReadonlyArray<ProviderOptionSelection> | undefined => {
+    const entries: ProviderOptionSelection[] = [];
+    for (const [id, raw] of Object.entries(obj)) {
+      if (typeof raw === "string" || typeof raw === "boolean") {
+        entries.push({ id, value: raw });
+      } else if (typeof raw === "number") {
+        entries.push({ id, value: String(raw) });
+      }
+    }
+    return entries.length > 0 ? entries : undefined;
   };
+  const result: Partial<Record<ProviderKind, ReadonlyArray<ProviderOptionSelection>>> = {};
+  if (codex) {
+    const arr = structToArray(codex);
+    if (arr) result.codex = arr;
+  }
+  if (claude) {
+    const arr = structToArray(claude);
+    if (arr) result.claudeAgent = arr;
+  }
+  if (gemini) {
+    const arr = structToArray(gemini);
+    if (arr) result.gemini = arr;
+  }
+  if (opencode) {
+    const arr = structToArray(opencode);
+    if (arr) result.opencode = arr;
+  }
+  if (copilotAgent) {
+    const arr = structToArray(copilotAgent);
+    if (arr) result.copilotAgent = arr;
+  }
+  return Object.keys(result).length > 0 ? result : null;
 }
 
 function normalizeModelSelection(
@@ -826,13 +875,14 @@ function legacyMergeModelSelectionIntoProviderModelOptions(
   modelSelection: ModelSelection | null,
   currentModelOptions: ProviderOptionSelectionsByProvider | null | undefined,
 ): ProviderOptionSelectionsByProvider | null {
-  if (!modelSelection?.options || modelSelection.options.length === 0) {
+  const selectionOptions = modelSelectionOptionsAsArray(modelSelection?.options);
+  if (!selectionOptions || selectionOptions.length === 0) {
     return normalizeProviderModelOptions(currentModelOptions);
   }
   return legacyReplaceProviderModelOptions(
     normalizeProviderModelOptions(currentModelOptions),
-    modelSelection.provider,
-    modelSelection.options,
+    modelSelection!.provider,
+    selectionOptions,
   );
 }
 

@@ -605,6 +605,15 @@ export const ChatComposer = memo(
 
     const selectedPromptEffort = composerProviderState.promptEffort;
     const selectedModelOptionsForDispatch = composerProviderState.modelOptionsForDispatch;
+    const composerProviderControls = useMemo(
+      () => ({
+        showInteractionModeToggle: getProviderInteractionModeToggle(
+          providerStatuses,
+          selectedProvider,
+        ),
+      }),
+      [providerStatuses, selectedProvider],
+    );
     const selectedModelSelection = useMemo(
       () =>
         ({

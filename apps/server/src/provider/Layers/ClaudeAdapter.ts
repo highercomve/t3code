@@ -24,6 +24,7 @@ import {
   ApprovalRequestId,
   type CanonicalItemType,
   type CanonicalRequestType,
+  type ClaudeCodeEffort,
   EventId,
   type ProviderApprovalDecision,
   ProviderItemId,

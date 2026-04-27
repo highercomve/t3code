@@ -54,6 +54,14 @@ export function buildModelSelection<P extends ProviderKind>(
   } as ModelSelectionByProvider[P];
 }
 
+interface ProviderCustomModelConfig {
+  provider: ProviderKind;
+  title: string;
+  description: string;
+  placeholder: string;
+  example: string;
+}
+
 const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConfig> = {
   codex: {
     provider: "codex",
@@ -93,7 +101,6 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
 };
 
 export const MODEL_PROVIDER_SETTINGS = Object.values(PROVIDER_CUSTOM_MODEL_CONFIG);
-
 
 export function normalizeCustomModelSlugs(
   models: Iterable<string | null | undefined>,
@@ -253,8 +260,8 @@ export function resolveAppModelSelectionState(
     model,
     models: getProviderModels(providers, provider),
     prompt: "",
-    modelOptions: provider === selection.provider ? selection.options : undefined,
+    modelOptions: (provider === selection.provider ? selection.options : undefined) as never,
   });
 
-  return buildModelSelection(provider, model, modelOptionsForDispatch);
+  return buildModelSelection(provider, model, modelOptionsForDispatch as never);
 }

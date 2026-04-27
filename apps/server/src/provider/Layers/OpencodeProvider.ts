@@ -15,11 +15,11 @@ import {
   parseGenericCliVersion,
   providerModelsFromSettings,
   spawnAndCollect,
-} from "../providerSnapshot";
-import { makeManagedServerProvider } from "../makeManagedServerProvider";
-import { OpencodeProvider } from "../Services/OpencodeProvider";
+} from "../providerSnapshot.ts";
+import { makeManagedServerProvider } from "../makeManagedServerProvider.ts";
+import { OpencodeProvider } from "../Services/OpencodeProvider.ts";
 import { ServerSettingsError } from "@t3tools/contracts";
-import { ServerSettingsService } from "../../serverSettings";
+import { ServerSettingsService } from "../../serverSettings.ts";
 
 const DEFAULT_OPENCODE_MODEL_CAPABILITIES: ModelCapabilities = {
   reasoningEffortLevels: [],
@@ -30,6 +30,10 @@ const DEFAULT_OPENCODE_MODEL_CAPABILITIES: ModelCapabilities = {
 };
 
 const PROVIDER = "opencode" as const;
+const OPENCODE_PRESENTATION = {
+  displayName: "OpenCode",
+  showInteractionModeToggle: true,
+} as const;
 
 const OPENCODE_MODEL_CAPABILITIES: ServerProviderModel["capabilities"] = {
   reasoningEffortLevels: [
@@ -234,6 +238,7 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
     if (!opencodeSettings.enabled) {
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: OPENCODE_PRESENTATION,
         enabled: false,
         checkedAt,
         models,
@@ -258,6 +263,7 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
       const error = versionProbe.failure;
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: OPENCODE_PRESENTATION,
         enabled: opencodeSettings.enabled,
         checkedAt,
         models,
@@ -276,6 +282,7 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
     if (Option.isNone(versionProbe.success)) {
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: OPENCODE_PRESENTATION,
         enabled: opencodeSettings.enabled,
         checkedAt,
         models,
@@ -295,6 +302,7 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
       const detail = detailFromResult(version);
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: OPENCODE_PRESENTATION,
         enabled: opencodeSettings.enabled,
         checkedAt,
         models,
@@ -354,6 +362,7 @@ export const checkOpencodeProviderStatus = Effect.fn("checkOpencodeProviderStatu
 
     return buildServerProvider({
       provider: PROVIDER,
+      presentation: OPENCODE_PRESENTATION,
       enabled: opencodeSettings.enabled,
       checkedAt,
       models: finalModels,
@@ -385,6 +394,7 @@ const makePendingOpencodeProvider = (opencodeSettings: OpencodeSettings): Server
   if (!opencodeSettings.enabled) {
     return buildServerProvider({
       provider: PROVIDER,
+      presentation: OPENCODE_PRESENTATION,
       enabled: false,
       checkedAt,
       models,
@@ -400,6 +410,7 @@ const makePendingOpencodeProvider = (opencodeSettings: OpencodeSettings): Server
 
   return buildServerProvider({
     provider: PROVIDER,
+    presentation: OPENCODE_PRESENTATION,
     enabled: true,
     checkedAt,
     models,

@@ -307,10 +307,21 @@ export function getModelSelectionOptionDescriptors(
   if (!caps) {
     return [];
   }
-  return getProviderOptionDescriptors({
-    caps,
-    selections: modelSelection.options,
-  });
+  const rawOptions = modelSelection.options;
+  const selections: ReadonlyArray<ProviderOptionSelection> | undefined = Array.isArray(rawOptions)
+    ? (rawOptions as ReadonlyArray<ProviderOptionSelection>)
+    : rawOptions && typeof rawOptions === "object"
+      ? Object.entries(rawOptions)
+          .filter(
+            ([, value]) =>
+              typeof value === "string" || typeof value === "boolean" || typeof value === "number",
+          )
+          .map(([id, value]) => ({
+            id,
+            value: typeof value === "number" ? String(value) : (value as string | boolean),
+          }))
+      : undefined;
+  return getProviderOptionDescriptors({ caps, selections });
 }
 
 export function isClaudeUltrathinkPrompt(text: string | null | undefined): boolean {

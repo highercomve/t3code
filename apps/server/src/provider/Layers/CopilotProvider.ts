@@ -18,11 +18,11 @@ import {
   providerModelsFromSettings,
   spawnAndCollect,
   type CommandResult,
-} from "../providerSnapshot";
-import { makeManagedServerProvider } from "../makeManagedServerProvider";
-import { CopilotProvider } from "../Services/CopilotProvider";
+} from "../providerSnapshot.ts";
+import { makeManagedServerProvider } from "../makeManagedServerProvider.ts";
+import { CopilotProvider } from "../Services/CopilotProvider.ts";
 import { ServerSettingsError } from "@t3tools/contracts";
-import { ServerSettingsService } from "../../serverSettings";
+import { ServerSettingsService } from "../../serverSettings.ts";
 
 const DEFAULT_COPILOT_MODEL_CAPABILITIES: ModelCapabilities = {
   reasoningEffortLevels: [],
@@ -33,6 +33,10 @@ const DEFAULT_COPILOT_MODEL_CAPABILITIES: ModelCapabilities = {
 };
 
 const PROVIDER = "copilotAgent" as const;
+const COPILOT_PRESENTATION = {
+  displayName: "Copilot",
+  showInteractionModeToggle: true,
+} as const;
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
   {
     slug: "claude-sonnet-4.6",
@@ -192,6 +196,7 @@ export const checkCopilotProviderStatus = Effect.fn("checkCopilotProviderStatus"
     if (!copilotSettings.enabled) {
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: COPILOT_PRESENTATION,
         enabled: false,
         checkedAt,
         models,
@@ -214,6 +219,7 @@ export const checkCopilotProviderStatus = Effect.fn("checkCopilotProviderStatus"
       const error = versionProbe.failure;
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: COPILOT_PRESENTATION,
         enabled: copilotSettings.enabled,
         checkedAt,
         models,
@@ -232,6 +238,7 @@ export const checkCopilotProviderStatus = Effect.fn("checkCopilotProviderStatus"
     if (Option.isNone(versionProbe.success)) {
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: COPILOT_PRESENTATION,
         enabled: copilotSettings.enabled,
         checkedAt,
         models,
@@ -251,6 +258,7 @@ export const checkCopilotProviderStatus = Effect.fn("checkCopilotProviderStatus"
       const detail = detailFromResult(version);
       return buildServerProvider({
         provider: PROVIDER,
+        presentation: COPILOT_PRESENTATION,
         enabled: copilotSettings.enabled,
         checkedAt,
         models,
@@ -268,6 +276,7 @@ export const checkCopilotProviderStatus = Effect.fn("checkCopilotProviderStatus"
 
     return buildServerProvider({
       provider: PROVIDER,
+      presentation: COPILOT_PRESENTATION,
       enabled: copilotSettings.enabled,
       checkedAt,
       models,
@@ -294,6 +303,7 @@ const makePendingCopilotProvider = (copilotSettings: CopilotSettings): ServerPro
   if (!copilotSettings.enabled) {
     return buildServerProvider({
       provider: PROVIDER,
+      presentation: COPILOT_PRESENTATION,
       enabled: false,
       checkedAt,
       models,
@@ -309,6 +319,7 @@ const makePendingCopilotProvider = (copilotSettings: CopilotSettings): ServerPro
 
   return buildServerProvider({
     provider: PROVIDER,
+    presentation: COPILOT_PRESENTATION,
     enabled: true,
     checkedAt,
     models,

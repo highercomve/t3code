@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_MODEL_BY_PROVIDER, type ModelCapabilities } from "@t3tools/contracts";
+import {
+  DEFAULT_MODEL_BY_PROVIDER,
+  type ModelCapabilities,
+  type ProviderOptionSelection,
+} from "@t3tools/contracts";
 
 import {
   applyClaudePromptEffortPrefix,
@@ -202,13 +206,12 @@ describe("descriptor helpers", () => {
       { id: "fastMode", value: true },
     ]);
 
-    expect(getProviderOptionStringSelectionValue(selection.options, "reasoningEffort")).toBe(
-      "high",
-    );
-    expect(getProviderOptionStringSelectionValue(selection.options, "fastMode")).toBeUndefined();
-    expect(getProviderOptionBooleanSelectionValue(selection.options, "fastMode")).toBe(true);
+    const optionsAsArray = selection.options as ReadonlyArray<ProviderOptionSelection>;
+    expect(getProviderOptionStringSelectionValue(optionsAsArray, "reasoningEffort")).toBe("high");
+    expect(getProviderOptionStringSelectionValue(optionsAsArray, "fastMode")).toBeUndefined();
+    expect(getProviderOptionBooleanSelectionValue(optionsAsArray, "fastMode")).toBe(true);
     expect(
-      getProviderOptionBooleanSelectionValue(selection.options, "reasoningEffort"),
+      getProviderOptionBooleanSelectionValue(optionsAsArray, "reasoningEffort"),
     ).toBeUndefined();
     expect(getModelSelectionStringOptionValue(selection, "reasoningEffort")).toBe("high");
     expect(getModelSelectionBooleanOptionValue(selection, "fastMode")).toBe(true);

@@ -74,7 +74,7 @@ describe("scoreModelPickerSearch", () => {
     );
     const nonFavoriteScore = scoreModelPickerSearch(
       {
-        provider: "cursor",
+        provider: "opencode",
         name: "Opus 4.5",
       },
       "opu",
@@ -96,7 +96,7 @@ describe("scoreModelPickerSearch", () => {
     );
     const nonFavoriteExactScore = scoreModelPickerSearch(
       {
-        provider: "cursor",
+        provider: "opencode",
         name: "Opus 4.7",
       },
       "opus 4.7",

@@ -20,6 +20,7 @@ import {
   hasActionableProposedPlan,
   hasToolActivityForTurn,
   isLatestTurnSettled,
+  PROVIDER_OPTIONS,
 } from "./session-logic";
 
 function makeActivity(overrides: {

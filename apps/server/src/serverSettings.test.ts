@@ -29,12 +29,12 @@ it.layer(NodeServices.layer)("server settings", (it) => {
       assert.deepEqual(
         decodePatch({
           textGenerationModelSelection: {
-            options: [{ id: "fastMode", value: false }],
+            options: [{ id: "fastMode", value: false }] as never,
           },
         }),
         {
           textGenerationModelSelection: {
-            options: [{ id: "fastMode", value: false }],
+            options: [{ id: "fastMode", value: false }] as never,
           },
         },
       );
@@ -58,7 +58,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
         assert.deepEqual(decoded.textGenerationModelSelection, {
           provider: "codex",
           model: "gpt-5.4-mini",
-          options: [{ id: "reasoningEffort", value: "low" }],
+          options: [{ id: "reasoningEffort", value: "low" }] as never,
         });
       }),
   );
@@ -99,7 +99,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           },
         },
         textGenerationModelSelection: {
-          options: [{ id: "fastMode", value: false }],
+          options: [{ id: "fastMode", value: false }] as never,
         },
       });
 
@@ -136,7 +136,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           model: "claude-sonnet-4-6",
           options: createModelSelection("claudeAgent", "claude-sonnet-4-6", [
             { id: "effort", value: "high" },
-          ]).options!,
+          ]).options! as never,
         },
       });
 
@@ -148,7 +148,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
           model: "gpt-5.4",
           options: createModelSelection("codex", "gpt-5.4", [
             { id: "reasoningEffort", value: "high" },
-          ]).options!,
+          ]).options! as never,
         },
       });
 
@@ -228,6 +228,7 @@ it.layer(NodeServices.layer)("server settings", (it) => {
       assert.deepEqual(next.providers.opencode, {
         enabled: true,
         binaryPath: "/opt/homebrew/bin/opencode",
+        apiKey: "",
         serverUrl: "http://127.0.0.1:4096",
         serverPassword: "secret-password",
         customModels: [],

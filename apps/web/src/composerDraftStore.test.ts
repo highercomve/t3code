@@ -121,7 +121,7 @@ function resetComposerDraftStore() {
 }
 
 function modelSelection(
-  provider: "codex" | "claudeAgent" | "cursor",
+  provider: "codex" | "claudeAgent" | "gemini" | "opencode" | "copilotAgent",
   model: string,
   options?: Record<string, string | boolean | undefined>,
 ): ModelSelection {
@@ -1029,7 +1029,7 @@ describe("composerDraftStore modelSelection", () => {
 
     store.setModelSelection(
       threadRef,
-      modelSelection("cursor", "claude-opus-4-6", {
+      modelSelection("opencode", "claude-opus-4-6", {
         reasoning: "xhigh",
         fastMode: true,
         thinking: false,
@@ -1038,12 +1038,12 @@ describe("composerDraftStore modelSelection", () => {
 
     store.setProviderModelOptions(
       threadRef,
-      "cursor",
+      "opencode",
       toSelections({ reasoning: "medium", fastMode: false, thinking: true }),
     );
 
-    expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.modelSelectionByProvider.cursor).toEqual(
-      modelSelection("cursor", "claude-opus-4-6", {
+    expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.modelSelectionByProvider.opencode).toEqual(
+      modelSelection("opencode", "claude-opus-4-6", {
         reasoning: "medium",
         fastMode: false,
         thinking: true,
@@ -1054,18 +1054,18 @@ describe("composerDraftStore modelSelection", () => {
   it("preserves the selected Cursor model when only traits change", () => {
     const store = useComposerDraftStore.getState();
 
-    store.setProviderModelOptions(threadRef, "cursor", toSelections({ reasoning: "high" }), {
+    store.setProviderModelOptions(threadRef, "opencode", toSelections({ reasoning: "high" }), {
       model: "gpt-5.4",
       persistSticky: true,
     });
 
-    expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.modelSelectionByProvider.cursor).toEqual(
-      modelSelection("cursor", "gpt-5.4", {
+    expect(draftFor(threadId, TEST_ENVIRONMENT_ID)?.modelSelectionByProvider.opencode).toEqual(
+      modelSelection("opencode", "gpt-5.4", {
         reasoning: "high",
       }),
     );
-    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.cursor).toEqual(
-      modelSelection("cursor", "gpt-5.4", {
+    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.opencode).toEqual(
+      modelSelection("opencode", "gpt-5.4", {
         reasoning: "high",
       }),
     );
@@ -1242,7 +1242,7 @@ describe("composerDraftStore sticky composer settings", () => {
     const store = useComposerDraftStore.getState();
 
     store.setStickyModelSelection(
-      modelSelection("cursor", "gpt-5.4", {
+      modelSelection("opencode", "gpt-5.4", {
         reasoning: undefined,
         fastMode: undefined,
         thinking: undefined,
@@ -1250,10 +1250,10 @@ describe("composerDraftStore sticky composer settings", () => {
       }),
     );
 
-    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.cursor).toEqual(
-      modelSelection("cursor", "gpt-5.4"),
+    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.opencode).toEqual(
+      modelSelection("opencode", "gpt-5.4"),
     );
-    expect(useComposerDraftStore.getState().stickyActiveProvider).toBe("cursor");
+    expect(useComposerDraftStore.getState().stickyActiveProvider).toBe("opencode");
   });
 
   it("applies sticky activeProvider to new drafts", () => {

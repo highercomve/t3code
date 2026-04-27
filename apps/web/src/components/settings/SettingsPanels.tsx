@@ -612,11 +612,7 @@ export function GeneralSettingsPanel() {
   const availableEditors = useServerAvailableEditors();
   const observability = useServerObservability();
   const serverProviders = useServerProviders();
-  const visibleProviderSettings = PROVIDER_SETTINGS.filter(
-    (providerSettings) =>
-      providerSettings.provider !== "cursor" ||
-      serverProviders.some((provider) => provider.provider === "cursor"),
-  );
+  const visibleProviderSettings = PROVIDER_SETTINGS;
   const codexHomePath = settings.providers.codex.homePath;
   const logsDirectoryPath = observability?.logsDirectoryPath ?? null;
   const diagnosticsDescription = (() => {
@@ -1155,7 +1151,7 @@ export function GeneralSettingsPanel() {
                 model={textGenModel}
                 prompt=""
                 onPromptChange={() => {}}
-                modelOptions={textGenModelOptions}
+                modelOptions={textGenModelOptions as never}
                 allowPromptInjectedEffort={false}
                 triggerVariant="outline"
                 triggerClassName="min-w-0 max-w-none shrink-0 text-foreground/90 hover:text-foreground"
@@ -1167,7 +1163,7 @@ export function GeneralSettingsPanel() {
                         textGenerationModelSelection: buildModelSelection(
                           textGenProvider,
                           textGenModel,
-                          nextOptions ?? undefined,
+                          nextOptions as never,
                         ),
                       },
                       serverProviders,

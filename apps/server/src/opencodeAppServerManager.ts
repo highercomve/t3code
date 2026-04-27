@@ -21,7 +21,7 @@ import {
 } from "@t3tools/contracts";
 import { normalizeModelSlug } from "@t3tools/shared/model";
 import { Effect, Context } from "effect";
-import { setProviderDynamicModels } from "./provider/providerDynamicModels";
+import { setProviderDynamicModels } from "./provider/providerDynamicModels.ts";
 
 // ── Types ────────────────────────────────────────────────────────────
 
