@@ -2,11 +2,10 @@ import {
   DEFAULT_MODEL_BY_PROVIDER,
   MODEL_OPTIONS_BY_PROVIDER,
   MODEL_SLUG_ALIASES_BY_PROVIDER,
-  type ClaudeCodeEffort,
-  type ClaudeModelOptions,
-  type CodexModelOptions,
   type ModelCapabilities,
   type ModelSelection,
+  type ProviderOptionDescriptor,
+  type ProviderOptionSelection,
   type ProviderKind,
 } from "@t3tools/contracts";
 
@@ -57,6 +56,116 @@ export function resolveEffort(
   return defaultValue ?? undefined;
 }
 
+export function createModelCapabilities(input: {
+  optionDescriptors: ReadonlyArray<ProviderOptionDescriptor>;
+  reasoningEffortLevels?: ReadonlyArray<{
+    value: string;
+    label: string;
+    isDefault?: boolean;
+  }>;
+  supportsFastMode?: boolean;
+  supportsThinkingToggle?: boolean;
+  contextWindowOptions?: ReadonlyArray<{
+    value: string;
+    label: string;
+    isDefault?: boolean;
+  }>;
+  promptInjectedEffortLevels?: ReadonlyArray<string>;
+}): ModelCapabilities {
+  return {
+    optionDescriptors: input.optionDescriptors.map(cloneDescriptor),
+    reasoningEffortLevels: input.reasoningEffortLevels ?? [],
+    supportsFastMode: input.supportsFastMode ?? false,
+    supportsThinkingToggle: input.supportsThinkingToggle ?? false,
+    contextWindowOptions: input.contextWindowOptions ?? [],
+    promptInjectedEffortLevels: input.promptInjectedEffortLevels ?? [],
+  };
+}
+
+function getRawSelectionValueById(
+  selections: ReadonlyArray<ProviderOptionSelection> | null | undefined,
+  id: string,
+): string | boolean | undefined {
+  const selection = selections?.find((candidate) => candidate.id === id);
+  return selection?.value;
+}
+
+export function getProviderOptionSelectionValue(
+  selections: ReadonlyArray<ProviderOptionSelection> | null | undefined,
+  id: string,
+): string | boolean | undefined {
+  return getRawSelectionValueById(selections, id);
+}
+
+export function getProviderOptionStringSelectionValue(
+  selections: ReadonlyArray<ProviderOptionSelection> | null | undefined,
+  id: string,
+): string | undefined {
+  const value = getProviderOptionSelectionValue(selections, id);
+  return typeof value === "string" ? value : undefined;
+}
+
+export function getProviderOptionBooleanSelectionValue(
+  selections: ReadonlyArray<ProviderOptionSelection> | null | undefined,
+  id: string,
+): boolean | undefined {
+  const value = getProviderOptionSelectionValue(selections, id);
+  return typeof value === "boolean" ? value : undefined;
+}
+
+export function getModelSelectionOptionValue(
+  modelSelection: ModelSelection | null | undefined,
+  id: string,
+): string | boolean | undefined {
+  const options = modelSelection?.options;
+  if (!options) return undefined;
+  if (Array.isArray(options)) {
+    return getProviderOptionSelectionValue(options, id);
+  }
+  // Legacy object-shaped options
+  const value = (options as Record<string, unknown>)[id];
+  return typeof value === "string" || typeof value === "boolean" ? value : undefined;
+}
+
+export function getModelSelectionStringOptionValue(
+  modelSelection: ModelSelection | null | undefined,
+  id: string,
+): string | undefined {
+  const value = getModelSelectionOptionValue(modelSelection, id);
+  return typeof value === "string" ? value : undefined;
+}
+
+export function getModelSelectionBooleanOptionValue(
+  modelSelection: ModelSelection | null | undefined,
+  id: string,
+): boolean | undefined {
+  const value = getModelSelectionOptionValue(modelSelection, id);
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function resolveDescriptorChoiceValue(
+  descriptor: Extract<ProviderOptionDescriptor, { type: "select" }>,
+  raw: string | null | undefined,
+): string | undefined {
+  const trimmed = trimOrNull(raw);
+  if (!trimmed) {
+    return descriptor.currentValue ?? descriptor.options.find((option) => option.isDefault)?.id;
+  }
+  if (descriptor.options.length === 0) {
+    return trimmed;
+  }
+  if (
+    descriptor.promptInjectedValues?.includes(trimmed) &&
+    descriptor.options.some((option) => option.id === trimmed)
+  ) {
+    return descriptor.options.find((option) => option.isDefault)?.id;
+  }
+  if (descriptor.options.some((option) => option.id === trimmed)) {
+    return trimmed;
+  }
+  return descriptor.currentValue ?? descriptor.options.find((option) => option.isDefault)?.id;
+}
+
 // ── Context window helpers ───────────────────────────────────────────
 
 export function hasContextWindowOption(caps: ModelCapabilities, value: string): boolean {
@@ -76,36 +185,132 @@ export function resolveContextWindow(
   return hasContextWindowOption(caps, raw) ? raw : (defaultValue ?? undefined);
 }
 
-export function normalizeCodexModelOptionsWithCapabilities(
-  caps: ModelCapabilities,
-  modelOptions: CodexModelOptions | null | undefined,
-): CodexModelOptions | undefined {
-  const reasoningEffort = resolveEffort(caps, modelOptions?.reasoningEffort);
-  const fastMode = caps.supportsFastMode ? modelOptions?.fastMode : undefined;
-  const nextOptions: CodexModelOptions = {
-    ...(reasoningEffort
-      ? { reasoningEffort: reasoningEffort as CodexModelOptions["reasoningEffort"] }
-      : {}),
-    ...(fastMode !== undefined ? { fastMode } : {}),
-  };
-  return Object.keys(nextOptions).length > 0 ? nextOptions : undefined;
+function cloneDescriptor(descriptor: ProviderOptionDescriptor): ProviderOptionDescriptor {
+  return descriptor.type === "select"
+    ? {
+        ...descriptor,
+        options: [...descriptor.options],
+        ...(descriptor.promptInjectedValues
+          ? { promptInjectedValues: [...descriptor.promptInjectedValues] }
+          : {}),
+      }
+    : { ...descriptor };
 }
 
-export function normalizeClaudeModelOptionsWithCapabilities(
-  caps: ModelCapabilities,
-  modelOptions: ClaudeModelOptions | null | undefined,
-): ClaudeModelOptions | undefined {
-  const effort = resolveEffort(caps, modelOptions?.effort);
-  const thinking = caps.supportsThinkingToggle ? modelOptions?.thinking : undefined;
-  const fastMode = caps.supportsFastMode ? modelOptions?.fastMode : undefined;
-  const contextWindow = resolveContextWindow(caps, modelOptions?.contextWindow);
-  const nextOptions: ClaudeModelOptions = {
-    ...(thinking !== undefined ? { thinking } : {}),
-    ...(effort ? { effort: effort as ClaudeModelOptions["effort"] } : {}),
-    ...(fastMode !== undefined ? { fastMode } : {}),
-    ...(contextWindow !== undefined ? { contextWindow } : {}),
+function cloneSelection(selection: ProviderOptionSelection): ProviderOptionSelection {
+  return { ...selection };
+}
+
+function withDescriptorCurrentValue(
+  descriptor: ProviderOptionDescriptor,
+  rawCurrentValue: string | boolean | undefined,
+): ProviderOptionDescriptor {
+  if (descriptor.type === "boolean") {
+    if (typeof rawCurrentValue === "boolean") {
+      return {
+        ...descriptor,
+        currentValue: rawCurrentValue,
+      };
+    }
+    return descriptor;
+  }
+  const currentValue =
+    typeof rawCurrentValue === "string"
+      ? resolveDescriptorChoiceValue(descriptor, rawCurrentValue)
+      : resolveDescriptorChoiceValue(descriptor, descriptor.currentValue);
+  if (!currentValue) {
+    const { currentValue: _unusedCurrentValue, ...rest } = descriptor;
+    return rest;
+  }
+  return {
+    ...descriptor,
+    currentValue,
   };
-  return Object.keys(nextOptions).length > 0 ? nextOptions : undefined;
+}
+
+export function getProviderOptionDescriptors(input: {
+  caps: ModelCapabilities;
+  selections?: ReadonlyArray<ProviderOptionSelection> | null | undefined;
+}): ReadonlyArray<ProviderOptionDescriptor> {
+  const { caps, selections } = input;
+  const baseDescriptors = (caps.optionDescriptors ?? []).map(cloneDescriptor);
+
+  return baseDescriptors.map((descriptor) =>
+    withDescriptorCurrentValue(
+      descriptor,
+      getRawSelectionValueById(selections, descriptor.id) ?? descriptor.currentValue,
+    ),
+  );
+}
+
+export function getProviderOptionCurrentValue(
+  descriptor: ProviderOptionDescriptor | null | undefined,
+): string | boolean | undefined {
+  if (!descriptor) {
+    return undefined;
+  }
+  if (descriptor.type === "boolean") {
+    return descriptor.currentValue;
+  }
+  if (descriptor.currentValue) {
+    return descriptor.currentValue;
+  }
+  return descriptor.options.find((option) => option.isDefault)?.id;
+}
+
+export function getProviderOptionCurrentLabel(
+  descriptor: ProviderOptionDescriptor | null | undefined,
+): string | undefined {
+  if (!descriptor) {
+    return undefined;
+  }
+  if (descriptor.type === "boolean") {
+    return typeof descriptor.currentValue === "boolean"
+      ? descriptor.currentValue
+        ? "On"
+        : "Off"
+      : undefined;
+  }
+  const currentValue = getProviderOptionCurrentValue(descriptor);
+  if (typeof currentValue !== "string") {
+    return undefined;
+  }
+  return descriptor.options.find((option) => option.id === currentValue)?.label;
+}
+
+export function buildProviderOptionSelectionsFromDescriptors(
+  descriptors: ReadonlyArray<ProviderOptionDescriptor> | null | undefined,
+): Array<ProviderOptionSelection> | undefined {
+  if (!descriptors || descriptors.length === 0) {
+    return undefined;
+  }
+
+  const nextSelections: Array<ProviderOptionSelection> = [];
+
+  for (const descriptor of descriptors) {
+    const value = getProviderOptionCurrentValue(descriptor);
+    if (typeof value === "string" || typeof value === "boolean") {
+      nextSelections.push({ id: descriptor.id, value });
+    }
+  }
+
+  return nextSelections.length > 0 ? nextSelections : undefined;
+}
+
+export function getModelSelectionOptionDescriptors(
+  modelSelection: ModelSelection | null | undefined,
+  caps?: ModelCapabilities | null | undefined,
+): ReadonlyArray<ProviderOptionDescriptor> {
+  if (!modelSelection) {
+    return [];
+  }
+  if (!caps) {
+    return [];
+  }
+  return getProviderOptionDescriptors({
+    caps,
+    selections: modelSelection.options,
+  });
 }
 
 export function isClaudeUltrathinkPrompt(text: string | null | undefined): boolean {
@@ -165,7 +370,7 @@ export function resolveSelectableModel(
   return resolved ? resolved.slug : null;
 }
 
-export function resolveModelSlug(model: string | null | undefined, provider: ProviderKind): string {
+function resolveModelSlug(model: string | null | undefined, provider: ProviderKind): string {
   const normalized = normalizeModelSlug(model, provider);
   if (!normalized) {
     return DEFAULT_MODEL_BY_PROVIDER[provider];
@@ -235,9 +440,47 @@ export function resolveApiModelId(modelSelection: ModelSelection): string {
   }
 }
 
+function cloneSelections(
+  selections: ReadonlyArray<ProviderOptionSelection>,
+): Array<ProviderOptionSelection> {
+  return selections.map(cloneSelection);
+}
+
+export function createModelSelection(
+  provider: ProviderKind,
+  model: string,
+  options?: ReadonlyArray<ProviderOptionSelection> | null,
+): ModelSelection {
+  const selections = options ? cloneSelections(options) : [];
+  return {
+    provider,
+    model,
+    ...(selections.length > 0 ? { options: selections } : {}),
+  } as ModelSelection;
+}
+
+/**
+ * Returns the effort value if it is a prompt-injected value according to
+ * any select descriptor in the given capabilities, or null otherwise.
+ */
+export function resolvePromptInjectedEffort(
+  caps: ModelCapabilities,
+  rawEffort: string | null | undefined,
+): string | null {
+  const trimmed = trimOrNull(rawEffort);
+  if (!trimmed) return null;
+  const descriptors = getProviderOptionDescriptors({ caps });
+  for (const descriptor of descriptors) {
+    if (descriptor.type === "select" && descriptor.promptInjectedValues?.includes(trimmed)) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
 export function applyClaudePromptEffortPrefix(
   text: string,
-  effort: ClaudeCodeEffort | null | undefined,
+  effort: string | null | undefined,
 ): string {
   const trimmed = text.trim();
   if (!trimmed) {

@@ -17,12 +17,13 @@ import {
   type OrchestrationThreadShell,
   type OrchestrationThreadActivity,
   type ProjectId,
-  type ProviderKind,
+  ProviderKind,
   type ScopedProjectRef,
   type ScopedThreadRef,
   type ThreadId,
   type TurnId,
 } from "@t3tools/contracts";
+import { Schema } from "effect";
 import { resolveModelSlugForProvider } from "@t3tools/shared/model";
 import { create } from "zustand";
 import {

@@ -11,11 +11,7 @@
  */
 import { Effect, Layer, Context } from "effect";
 
-import {
-  type TextGenerationProvider,
-  type TextGenerationShape,
-  TextGeneration,
-} from "../Services/TextGeneration.ts";
+import { TextGeneration, type TextGenerationShape } from "../Services/TextGeneration.ts";
 import { CodexTextGenerationLive } from "./CodexTextGeneration.ts";
 import { ClaudeTextGenerationLive } from "./ClaudeTextGeneration.ts";
 import { GeminiTextGenerationLive } from "./GeminiTextGeneration.ts";
@@ -51,25 +47,25 @@ const makeRoutingTextGeneration = Effect.gen(function* () {
   const gemini = yield* GeminiTextGen;
   const opencode = yield* OpencodeTextGen;
 
-  const route = (provider?: TextGenerationProvider): TextGenerationShape => {
-    switch (provider) {
-      case "claudeAgent":
-        return claude;
-      case "gemini":
-        return gemini;
-      case "opencode":
-        return opencode;
-      default:
-        return codex;
-    }
-  };
+  const byProvider = {
+    codex,
+    claudeAgent: claude,
+    gemini,
+    opencode,
+    // copilotAgent does not yet have a dedicated text-generation backend; fall
+    // back to claude for commit/PR/title text generation tasks.
+    copilotAgent: claude,
+  } as const;
 
   return {
     generateCommitMessage: (input) =>
-      route(input.modelSelection.provider).generateCommitMessage(input),
-    generatePrContent: (input) => route(input.modelSelection.provider).generatePrContent(input),
-    generateBranchName: (input) => route(input.modelSelection.provider).generateBranchName(input),
-    generateThreadTitle: (input) => route(input.modelSelection.provider).generateThreadTitle(input),
+      byProvider[input.modelSelection.provider].generateCommitMessage(input),
+    generatePrContent: (input) =>
+      byProvider[input.modelSelection.provider].generatePrContent(input),
+    generateBranchName: (input) =>
+      byProvider[input.modelSelection.provider].generateBranchName(input),
+    generateThreadTitle: (input) =>
+      byProvider[input.modelSelection.provider].generateThreadTitle(input),
   } satisfies TextGenerationShape;
 });
 

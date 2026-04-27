@@ -20,7 +20,7 @@ import { CodexAdapter } from "../Services/CodexAdapter.ts";
 import { GeminiAdapter } from "../Services/GeminiAdapter.ts";
 import { OpencodeAdapter } from "../Services/OpencodeAdapter.ts";
 import { CopilotAdapter } from "../Services/CopilotAdapter.ts";
-import { CopilotAdapterLive } from "./CopilotAdapter.ts";
+import { createBuiltInAdapterList } from "../builtInProviderCatalog.ts";
 
 export interface ProviderAdapterRegistryLiveOptions {
   readonly adapters?: ReadonlyArray<ProviderAdapterShape<ProviderAdapterError>>;
@@ -32,13 +32,13 @@ const makeProviderAdapterRegistry = Effect.fn("makeProviderAdapterRegistry")(fun
   const adapters =
     options?.adapters !== undefined
       ? options.adapters
-      : [
-          yield* CodexAdapter,
-          yield* GeminiAdapter,
-          yield* ClaudeAdapter,
-          yield* OpencodeAdapter,
-          yield* CopilotAdapter,
-        ];
+      : createBuiltInAdapterList({
+          codex: yield* CodexAdapter,
+          claudeAgent: yield* ClaudeAdapter,
+          gemini: yield* GeminiAdapter,
+          opencode: yield* OpencodeAdapter,
+          copilotAgent: yield* CopilotAdapter,
+        });
   const byProvider = new Map(adapters.map((adapter) => [adapter.provider, adapter]));
 
   const getByProvider: ProviderAdapterRegistryShape["getByProvider"] = (provider) => {

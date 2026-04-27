@@ -11,29 +11,32 @@ import {
   ThreadId,
   TrimmedNonEmptyString,
   TurnId,
-} from "./baseSchemas";
-import { ProviderKind } from "./orchestration";
+} from "./baseSchemas.ts";
+import { ProviderKind } from "./orchestration.ts";
 
 const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
 const UnknownRecordSchema = Schema.Record(Schema.String, Schema.Unknown);
 
-const RuntimeEventRawSource = Schema.Literals([
-  "codex.app-server.notification",
-  "codex.app-server.request",
-  "codex.eventmsg",
-  "claude.sdk.message",
-  "claude.sdk.permission",
-  "codex.sdk.thread-event",
-  "gemini.api.response",
-  "gemini.api.stream",
-  "gemini.app-server.notification",
-  "gemini.app-server.request",
-  "claudeCode.acp.notification",
-  "claudeCode.acp.request",
-  "opencode.acp.notification",
-  "opencode.acp.request",
-  "copilot.acp.notification",
-  "copilot.acp.request",
+const RuntimeEventRawSource = Schema.Union([
+  Schema.Literal("codex.app-server.notification"),
+  Schema.Literal("codex.app-server.request"),
+  Schema.Literal("codex.eventmsg"),
+  Schema.Literal("claude.sdk.message"),
+  Schema.Literal("claude.sdk.permission"),
+  Schema.Literal("codex.sdk.thread-event"),
+  Schema.Literal("gemini.api.response"),
+  Schema.Literal("gemini.api.stream"),
+  Schema.Literal("gemini.app-server.notification"),
+  Schema.Literal("gemini.app-server.request"),
+  Schema.Literal("claudeCode.acp.notification"),
+  Schema.Literal("claudeCode.acp.request"),
+  Schema.Literal("opencode.acp.notification"),
+  Schema.Literal("opencode.acp.request"),
+  Schema.Literal("opencode.sdk.event"),
+  Schema.Literal("copilot.acp.notification"),
+  Schema.Literal("copilot.acp.request"),
+  Schema.Literal("acp.jsonrpc"),
+  Schema.TemplateLiteral(["acp.", Schema.String, ".extension"]),
 ]);
 export type RuntimeEventRawSource = typeof RuntimeEventRawSource.Type;
 

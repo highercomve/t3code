@@ -9,29 +9,28 @@ import {
   type CodexModelSelection,
   type CopilotModelSelection,
 } from "@t3tools/contracts";
-import { normalizeModelSlug, resolveSelectableModel } from "@t3tools/shared/model";
-import { getComposerProviderState } from "./components/chat/composerProviderRegistry";
+import {
+  createModelSelection,
+  normalizeModelSlug,
+  resolveSelectableModel,
+} from "@t3tools/shared/model";
+import { getComposerProviderState } from "./components/chat/composerProviderState";
 import { UnifiedSettings } from "@t3tools/contracts/settings";
 import {
   getDefaultServerModel,
   getProviderModels,
   resolveSelectableProvider,
 } from "./providerModels";
+import { ModelEsque } from "./components/chat/providerIconUtils";
 
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 
-export type ProviderCustomModelConfig = {
-  provider: ProviderKind;
-  title: string;
-  description: string;
-  placeholder: string;
-  example: string;
-};
-
 export interface AppModelOption {
   slug: string;
   name: string;
+  shortName?: string;
+  subProvider?: string;
   isCustom: boolean;
 }
 
@@ -48,38 +47,11 @@ export function buildModelSelection<P extends ProviderKind>(
   model: string,
   options?: ModelSelectionByProvider[P]["options"],
 ): ModelSelectionByProvider[P] {
-  switch (provider) {
-    case "codex":
-      return {
-        provider,
-        model,
-        ...(options ? { options } : {}),
-      } as ModelSelectionByProvider[P];
-    case "gemini":
-      return {
-        provider,
-        model,
-        ...(options ? { options } : {}),
-      } as ModelSelectionByProvider[P];
-    case "claudeAgent":
-      return {
-        provider,
-        model,
-        ...(options ? { options } : {}),
-      } as ModelSelectionByProvider[P];
-    case "opencode":
-      return {
-        provider,
-        model,
-        ...(options ? { options } : {}),
-      } as ModelSelectionByProvider[P];
-    case "copilotAgent":
-      return {
-        provider,
-        model,
-        ...(options ? { options } : {}),
-      } as ModelSelectionByProvider[P];
-  }
+  return {
+    provider,
+    model,
+    ...(options ? { options } : {}),
+  } as ModelSelectionByProvider[P];
 }
 
 const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConfig> = {
@@ -122,6 +94,7 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
 
 export const MODEL_PROVIDER_SETTINGS = Object.values(PROVIDER_CUSTOM_MODEL_CONFIG);
 
+
 export function normalizeCustomModelSlugs(
   models: Iterable<string | null | undefined>,
   builtInModelSlugs: ReadonlySet<string>,
@@ -158,9 +131,11 @@ export function getAppModelOptions(
   selectedModel?: string | null,
 ): AppModelOption[] {
   const options: AppModelOption[] = getProviderModels(providers, provider).map(
-    ({ slug, name, isCustom }) => ({
+    ({ slug, name, shortName, subProvider, isCustom }) => ({
       slug,
       name,
+      ...(shortName ? { shortName } : {}),
+      ...(subProvider ? { subProvider } : {}),
       isCustom,
     }),
   );
@@ -224,7 +199,7 @@ export function getCustomModelOptionsByProvider(
   providers: ReadonlyArray<ServerProvider>,
   selectedProvider?: ProviderKind | null,
   selectedModel?: string | null,
-): Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>> {
+): Record<ProviderKind, ReadonlyArray<ModelEsque>> {
   return {
     codex: getAppModelOptions(
       settings,
@@ -278,9 +253,7 @@ export function resolveAppModelSelectionState(
     model,
     models: getProviderModels(providers, provider),
     prompt: "",
-    modelOptions: {
-      [provider]: provider === selection.provider ? selection.options : undefined,
-    },
+    modelOptions: provider === selection.provider ? selection.options : undefined,
   });
 
   return buildModelSelection(provider, model, modelOptionsForDispatch);

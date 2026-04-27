@@ -6,23 +6,23 @@
 import type { ProviderKind, ServerProvider } from "@t3tools/contracts";
 import { Effect, Equal, FileSystem, Layer, Path, PubSub, Ref, Stream } from "effect";
 
-import { ServerConfig } from "../../config";
-import { ClaudeProviderLive } from "./ClaudeProvider";
-import { CodexProviderLive } from "./CodexProvider";
-import { CopilotProviderLive } from "./CopilotProvider";
-import { GeminiProviderLive } from "./GeminiProvider";
-import { OpencodeProviderLive } from "./OpencodeProvider";
-import type { ClaudeProviderShape } from "../Services/ClaudeProvider";
-import { ClaudeProvider } from "../Services/ClaudeProvider";
-import type { CodexProviderShape } from "../Services/CodexProvider";
-import { CodexProvider } from "../Services/CodexProvider";
-import type { CopilotProviderShape } from "../Services/CopilotProvider";
-import { CopilotProvider } from "../Services/CopilotProvider";
-import type { GeminiProviderShape } from "../Services/GeminiProvider";
-import { GeminiProvider } from "../Services/GeminiProvider";
-import type { OpencodeProviderShape } from "../Services/OpencodeProvider";
-import { OpencodeProvider } from "../Services/OpencodeProvider";
-import { ProviderRegistry, type ProviderRegistryShape } from "../Services/ProviderRegistry";
+import { ServerConfig } from "../../config.ts";
+import { ClaudeProviderLive } from "./ClaudeProvider.ts";
+import { CodexProviderLive } from "./CodexProvider.ts";
+import { CopilotProviderLive } from "./CopilotProvider.ts";
+import { GeminiProviderLive } from "./GeminiProvider.ts";
+import { OpencodeProviderLive } from "./OpencodeProvider.ts";
+import type { ClaudeProviderShape } from "../Services/ClaudeProvider.ts";
+import { ClaudeProvider } from "../Services/ClaudeProvider.ts";
+import type { CodexProviderShape } from "../Services/CodexProvider.ts";
+import { CodexProvider } from "../Services/CodexProvider.ts";
+import type { CopilotProviderShape } from "../Services/CopilotProvider.ts";
+import { CopilotProvider } from "../Services/CopilotProvider.ts";
+import type { GeminiProviderShape } from "../Services/GeminiProvider.ts";
+import { GeminiProvider } from "../Services/GeminiProvider.ts";
+import type { OpencodeProviderShape } from "../Services/OpencodeProvider.ts";
+import { OpencodeProvider } from "../Services/OpencodeProvider.ts";
+import { ProviderRegistry, type ProviderRegistryShape } from "../Services/ProviderRegistry.ts";
 import {
   hydrateCachedProvider,
   PROVIDER_CACHE_IDS,
@@ -30,7 +30,7 @@ import {
   readProviderStatusCache,
   resolveProviderStatusCachePath,
   writeProviderStatusCache,
-} from "../providerStatusCache";
+} from "../providerStatusCache.ts";
 
 const loadProviders = (
   codexProvider: CodexProviderShape,
@@ -54,6 +54,45 @@ const loadProviders = (
     },
   );
 
+const hasModelCapabilities = (model: ServerProvider["models"][number]): boolean =>
+  (model.capabilities?.optionDescriptors?.length ?? 0) > 0 ||
+  (model.capabilities?.reasoningEffortLevels?.length ?? 0) > 0 ||
+  (model.capabilities?.contextWindowOptions?.length ?? 0) > 0;
+
+const mergeProviderModels = (
+  previousModels: ReadonlyArray<ServerProvider["models"][number]>,
+  nextModels: ReadonlyArray<ServerProvider["models"][number]>,
+): ReadonlyArray<ServerProvider["models"][number]> => {
+  if (nextModels.length === 0 && previousModels.length > 0) {
+    return previousModels;
+  }
+
+  const previousBySlug = new Map(previousModels.map((model) => [model.slug, model] as const));
+  const mergedModels = nextModels.map((model) => {
+    const previousModel = previousBySlug.get(model.slug);
+    if (!previousModel || hasModelCapabilities(model) || !hasModelCapabilities(previousModel)) {
+      return model;
+    }
+    return {
+      ...model,
+      capabilities: previousModel.capabilities,
+    };
+  });
+  const nextSlugs = new Set(nextModels.map((model) => model.slug));
+  return [...mergedModels, ...previousModels.filter((model) => !nextSlugs.has(model.slug))];
+};
+
+export const mergeProviderSnapshot = (
+  previousProvider: ServerProvider | undefined,
+  nextProvider: ServerProvider,
+): ServerProvider =>
+  !previousProvider
+    ? nextProvider
+    : {
+        ...nextProvider,
+        models: mergeProviderModels(previousProvider.models, nextProvider.models),
+      };
+
 export const haveProvidersChanged = (
   previousProviders: ReadonlyArray<ServerProvider>,
   nextProviders: ReadonlyArray<ServerProvider>,
@@ -70,6 +109,8 @@ export const ProviderRegistryLive = Layer.effect(
     const config = yield* ServerConfig;
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
+
+    const activeProviders = PROVIDER_CACHE_IDS;
     const changesPubSub = yield* Effect.acquireRelease(
       PubSub.unbounded<ReadonlyArray<ServerProvider>>(),
       PubSub.shutdown,
@@ -82,7 +123,7 @@ export const ProviderRegistryLive = Layer.effect(
       opencodeProvider,
     );
     const cachePathByProvider = new Map(
-      PROVIDER_CACHE_IDS.map(
+      activeProviders.map(
         (provider) =>
           [
             provider,
@@ -96,8 +137,9 @@ export const ProviderRegistryLive = Layer.effect(
     const fallbackByProvider = new Map(
       fallbackProviders.map((provider) => [provider.provider, provider] as const),
     );
+
     const cachedProviders = yield* Effect.forEach(
-      PROVIDER_CACHE_IDS,
+      activeProviders,
       (provider) => {
         const filePath = cachePathByProvider.get(provider)!;
         const fallbackProvider = fallbackByProvider.get(provider)!;
@@ -148,7 +190,10 @@ export const ProviderRegistryLive = Layer.effect(
           );
 
           for (const provider of nextProviders) {
-            mergedProviders.set(provider.provider, provider);
+            mergedProviders.set(
+              provider.provider,
+              mergeProviderSnapshot(mergedProviders.get(provider.provider), provider),
+            );
           }
 
           const providers = orderProviderSnapshots([...mergedProviders.values()]);

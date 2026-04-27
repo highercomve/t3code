@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import * as Schema from "effect/Schema";
 import * as SchemaTransformation from "effect/SchemaTransformation";
-import { TrimmedNonEmptyString, TrimmedString } from "./baseSchemas";
+import { TrimmedNonEmptyString, TrimmedString } from "./baseSchemas.ts";
 import {
   ClaudeModelOptions,
   CodexModelOptions,
@@ -9,8 +9,8 @@ import {
   GeminiModelOptions,
   OpencodeModelOptions,
   DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER,
-} from "./model";
-import { ModelSelection } from "./orchestration";
+} from "./model.ts";
+import { ModelSelection, ProviderKind } from "./orchestration.ts";
 
 // ── Client Settings (local-only) ───────────────────────────────
 
@@ -26,10 +26,32 @@ export const SidebarThreadSortOrder = Schema.Literals(["updated_at", "created_at
 export type SidebarThreadSortOrder = typeof SidebarThreadSortOrder.Type;
 export const DEFAULT_SIDEBAR_THREAD_SORT_ORDER: SidebarThreadSortOrder = "updated_at";
 
+export const SidebarProjectGroupingMode = Schema.Literals([
+  "repository",
+  "repository_path",
+  "separate",
+]);
+export type SidebarProjectGroupingMode = typeof SidebarProjectGroupingMode.Type;
+export const DEFAULT_SIDEBAR_PROJECT_GROUPING_MODE: SidebarProjectGroupingMode = "repository";
+
 export const ClientSettingsSchema = Schema.Struct({
+  autoOpenPlanSidebar: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   confirmThreadArchive: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   confirmThreadDelete: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   diffWordWrap: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  favorites: Schema.Array(
+    Schema.Struct({
+      provider: ProviderKind,
+      model: TrimmedNonEmptyString,
+    }),
+  ).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
+  sidebarProjectGroupingMode: SidebarProjectGroupingMode.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_SIDEBAR_PROJECT_GROUPING_MODE)),
+  ),
+  sidebarProjectGroupingOverrides: Schema.Record(
+    TrimmedNonEmptyString,
+    SidebarProjectGroupingMode,
+  ).pipe(Schema.withDecodingDefault(Effect.succeed({}))),
   sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_SIDEBAR_PROJECT_SORT_ORDER)),
   ),
@@ -89,6 +111,8 @@ export const OpencodeSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   binaryPath: makeBinaryPathSetting("opencode"),
   apiKey: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  serverUrl: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
+  serverPassword: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
   customModels: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
 });
 export type OpencodeSettings = typeof OpencodeSettings.Type;
@@ -235,6 +259,8 @@ const OpencodeSettingsPatch = Schema.Struct({
   enabled: Schema.optionalKey(Schema.Boolean),
   binaryPath: Schema.optionalKey(Schema.String),
   apiKey: Schema.optionalKey(Schema.String),
+  serverUrl: Schema.optionalKey(Schema.String),
+  serverPassword: Schema.optionalKey(Schema.String),
   customModels: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
@@ -245,6 +271,7 @@ const CopilotSettingsPatch = Schema.Struct({
 });
 
 export const ServerSettingsPatch = Schema.Struct({
+  // Server settings
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   defaultThreadEnvMode: Schema.optionalKey(ThreadEnvMode),
   addProjectBaseDirectory: Schema.optionalKey(Schema.String),
@@ -266,3 +293,26 @@ export const ServerSettingsPatch = Schema.Struct({
   ),
 });
 export type ServerSettingsPatch = typeof ServerSettingsPatch.Type;
+
+export const ClientSettingsPatch = Schema.Struct({
+  autoOpenPlanSidebar: Schema.optionalKey(Schema.Boolean),
+  confirmThreadArchive: Schema.optionalKey(Schema.Boolean),
+  confirmThreadDelete: Schema.optionalKey(Schema.Boolean),
+  diffWordWrap: Schema.optionalKey(Schema.Boolean),
+  favorites: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        provider: ProviderKind,
+        model: TrimmedNonEmptyString,
+      }),
+    ),
+  ),
+  sidebarProjectGroupingMode: Schema.optionalKey(SidebarProjectGroupingMode),
+  sidebarProjectGroupingOverrides: Schema.optionalKey(
+    Schema.Record(TrimmedNonEmptyString, SidebarProjectGroupingMode),
+  ),
+  sidebarProjectSortOrder: Schema.optionalKey(SidebarProjectSortOrder),
+  sidebarThreadSortOrder: Schema.optionalKey(SidebarThreadSortOrder),
+  timestampFormat: Schema.optionalKey(TimestampFormat),
+});
+export type ClientSettingsPatch = typeof ClientSettingsPatch.Type;
