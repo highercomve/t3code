@@ -7,8 +7,9 @@ survive a `git merge upstream/main` (or be re-applied to the new upstream
 shape).
 
 Last sync references:
+
 - Upstream HEAD at last full audit: `d1e85c4e chore(release): prepare v0.0.24`
-- Fork HEAD at last full audit:     `fc4623dd fix: post-merge typecheck/lint/format fixes`
+- Fork HEAD at last full audit: `fc4623dd fix: post-merge typecheck/lint/format fixes`
 - Fork base (closest common ancestor): `ada410bc chore(release): prepare v0.0.21`
 
 Update this file every time we merge upstream or add a new fork feature.
@@ -36,23 +37,23 @@ Update this file every time we merge upstream or add a new fork feature.
 
 These are the commits unique to this fork (older first):
 
-| Commit     | Title |
-|------------|-------|
-| `a2fac667` | feature: add support to gemini and claude |
-| `e6e0ea71` | add linux arm64 |
-| `881d1fb4` | feature: opencode integration version 0.0.1 |
-| `8bdee773` | fix: add messages timeline for opencode |
-| `23d4ae3c` | feature: add local install for linux |
-| `7b5d25e9` | update memories |
-| `c8bca90d` | feature: add opencode and gemini again |
-| `9b3879f2` | feature: add reasoning into the chat for gemini and opencode |
-| `0cd09732` | fix: add opencode go subscription |
-| `1c88e0e7` | fix: auto-detect linux arch in dist:desktop:linux script |
+| Commit     | Title                                                                 |
+| ---------- | --------------------------------------------------------------------- |
+| `a2fac667` | feature: add support to gemini and claude                             |
+| `e6e0ea71` | add linux arm64                                                       |
+| `881d1fb4` | feature: opencode integration version 0.0.1                           |
+| `8bdee773` | fix: add messages timeline for opencode                               |
+| `23d4ae3c` | feature: add local install for linux                                  |
+| `7b5d25e9` | update memories                                                       |
+| `c8bca90d` | feature: add opencode and gemini again                                |
+| `9b3879f2` | feature: add reasoning into the chat for gemini and opencode          |
+| `0cd09732` | fix: add opencode go subscription                                     |
+| `1c88e0e7` | fix: auto-detect linux arch in dist:desktop:linux script              |
 | `c426adb8` | feature: Add commit message suggestions and Gemini/OpenCode providers |
-| `a11a68dd` | fix: delete projects without threads |
-| `19eef554` | feature: add support to copilot |
-| `e8499d24` | Add Claude Opus 4.7, Gemini effort levels, OpenCode model refresh |
-| `fc4623dd` | fix: post-merge typecheck/lint/format fixes |
+| `a11a68dd` | fix: delete projects without threads                                  |
+| `19eef554` | feature: add support to copilot                                       |
+| `e8499d24` | Add Claude Opus 4.7, Gemini effort levels, OpenCode model refresh     |
+| `fc4623dd` | fix: post-merge typecheck/lint/format fixes                           |
 
 Merge commits omitted; see `git log upstream/main..HEAD --oneline` for the
 current diff.
@@ -66,6 +67,7 @@ current diff.
 Full ACP-based provider for Google's Gemini CLI agent.
 
 **New files (must exist after every merge):**
+
 - `apps/server/src/geminiAppServerManager.ts`
 - `apps/server/src/provider/Layers/GeminiAdapter.ts`
 - `apps/server/src/provider/Layers/GeminiProvider.ts`
@@ -74,6 +76,7 @@ Full ACP-based provider for Google's Gemini CLI agent.
 - `apps/server/src/git/Layers/GeminiTextGeneration.ts`
 
 **Touches (must keep Gemini wiring on merge):**
+
 - Provider registry — `apps/server/src/provider/Layers/ProviderRegistry.ts`,
   `apps/server/src/provider/Layers/ProviderAdapterRegistry.ts`
 - Commit-message text generation routing — `apps/server/src/git/Layers/RoutingTextGeneration.ts`
@@ -83,6 +86,7 @@ Full ACP-based provider for Google's Gemini CLI agent.
 - Web provider/model UI — `apps/web/src/components/**` (search for `gemini`)
 
 **Notes for next merge:**
+
 - Upstream may eventually add a Gemini provider of its own. If so, diff our
   adapter against theirs and keep ours unless theirs is strictly better.
 - Gemini reasoning surfaces through the same `turn/plan/updated` /
@@ -94,6 +98,7 @@ Full ACP-based provider for Google's Gemini CLI agent.
 ACP-based provider for GitHub Copilot CLI.
 
 **New files:**
+
 - `apps/server/src/copilotAppServerManager.ts`
 - `apps/server/src/provider/Layers/CopilotAdapter.ts`
 - `apps/server/src/provider/Layers/CopilotProvider.ts`
@@ -101,12 +106,14 @@ ACP-based provider for GitHub Copilot CLI.
 - `apps/server/src/provider/Services/CopilotProvider.ts`
 
 **Touches:**
+
 - Provider registry and adapter registry (same files as Gemini).
 - Auth flow — Copilot uses GitHub device-flow auth; relevant code is wired in
   `apps/server/src/auth/`.
 - Provider/model literals in `packages/contracts/src/providerRuntime.ts`.
 
 **Notes for next merge:**
+
 - Upstream periodically restructures `provider/Layers`. When that happens,
   re-house the Copilot files in the new directory shape and update imports.
 
@@ -115,6 +122,7 @@ ACP-based provider for GitHub Copilot CLI.
 Fork has a dedicated `claudeCodeAppServerManager.ts` that upstream does not.
 
 **New files:**
+
 - `apps/server/src/claudeCodeAppServerManager.ts`
 
 **Notes:** Investigate whether upstream now handles Claude Code via a different
@@ -129,6 +137,7 @@ Upstream has its own OpenCode provider (PascalCase `OpenCodeAdapter`,
 (`opencodeAppServerManager`, `OpencodeAdapter`, `OpencodeProvider`).
 
 **Fork files:**
+
 - `apps/server/src/opencodeAppServerManager.ts`
 - `apps/server/src/opencodeAppServerManager.test.ts`
 - `apps/server/src/provider/Layers/OpencodeAdapter.ts`
@@ -139,6 +148,7 @@ Upstream has its own OpenCode provider (PascalCase `OpenCodeAdapter`,
 - `apps/server/src/git/Layers/OpencodeTextGeneration.ts`
 
 **Fork-specific behavior to preserve when reconciling with upstream:**
+
 - "OpenCode go subscription" subscribe message (commit `0cd09732`).
 - TodoWrite-style plan event normalization. (Already handled centrally via
   `apps/server/src/provider/acp/AcpRuntimeModel.ts` `case "plan"` since
@@ -150,6 +160,7 @@ Upstream has its own OpenCode provider (PascalCase `OpenCodeAdapter`,
 - Model refresh (commit `e8499d24`).
 
 **Next-merge plan:**
+
 - Decision needed: migrate the fork's lowercase opencode files onto upstream's
   PascalCase + `Drivers/`-based layout, OR keep the fork's variant indefinitely.
   Migrating is the long-term winner; until done, conflicts in this area are
@@ -158,6 +169,7 @@ Upstream has its own OpenCode provider (PascalCase `OpenCodeAdapter`,
 ### 5. Linux ARM64 + local install support
 
 **Touches:**
+
 - `apps/desktop/package.json` — desktop build/dist scripts.
 - `apps/desktop/scripts/*.mjs` — auto-detect Linux arch in
   `dist:desktop:linux` (commit `1c88e0e7`).
@@ -174,6 +186,7 @@ entries and any `dist:desktop:linux:*` scripts.
 Commit `e8499d24`. Add new built-in models and per-provider reasoning effort.
 
 **Touches:**
+
 - `packages/contracts/src/model.ts` and `packages/shared/src/model.ts` — model
   catalog (look for `claude-opus-4-7`, `opus-4-7`).
 - `packages/contracts/src/providerRuntime.ts` — Gemini `effort` literal union.
@@ -201,6 +214,7 @@ message" / "Generate PR description" flow that upstream originally limited to
 Codex and Claude.
 
 **Touches:**
+
 - `apps/server/src/git/Layers/RoutingTextGeneration.ts` — provider router.
 - `apps/server/src/git/Layers/GeminiTextGeneration.ts` (new).
 - `apps/server/src/git/Layers/OpencodeTextGeneration.ts` (new).
@@ -220,6 +234,7 @@ project-delete RPC handler.
 `project.yml`. Upstream does not configure Serena.
 
 **Files:**
+
 - `.serena/project.yml`
 - `.serena/memories/*.md`
 - `.serena/.gitignore`
@@ -237,9 +252,51 @@ next merge.
 
 - **OpenCode `case "plan"` handler in `opencodeAppServerManager.ts`** —
   superseded by upstream refactor #2218 (`Refactor OpenCode lifecycle and
-  structured output handling`). Plan updates now flow through
+structured output handling`). Plan updates now flow through
   `apps/server/src/provider/acp/AcpRuntimeModel.ts` `case "plan"`. Do NOT
   re-introduce the ad-hoc handler.
+
+---
+
+## Pending upstream merge (as of fork HEAD `fc4623dd`)
+
+Upstream has **103 commits** ahead of the fork (last audit). A trial
+`git merge upstream/main` produced **79 conflicting files**, dominated by
+three architectural refactors that overlap heavily with fork work:
+
+1. **`aa219be7 port desktop app to Effect (#2546)`** — splits
+   `apps/desktop/src/*.ts` into `apps/desktop/src/{app,backend,electron,ipc,settings,shell,ssh,updates,window}/*.ts`.
+   Almost every fork addition under `apps/desktop/src/` (Linux ARM64 hooks,
+   `dist:desktop:linux:*` plumbing) needs to be re-homed in the new layout.
+2. **`08e6d4cf feat: Multi-Provider support (#2277)`** + **`460d9c3e Refactor
+provider settings to declarative metadata (#2452)`** — restructure the
+   provider system. Touches every file under `apps/server/src/provider/**`
+   that our Gemini/Copilot/Claude-Code work also touches.
+3. **`6d7fe2ee Introduce pluggable VCS driver foundation (#2435)`** +
+   **`0ce7e56e feat(scm): Gitlab (#2462)`** +
+   **`91a03e07 feat(source-control): add Bitbucket & Azure Devops providers (#2473)`** —
+   introduce a VCS driver abstraction that our commit-message-suggestions
+   wiring (Gemini/OpenCode text generation) needs to align with.
+
+Because of the scope, the recommended path is **not** a single bulk merge:
+
+- **Step 1 — Safe upstream parts**: cherry-pick the small, fork-orthogonal
+  commits first (bug fixes, doc updates, UI polish). Skim the upstream log
+  from the bottom up and pull anything that does not touch
+  `apps/desktop/src/`, `apps/server/src/provider/`, or
+  `apps/server/src/git/`. Most of the `[codex]`, `fix(web)`, `fix(mobile)`,
+  `feat(web)` commits qualify.
+- **Step 2 — Provider refactor catch-up**: port Gemini, Copilot, and the
+  fork's OpenCode patches onto upstream's multi-provider + declarative
+  metadata system. This is a focused refactor PR on its own.
+- **Step 3 — Desktop Effect port**: rehome Linux ARM64 / install hooks onto
+  the new `apps/desktop/src/{app,backend,electron,...}` layout.
+- **Step 4 — VCS driver alignment**: migrate
+  `RoutingTextGeneration`/`GeminiTextGeneration`/`OpencodeTextGeneration`
+  onto the new pluggable VCS driver API.
+
+The full pending-upstream commit list lives in
+`git log HEAD..upstream/main --oneline`.
 
 ---
 
