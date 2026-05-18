@@ -1,11 +1,10 @@
 import { Effect, Option, Schema, SchemaIssue, Struct } from "effect";
 import {
-  ClaudeModelOptions,
-  CodexModelOptions,
-  CopilotModelOptions,
-  GeminiModelOptions,
-  OpencodeModelOptions,
-  ProviderOptionSelections,
+  TolerantClaudeModelOptions,
+  TolerantCopilotModelOptions,
+  TolerantCodexModelOptions,
+  TolerantGeminiModelOptions,
+  TolerantOpencodeModelOptions,
 } from "./model.ts";
 import { RepositoryIdentity } from "./environment.ts";
 import {
@@ -108,35 +107,35 @@ export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 export const CodexModelSelection = Schema.Struct({
   provider: Schema.Literal("codex"),
   model: TrimmedNonEmptyString,
-  options: Schema.optionalKey(CodexModelOptions),
+  options: Schema.optionalKey(TolerantCodexModelOptions),
 });
 export type CodexModelSelection = typeof CodexModelSelection.Type;
 
 export const GeminiModelSelection = Schema.Struct({
   provider: Schema.Literal("gemini"),
   model: TrimmedNonEmptyString,
-  options: Schema.optionalKey(GeminiModelOptions),
+  options: Schema.optionalKey(TolerantGeminiModelOptions),
 });
 export type GeminiModelSelection = typeof GeminiModelSelection.Type;
 
 export const ClaudeModelSelection = Schema.Struct({
   provider: Schema.Literal("claudeAgent"),
   model: TrimmedNonEmptyString,
-  options: Schema.optionalKey(ClaudeModelOptions),
+  options: Schema.optionalKey(TolerantClaudeModelOptions),
 });
 export type ClaudeModelSelection = typeof ClaudeModelSelection.Type;
 
 export const OpencodeModelSelection = Schema.Struct({
   provider: Schema.Literal("opencode"),
   model: TrimmedNonEmptyString,
-  options: Schema.optionalKey(OpencodeModelOptions),
+  options: Schema.optionalKey(TolerantOpencodeModelOptions),
 });
 export type OpencodeModelSelection = typeof OpencodeModelSelection.Type;
 
 export const CopilotModelSelection = Schema.Struct({
   provider: Schema.Literal("copilotAgent"),
   model: TrimmedNonEmptyString,
-  options: Schema.optionalKey(CopilotModelOptions),
+  options: Schema.optionalKey(TolerantCopilotModelOptions),
 });
 export type CopilotModelSelection = typeof CopilotModelSelection.Type;
 

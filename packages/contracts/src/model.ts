@@ -182,6 +182,52 @@ function canonicalSelectionsToLegacyObject(
   return out;
 }
 
+/**
+ * Wraps a provider-specific options struct schema so it also accepts the
+ * v3 array-of-selections format (`[{id, value}, …]`) and the legacy object
+ * format (`{effort: "high", …}`) on decode.
+ *
+ * The array form was introduced by migration 026 but the current schema
+ * expects provider-specific struct fields. Without this tolerance the server
+ * crashes on startup when encountering stored array data.
+ *
+ * On encode the struct format is always produced, so any array data that
+ * passes through a decode/encode round-trip is normalised to the struct form.
+ */
+function tolerantProviderOptions<S extends Schema.Top>(structSchema: S) {
+  const fromLegacyObject = LegacyProviderOptionSelectionsObject.pipe(
+    Schema.decodeTo(
+      structSchema,
+      SchemaTransformation.transformOrFail({
+        decode: (record) =>
+          Effect.succeed(
+            coerceLegacyOptionsObjectToArray(record) as unknown as Schema.Schema.Type<S>,
+          ),
+        encode: () => Effect.succeed({} as Record<string, unknown>),
+      }) as never,
+    ),
+  );
+  const fromSelectionsArray = Schema.Array(ProviderOptionSelection).pipe(
+    Schema.decodeTo(
+      structSchema,
+      SchemaTransformation.transformOrFail({
+        decode: (selections) => {
+          const record = canonicalSelectionsToLegacyObject(selections);
+          return Effect.succeed(record as unknown as Schema.Schema.Type<S>);
+        },
+        encode: () => Effect.succeed([] as unknown as ProviderOptionSelection[]),
+      }) as never,
+    ),
+  );
+  return Schema.Union([structSchema, fromLegacyObject, fromSelectionsArray]);
+}
+
+export const TolerantCodexModelOptions = tolerantProviderOptions(CodexModelOptions);
+export const TolerantGeminiModelOptions = tolerantProviderOptions(GeminiModelOptions);
+export const TolerantClaudeModelOptions = tolerantProviderOptions(ClaudeModelOptions);
+export const TolerantOpencodeModelOptions = tolerantProviderOptions(OpencodeModelOptions);
+export const TolerantCopilotModelOptions = tolerantProviderOptions(CopilotModelOptions);
+
 type ModelOption = {
   readonly slug: string;
   readonly name: string;
