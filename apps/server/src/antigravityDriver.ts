@@ -69,9 +69,11 @@ function buildArgv(input: AntigravityTurnInput): ReadonlyArray<string> {
   if (input.conversationId !== null) {
     argv.push("--conversation", input.conversationId);
   }
-  if (input.model.length > 0) {
-    argv.push("--model", input.model);
-  }
+  // NOTE: agy has no `--model` flag — verified empirically (`agy --print
+  // --model X` exits 2 with `flags provided but not defined: -model`). The
+  // active model is whatever is in `~/.gemini/antigravity-cli/settings.json`
+  // ("Gemini 3.1 Pro (High)", "Claude Opus 4.6 (Thinking)", etc.). `input.model`
+  // is therefore informational only — the driver does NOT forward it.
   if (input.dangerouslySkipPermissions) {
     argv.push("--dangerously-skip-permissions");
   }

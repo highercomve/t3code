@@ -28,7 +28,7 @@ Each decision below is **recommendation + rationale + alternatives considered + 
 
 ### 3.1 Transport — `agy --print "<prompt>"` per turn, streaming line-buffered stdout (option a)
 
-**Recommendation:** option (a). Each user turn spawns `agy --print "<prompt>" --conversation <agyConversationId> --dangerously-skip-permissions --print-timeout 300s --model <m>`. The driver consumes stdout line-by-line (the binary is line-buffered — see §3.4 empirical evidence) and emits one `content.delta` per line, followed by `turn.completed` on exit.
+**Recommendation:** option (a). Each user turn spawns `agy --print "<prompt>" --conversation <agyConversationId> --dangerously-skip-permissions --print-timeout 300s (no --model flag; agy reads model from ~/.gemini/antigravity-cli/settings.json)`. The driver consumes stdout line-by-line (the binary is line-buffered — see §3.4 empirical evidence) and emits one `content.delta` per line, followed by `turn.completed` on exit.
 
 **Spawn-shape note (empirically verified 2026-05-27):** the prompt is the **argument of `--print`**, NOT a positional after `--`. Probe results:
 - `agy --print "Reply only PING"` → emits `PING`. Correct.
@@ -293,8 +293,8 @@ AntigravityDriver.runTurn({
    cwd,
    timeoutMs: 300_000
 })
-    │   if conversationId: spawn agy --print "<prompt>" --conversation <id> --model <m> --dangerously-skip-permissions --print-timeout 300s
-    │   else (first turn): spawn agy --print "<prompt>" --model <m> --dangerously-skip-permissions --print-timeout 300s
+    │   if conversationId: spawn agy --print "<prompt>" --conversation <id> (no --model flag; agy reads model from ~/.gemini/antigravity-cli/settings.json) --dangerously-skip-permissions --print-timeout 300s
+    │   else (first turn): spawn agy --print "<prompt>" (no --model flag; agy reads model from ~/.gemini/antigravity-cli/settings.json) --dangerously-skip-permissions --print-timeout 300s
     │   readline-wrap child.stdout, accumulate stderr
     │   on each stdout line: forward to adapter
     │   on exit (or timeout / cancel): forward terminal state

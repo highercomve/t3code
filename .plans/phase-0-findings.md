@@ -116,17 +116,37 @@ client-minted-UUID optimization. This costs us nothing: we still own the
 thread-to-conversation mapping in our SQLite, we just store the id agy
 returned.
 
-## P5 — Model slugs (NOT RUN)
+## P5 — Model slugs (RESOLVED — `agy` has NO `--model` flag)
 
-Deferred — slug acceptance can be discovered during phase 1 (catalog
-definition). Known facts from agy's own settings:
-- `antigravity-cli/settings.json` stores model as display string
-  `"Gemini 3.1 Pro (High)"`.
-- `agy changelog` mentions `gemini-3.1-pro`.
+**Resolved during Phase 7 (2026-05-27, post-Phase 6) by user-supplied
+screenshot of agy's interactive `/switch-model` picker.** Verified
+empirically: `agy --print --model gemini-3.1-pro` exits 2 with
+`flags provided but not defined: -model`. Every slug attempt (slug form,
+display form with effort, display form without effort) is rejected the
+same way — the flag itself doesn't exist.
 
-**Recommendation:** ship the catalog from plan §3.8 as-is (`gemini-3.1-pro`,
-`gemini-3.1-pro-preview`, `gemini-3-flash-preview`). The smoke matrix in Phase
-6 will surface any rejected slug, at which point we drop it from the catalog.
+**Actual model selection mechanism in agy:**
+- TUI picker shows: `Gemini 3.5 Flash (Low/Medium/High)`, `Gemini 3.1
+  Pro (Low/High)`, `Claude Sonnet 4.6 (Thinking)`, `Claude Opus 4.6
+  (Thinking)`, `GPT-OSS 120B (Medium)`. Effort is baked into the display
+  name; there is no separate effort dimension at the CLI level.
+- The picker writes the selected display string to
+  `~/.gemini/antigravity-cli/settings.json`'s `model` field
+  (e.g. `"Gemini 3.1 Pro (High)"`).
+- `agy --print` reads that field — there is NO per-invocation override.
+
+**Driver consequence:** `antigravityDriver.ts:buildArgv` must NOT
+forward `input.model` to argv. The field is kept on the type for future
+use (e.g. if we ever rewrite settings.json before spawn) but is
+informational today.
+
+**Settings/UI consequence:** the model picker in our web UI is currently
+decorative for Antigravity — selecting a different model in our app
+will not change what agy actually uses. If we want true model-switching
+we need to either (a) call `agy` interactively and drive the picker
+programmatically, or (b) rewrite `~/.gemini/antigravity-cli/settings.json`
+before each spawn (and restore afterwards). Out of scope for this
+migration; tracked as a follow-up.
 
 ## P6 — Tool exec without prompts (NOT RUN)
 

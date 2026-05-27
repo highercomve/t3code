@@ -9,9 +9,16 @@ shape).
 Last sync references:
 
 - Upstream HEAD at last full audit: `4f0f24f0 fix: maintain reasoning selections for multiple providers (#2760)`
-- Fork HEAD at last full audit: `e92e2dba fix: merge of upstream`
+- Fork HEAD at last full audit: post-gemini→antigravity migration (Phases 0–7)
 - Fork base (closest common ancestor): `ada410bc chore(release): prepare v0.0.21`
 - Audit date: 2026-05-27
+
+**Recent structural change:** the Gemini provider was removed in the
+2026-05-27 gemini → agy migration. The fork now ships Antigravity (`agy`)
+as the replacement; see §1. Migration plan + empirical probes live in
+`.plans/gemini-to-antigravity-migration.md` and
+`.plans/phase-0-findings.md`. Any future upstream merge that introduces a
+Gemini provider must be reconciled against the Antigravity rename.
 
 Update this file every time we merge upstream or add a new fork feature.
 
@@ -68,36 +75,88 @@ current diff.
 
 ## Active fork features
 
-### 1. Gemini provider
+### 1. Antigravity provider (replaces deprecated Gemini ACP integration)
 
-Full ACP-based provider for Google's Gemini CLI agent.
+One-shot, line-streaming provider for Google's Antigravity CLI (binary
+`agy`). Replaces the deprecated `gemini --experimental-acp` integration
+entirely — `agy` does NOT speak ACP. The on-disk provider id is
+`"antigravity"`; SQLite migration 028 rewrites persisted
+`provider="gemini"` references on first launch.
 
 **New files (must exist after every merge):**
 
-- `apps/server/src/geminiAppServerManager.ts`
-- `apps/server/src/provider/Layers/GeminiAdapter.ts`
-- `apps/server/src/provider/Layers/GeminiProvider.ts`
-- `apps/server/src/provider/Services/GeminiAdapter.ts`
-- `apps/server/src/provider/Services/GeminiProvider.ts`
-- `apps/server/src/git/Layers/GeminiTextGeneration.ts`
+- `apps/server/src/antigravityDriver.ts`
+- `apps/server/src/provider/Layers/AntigravityAdapter.ts`
+- `apps/server/src/provider/Layers/AntigravityProvider.ts`
+- `apps/server/src/provider/Services/AntigravityAdapter.ts`
+- `apps/server/src/provider/Services/AntigravityProvider.ts`
+- `apps/server/src/git/Layers/AntigravityTextGeneration.ts`
+- `apps/server/src/persistence/Layers/AntigravityConversationStore.ts`
+- `apps/server/src/persistence/Services/AntigravityConversationStore.ts`
+- `apps/server/src/persistence/Migrations/028_RenameGeminiToAntigravity.ts`
 
-**Touches (must keep Gemini wiring on merge):**
+**Touches (must keep Antigravity wiring on merge):**
 
 - Provider registry — `apps/server/src/provider/Layers/ProviderRegistry.ts`,
   `apps/server/src/provider/Layers/ProviderAdapterRegistry.ts`
-- Commit-message text generation routing — `apps/server/src/git/Layers/RoutingTextGeneration.ts`
-- Model + provider contract literals — `packages/contracts/src/providerRuntime.ts`,
-  `packages/contracts/src/orchestration.ts`, `packages/contracts/src/settings.ts`,
-  `packages/contracts/src/model.ts`
-- Web provider/model UI — `apps/web/src/components/**` (search for `gemini`)
+- Commit-message text generation routing —
+  `apps/server/src/git/Layers/RoutingTextGeneration.ts`
+- Model + provider contract literals —
+  `packages/contracts/src/{providerRuntime,orchestration,settings,model}.ts`,
+  `packages/shared/src/model.ts`
+- Settings migration — `apps/server/src/persistence/Migrations.ts`
+  (registers 028 which rewrites `provider: "gemini"` → `provider:
+"antigravity"` in projection_threads, projection_projects,
+  orchestration_events, projection_thread_sessions,
+  provider_session_runtime).
+- Web provider/model UI — `apps/web/src/components/**` (search for
+  `antigravity`; the literal `gemini` must NOT appear as a `ProviderKind`
+  value in the post-migration source tree — backwards-compat settings
+  keys `customGeminiModels` / `geminiApiKey` are the only intentional
+  exceptions).
+- Desktop env passthrough — `apps/desktop/src/syncShellEnvironment.ts`
+  (`GEMINI_API_KEY` and `GOOGLE_API_KEY` remain in the allowlist; agy
+  reads them via Google's underlying SDK). No `GEMINI_HOME` entry.
+
+**Behavioral notes (vs the old Gemini ACP integration):**
+
+- Driver is NOT ACP. Do NOT reuse `AcpTextGeneration.ts` or
+  `AcpRuntimeModel.ts` event normalization for this provider.
+- Streaming is line-grained — one `content.delta` per stdout line.
+  Empirically verified at 200-400 ms per-line cadence
+  (`.plans/phase-0-findings.md` §P3, §P4).
+- Multi-turn state delegated to `agy`'s own conversation store via
+  `--conversation <uuid>`. The driver never passes a client-minted UUID
+  — on the first turn it omits `--conversation`, then harvests the id
+  that agy mints from `~/.gemini/antigravity-cli/cache/last_conversations.json`
+  and persists it on the thread via `AntigravityConversationStore`.
+- `--print-timeout` requires a Go duration string (`60s`, NOT `60`).
+- The prompt is the argument of `--print` — never use the `--`
+  separator (empirically dropped by agy).
+- **agy has NO `--model` flag.** Verified empirically: `agy --print
+  --model X` exits 2 with `flags provided but not defined: -model`.
+  Model selection is the value of `model` in
+  `~/.gemini/antigravity-cli/settings.json` (full display string like
+  `"Gemini 3.1 Pro (High)"` — effort is encoded in the name) and is
+  changed either via the interactive picker (`agy -i` → `/switch-model`)
+  or by editing that file directly. The `model` field on `ProviderSession`
+  is informational only; the driver does NOT forward it. Future work: if
+  we want per-turn model overrides, the driver would have to rewrite
+  `antigravity-cli/settings.json` before each spawn and restore after —
+  not implemented today.
+- Reasoning surface and per-tool permission prompts are deliberately
+  not emitted (agy provides no equivalent). Plan mode requests downgrade
+  silently with a `runtime.warning`.
+- `--dangerously-skip-permissions` is passed by default; the UI exposes
+  a toggle to disable, which gates session start.
 
 **Notes for next merge:**
 
-- Upstream may eventually add a Gemini provider of its own. If so, diff our
-  adapter against theirs and keep ours unless theirs is strictly better.
-- Gemini reasoning surfaces through the same `turn/plan/updated` /
-  `item/reasoning/textDelta` channels as Codex; the central handling lives in
-  `apps/server/src/provider/acp/AcpRuntimeModel.ts`.
+- If upstream adds a streaming `--json-stream` flag to `agy`, revisit
+  `antigravityDriver.ts` to emit incremental token-level deltas.
+- The fork no longer carries a `gemini` provider id. If upstream adds
+  one later, evaluate whether to (a) reintroduce it side-by-side with
+  Antigravity, or (b) keep our rename. Default: (b).
 
 ### 2. Copilot provider
 
@@ -195,15 +254,18 @@ Upstream has its own OpenCode provider (PascalCase `OpenCodeAdapter`,
 `.github/workflows/release.yml` carefully and preserve `linux-arm64` matrix
 entries and any `dist:desktop:linux:*` scripts.
 
-### 6. Claude Opus 4.7 + Gemini effort levels + OpenCode model refresh
+### 6. Claude Opus 4.7 + Antigravity effort levels + OpenCode model refresh
 
 Commit `e8499d24`. Add new built-in models and per-provider reasoning effort.
 
 **Touches:**
 
 - `packages/contracts/src/model.ts` and `packages/shared/src/model.ts` — model
-  catalog (look for `claude-opus-4-7`, `opus-4-7`).
-- `packages/contracts/src/providerRuntime.ts` — Gemini `effort` literal union.
+  catalog (look for `claude-opus-4-7`, `opus-4-7`, `gemini-3.1-pro`).
+- `packages/contracts/src/providerRuntime.ts` — Antigravity `effort`
+  literal union (`ANTIGRAVITY_EFFORT_OPTIONS`). Note: agy itself exposes
+  no effort flag; the field is stored in settings as a future-compat
+  no-op.
 - `apps/server/src/provider/Services/ClaudeProvider.ts` and
   `apps/server/src/provider/Layers/ClaudeProvider.ts` — Opus 4.7 wiring.
 - Web model picker — `apps/web/src/components/**` (search for `opus-4-7`).
@@ -212,25 +274,29 @@ Commit `e8499d24`. Add new built-in models and per-provider reasoning effort.
 (e.g. `Add Claude Opus 4.5` #2143 already in upstream). When upstream adds
 Opus 4.7 or later, drop our local entry to avoid duplicates.
 
-### 7. Reasoning surfaces for Gemini & OpenCode
+### 7. Reasoning surfaces for OpenCode
 
-Commit `9b3879f2`. Maps each provider's reasoning chunks onto the shared
+Commit `9b3879f2`. Maps OpenCode's reasoning chunks onto the shared
 `item/reasoning/textDelta` ACP method so the UI's "thinking" panel works for
-non-Codex providers.
+non-Codex providers. Antigravity does NOT emit reasoning events (agy
+provides no reasoning surface); the reasoning panel is intentionally
+empty for that provider.
 
-**Touches:** the adapter files listed in §1, §2, §4 plus the runtime model
-under `apps/server/src/provider/acp/AcpRuntimeModel.ts`.
+**Touches:** the adapter files listed in §4 plus the runtime model under
+`apps/server/src/provider/acp/AcpRuntimeModel.ts`.
 
-### 8. Commit message suggestions powered by Gemini / OpenCode
+### 8. Commit message suggestions powered by Antigravity / OpenCode
 
-Commit `c426adb8`. Wires Gemini and OpenCode into the "Generate commit
-message" / "Generate PR description" flow that upstream originally limited to
-Codex and Claude.
+Commit `c426adb8` (originally Gemini + OpenCode; Gemini half migrated to
+Antigravity in the gemini → agy migration). Wires Antigravity and
+OpenCode into the "Generate commit message" / "Generate PR description"
+flow that upstream originally limited to Codex and Claude.
 
 **Touches:**
 
 - `apps/server/src/git/Layers/RoutingTextGeneration.ts` — provider router.
-- `apps/server/src/git/Layers/GeminiTextGeneration.ts` (new).
+- `apps/server/src/git/Layers/AntigravityTextGeneration.ts` (new — drives
+  `agy --print` directly; no ACP).
 - `apps/server/src/git/Layers/OpencodeTextGeneration.ts` (new).
 
 ### 9. "Delete projects without threads" fix
