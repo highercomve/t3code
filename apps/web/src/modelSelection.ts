@@ -84,9 +84,10 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
   },
   antigravity: {
     provider: "antigravity",
-    title: "Gemini",
-    description: "Save additional Gemini model slugs for the picker and `/model` command.",
-    placeholder: "your-gemini-model-slug",
+    title: "Antigravity",
+    description:
+      "Save additional Antigravity (Gemini-family) model slugs for the picker and `/model` command.",
+    placeholder: "your-antigravity-model-slug",
     example: "gemini-3.1-pro-preview",
   },
   opencode: {

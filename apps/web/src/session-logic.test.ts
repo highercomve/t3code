@@ -1552,11 +1552,11 @@ describe("deriveActiveWorkStartedAt", () => {
 });
 
 describe("PROVIDER_OPTIONS", () => {
-  it("advertises codex, claude, gemini, opencode, and copilot providers", () => {
+  it("advertises codex, claude, antigravity, opencode, and copilot providers", () => {
     expect(PROVIDER_OPTIONS).toEqual([
       { value: "codex", label: "Codex", available: true },
       { value: "claudeAgent", label: "Claude", available: true },
-      { value: "gemini", label: "Gemini", available: true },
+      { value: "antigravity", label: "Antigravity", available: true },
       { value: "opencode", label: "OpenCode", available: true },
       { value: "copilotAgent", label: "Copilot", available: true },
     ]);

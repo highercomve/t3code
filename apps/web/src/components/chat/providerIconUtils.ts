@@ -1,11 +1,11 @@
 import { type ProviderKind, PROVIDER_DISPLAY_NAMES } from "@t3tools/contracts";
-import { ClaudeAI, CopilotIcon, Gemini, Icon, OpenAI, OpenCodeIcon } from "../Icons";
+import { AntigravityIcon, ClaudeAI, CopilotIcon, Icon, OpenAI, OpenCodeIcon } from "../Icons";
 import { PROVIDER_OPTIONS } from "../../session-logic";
 
 export const PROVIDER_ICON_BY_PROVIDER: Record<ProviderKind, Icon> = {
   codex: OpenAI,
   claudeAgent: ClaudeAI,
-  antigravity: Gemini,
+  antigravity: AntigravityIcon,
   opencode: OpenCodeIcon,
   copilotAgent: CopilotIcon,
 };

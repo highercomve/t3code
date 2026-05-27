@@ -96,12 +96,15 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
   },
   antigravity: {
     provider: "antigravity",
+    // The on-disk settings key stays customGeminiModels for backwards-compat
+    // with existing user settings.json files; UI surfaces "Antigravity".
     settingsKey: "customGeminiModels",
     defaultSettingsKey: "customGeminiModels",
-    title: "Gemini",
-    description: "Save additional Gemini model slugs for the picker and `/model` command.",
-    placeholder: "your-gemini-model-slug",
-    example: "gemini-3.5-ultra-preview",
+    title: "Antigravity",
+    description:
+      "Save additional Antigravity (Gemini-family) model slugs for the picker and `/model` command.",
+    placeholder: "your-antigravity-model-slug",
+    example: "gemini-3.1-pro-preview",
   },
   claudeAgent: {
     provider: "claudeAgent",
