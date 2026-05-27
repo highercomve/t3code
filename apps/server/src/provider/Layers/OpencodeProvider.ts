@@ -35,7 +35,23 @@ const OPENCODE_PRESENTATION = {
   showInteractionModeToggle: true,
 } as const;
 
+const OPENCODE_REASONING_EFFORT_OPTIONS = [
+  { id: "low", label: "Low" },
+  { id: "medium", label: "Medium", isDefault: true },
+  { id: "high", label: "High" },
+  { id: "xhigh", label: "Extra High" },
+] as const;
+
 const OPENCODE_MODEL_CAPABILITIES: ServerProviderModel["capabilities"] = {
+  optionDescriptors: [
+    {
+      id: "reasoningEffort",
+      label: "Reasoning",
+      type: "select",
+      options: OPENCODE_REASONING_EFFORT_OPTIONS,
+      currentValue: "medium",
+    },
+  ],
   reasoningEffortLevels: [
     { value: "low", label: "Low" },
     { value: "medium", label: "Medium", isDefault: true },
@@ -56,20 +72,26 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "opencode/gpt-5-nano",
-    name: "GPT-5 Nano",
-    isCustom: false,
-    capabilities: OPENCODE_MODEL_CAPABILITIES,
-  },
-  {
-    slug: "opencode/minimax-m2.5-free",
-    name: "MiniMax M2.5 Free",
+    slug: "opencode/deepseek-v4-flash-free",
+    name: "DeepSeek V4 Flash Free",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
     slug: "opencode/nemotron-3-super-free",
     name: "Nemotron 3 Super Free",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
+    slug: "opencode-go/deepseek-v4-flash",
+    name: "DeepSeek V4 Flash (Go)",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
+    slug: "opencode-go/deepseek-v4-pro",
+    name: "DeepSeek V4 Pro (Go)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
@@ -92,14 +114,20 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "opencode-go/mimo-v2-omni",
-    name: "MiMo V2 Omni (Go)",
+    slug: "opencode-go/kimi-k2.6",
+    name: "Kimi K2.6 (Go)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "opencode-go/mimo-v2-pro",
-    name: "MiMo V2 Pro (Go)",
+    slug: "opencode-go/mimo-v2.5",
+    name: "MiMo V2.5 (Go)",
+    isCustom: false,
+    capabilities: OPENCODE_MODEL_CAPABILITIES,
+  },
+  {
+    slug: "opencode-go/mimo-v2.5-pro",
+    name: "MiMo V2.5 Pro (Go)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
@@ -116,20 +144,20 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "ollama/gemma4",
-    name: "Gemma 4 (Ollama Cloud)",
+    slug: "opencode-go/qwen3.5-plus",
+    name: "Qwen 3.5 Plus (Go)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "ollama/gemma4:31b-cloud",
-    name: "Gemma 4 31B (Ollama Cloud)",
+    slug: "opencode-go/qwen3.6-plus",
+    name: "Qwen 3.6 Plus (Go)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },
   {
-    slug: "ollama/nemotron-3-super",
-    name: "Nemotron 3 Super (Ollama Cloud)",
+    slug: "opencode-go/qwen3.7-max",
+    name: "Qwen 3.7 Max (Go)",
     isCustom: false,
     capabilities: OPENCODE_MODEL_CAPABILITIES,
   },

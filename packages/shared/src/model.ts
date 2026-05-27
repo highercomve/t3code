@@ -297,6 +297,25 @@ export function buildProviderOptionSelectionsFromDescriptors(
   return nextSelections.length > 0 ? nextSelections : undefined;
 }
 
+// The web carries provider options internally as `Array<{id, value}>` to drive
+// trait pickers, but the on-wire `ModelSelection.options` schema canonicalises
+// to a per-provider struct (`{reasoningEffort, fastMode, …}`). Convert at the
+// dispatch boundary so the request body matches the schema's in-memory type.
+export function providerOptionSelectionsToStruct(
+  selections: ReadonlyArray<ProviderOptionSelection> | null | undefined,
+): Record<string, string | boolean> | undefined {
+  if (!selections || selections.length === 0) {
+    return undefined;
+  }
+  const out: Record<string, string | boolean> = {};
+  for (const selection of selections) {
+    if (typeof selection.value === "string" || typeof selection.value === "boolean") {
+      out[selection.id] = selection.value;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export function getModelSelectionOptionDescriptors(
   modelSelection: ModelSelection | null | undefined,
   caps?: ModelCapabilities | null | undefined,

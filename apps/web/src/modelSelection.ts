@@ -12,8 +12,10 @@ import {
 import {
   createModelSelection,
   normalizeModelSlug,
+  providerOptionSelectionsToStruct,
   resolveSelectableModel,
 } from "@t3tools/shared/model";
+import type { ProviderOptionSelection } from "@t3tools/contracts";
 import { getComposerProviderState } from "./components/chat/composerProviderState";
 import { UnifiedSettings } from "@t3tools/contracts/settings";
 import {
@@ -45,12 +47,18 @@ type ModelSelectionByProvider = {
 export function buildModelSelection<P extends ProviderKind>(
   provider: P,
   model: string,
-  options?: ModelSelectionByProvider[P]["options"],
+  options?:
+    | ModelSelectionByProvider[P]["options"]
+    | ReadonlyArray<ProviderOptionSelection>
+    | null,
 ): ModelSelectionByProvider[P] {
+  const optionsStruct = Array.isArray(options)
+    ? providerOptionSelectionsToStruct(options as ReadonlyArray<ProviderOptionSelection>)
+    : (options as ModelSelectionByProvider[P]["options"] | undefined);
   return {
     provider,
     model,
-    ...(options ? { options } : {}),
+    ...(optionsStruct && Object.keys(optionsStruct).length > 0 ? { options: optionsStruct } : {}),
   } as ModelSelectionByProvider[P];
 }
 

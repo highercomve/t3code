@@ -17,7 +17,11 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
 } from "@t3tools/contracts";
-import { createModelSelection, normalizeModelSlug } from "@t3tools/shared/model";
+import {
+  createModelSelection,
+  normalizeModelSlug,
+  providerOptionSelectionsToStruct,
+} from "@t3tools/shared/model";
 import {
   forwardRef,
   memo,
@@ -614,15 +618,14 @@ export const ChatComposer = memo(
       }),
       [providerStatuses, selectedProvider],
     );
-    const selectedModelSelection = useMemo(
-      () =>
-        ({
-          provider: selectedProvider,
-          model: selectedModel,
-          ...(selectedModelOptionsForDispatch ? { options: selectedModelOptionsForDispatch } : {}),
-        }) as ModelSelection,
-      [selectedModel, selectedModelOptionsForDispatch, selectedProvider],
-    );
+    const selectedModelSelection = useMemo(() => {
+      const optionsStruct = providerOptionSelectionsToStruct(selectedModelOptionsForDispatch);
+      return {
+        provider: selectedProvider,
+        model: selectedModel,
+        ...(optionsStruct ? { options: optionsStruct } : {}),
+      } as ModelSelection;
+    }, [selectedModel, selectedModelOptionsForDispatch, selectedProvider]);
     const selectedModelForPicker = selectedModel;
     const modelOptionsByProvider = useMemo<
       Record<ProviderKind, ReadonlyArray<ServerProvider["models"][number]>>

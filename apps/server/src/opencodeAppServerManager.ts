@@ -524,6 +524,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
           model:
             normalizeModelSlug(input.model ?? context.session.model, PROVIDER) ??
             OPENCODE_DEFAULT_MODEL,
+          ...(input.effort ? { effort: input.effort } : {}),
         },
       },
     });
@@ -564,6 +565,7 @@ export class OpencodeAppServerManager extends EventEmitter<OpencodeAppServerMana
         {
           sessionId: context.acpSessionId,
           prompt: promptContent,
+          ...(input.effort ? { effort: input.effort } : {}),
         },
         PROMPT_TIMEOUT_MS,
       );
