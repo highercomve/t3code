@@ -16,7 +16,7 @@ import type { TextGenerationError } from "@t3tools/contracts";
 export type TextGenerationProvider =
   | "codex"
   | "claudeAgent"
-  | "gemini"
+  | "antigravity"
   | "opencode"
   | "copilotAgent";
 

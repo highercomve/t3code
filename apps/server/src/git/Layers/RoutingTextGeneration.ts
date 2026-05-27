@@ -4,7 +4,7 @@
  *
  * - `"codex"` → Codex CLI (`codex exec`)
  * - `"claudeAgent"` → Claude CLI (`claude -p --json-schema`)
- * - `"gemini"` → Gemini CLI (`gemini --experimental-acp`)
+ * - `"antigravity"` → Antigravity CLI (`agy --print`)
  * - `"opencode"` → OpenCode CLI (`opencode acp`)
  *
  * @module RoutingTextGeneration
@@ -14,7 +14,7 @@ import { Effect, Layer, Context } from "effect";
 import { TextGeneration, type TextGenerationShape } from "../Services/TextGeneration.ts";
 import { CodexTextGenerationLive } from "./CodexTextGeneration.ts";
 import { ClaudeTextGenerationLive } from "./ClaudeTextGeneration.ts";
-import { GeminiTextGenerationLive } from "./GeminiTextGeneration.ts";
+import { AntigravityTextGenerationLive } from "./AntigravityTextGeneration.ts";
 import { OpencodeTextGenerationLive } from "./OpencodeTextGeneration.ts";
 
 // ---------------------------------------------------------------------------
@@ -29,8 +29,8 @@ class ClaudeTextGen extends Context.Service<ClaudeTextGen, TextGenerationShape>(
   "t3/git/Layers/RoutingTextGeneration/ClaudeTextGen",
 ) {}
 
-class GeminiTextGen extends Context.Service<GeminiTextGen, TextGenerationShape>()(
-  "t3/git/Layers/RoutingTextGeneration/GeminiTextGen",
+class AntigravityTextGen extends Context.Service<AntigravityTextGen, TextGenerationShape>()(
+  "t3/git/Layers/RoutingTextGeneration/AntigravityTextGen",
 ) {}
 
 class OpencodeTextGen extends Context.Service<OpencodeTextGen, TextGenerationShape>()(
@@ -44,14 +44,13 @@ class OpencodeTextGen extends Context.Service<OpencodeTextGen, TextGenerationSha
 const makeRoutingTextGeneration = Effect.gen(function* () {
   const codex = yield* CodexTextGen;
   const claude = yield* ClaudeTextGen;
-  const gemini = yield* GeminiTextGen;
+  const antigravity = yield* AntigravityTextGen;
   const opencode = yield* OpencodeTextGen;
 
   const byProvider = {
     codex,
     claudeAgent: claude,
-    // TODO(phase-3): replace with AntigravityTextGenerationLive
-    antigravity: gemini,
+    antigravity,
     opencode,
     // copilotAgent does not yet have a dedicated text-generation backend; fall
     // back to claude for commit/PR/title text generation tasks.
@@ -86,13 +85,13 @@ const InternalClaudeLayer = Layer.effect(
   }),
 ).pipe(Layer.provide(ClaudeTextGenerationLive));
 
-const InternalGeminiLayer = Layer.effect(
-  GeminiTextGen,
+const InternalAntigravityLayer = Layer.effect(
+  AntigravityTextGen,
   Effect.gen(function* () {
     const svc = yield* TextGeneration;
     return svc;
   }),
-).pipe(Layer.provide(GeminiTextGenerationLive));
+).pipe(Layer.provide(AntigravityTextGenerationLive));
 
 const InternalOpencodeLayer = Layer.effect(
   OpencodeTextGen,
@@ -108,6 +107,6 @@ export const RoutingTextGenerationLive = Layer.effect(
 ).pipe(
   Layer.provide(InternalCodexLayer),
   Layer.provide(InternalClaudeLayer),
-  Layer.provide(InternalGeminiLayer),
+  Layer.provide(InternalAntigravityLayer),
   Layer.provide(InternalOpencodeLayer),
 );
