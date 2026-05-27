@@ -22,4 +22,7 @@ apps/web/src/components/__screenshots__
 __screenshots__/
 .tanstack
 squashfs-root/
-.antigravitycli/
+.vercel
+.gstack/
+dist-electron/
+.electron-runtime/

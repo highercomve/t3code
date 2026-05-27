@@ -1,6 +1,8 @@
-import { Effect, Schema, SchemaTransformation } from "effect";
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+import * as SchemaTransformation from "effect/SchemaTransformation";
 import { TrimmedNonEmptyString } from "./baseSchemas.ts";
-import type { ProviderKind } from "./orchestration.ts";
+import { ProviderDriverKind } from "./providerInstance.ts";
 
 export const CODEX_REASONING_EFFORT_OPTIONS = ["xhigh", "high", "medium", "low"] as const;
 export type CodexReasoningEffort = (typeof CODEX_REASONING_EFFORT_OPTIONS)[number];
@@ -153,10 +155,10 @@ function coerceLegacyOptionsObjectToArray(
   const entries: Array<ProviderOptionSelection> = [];
   for (const [rawKey, rawValue] of Object.entries(record)) {
     const id = typeof rawKey === "string" ? rawKey.trim() : "";
-    if (!id) continue;
+    if (id.length === 0) continue;
     if (typeof rawValue === "string") {
       const trimmed = rawValue.trim();
-      if (trimmed) entries.push({ id, value: trimmed });
+      if (trimmed.length > 0) entries.push({ id, value: trimmed });
     } else if (typeof rawValue === "boolean") {
       entries.push({ id, value: rawValue });
     }
@@ -324,52 +326,35 @@ export const ModelCapabilities = Schema.Struct({
 });
 export type ModelCapabilities = typeof ModelCapabilities.Type;
 
-export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderKind, ModelSlug> = {
-  codex: "gpt-5.4",
-  // matches the agy default model surfaced in
-  // ~/.gemini/antigravity-cli/settings.json ("Gemini 3.1 Pro (High)").
-  antigravity: "gemini-3.1-pro-high",
-  claudeAgent: "claude-sonnet-4-6",
-  opencode: "opencode/big-pickle",
-  copilotAgent: "claude-sonnet-4.6",
-} as const satisfies Record<ProviderKind, ModelSlug>;
+const CODEX_DRIVER_KIND = ProviderDriverKind.make("codex");
+const CLAUDE_DRIVER_KIND = ProviderDriverKind.make("claudeAgent");
+const CURSOR_DRIVER_KIND = ProviderDriverKind.make("cursor");
+const OPENCODE_DRIVER_KIND = ProviderDriverKind.make("opencode");
 
-/**
- * Maps our kebab slugs onto the exact display strings agy expects in
- * `~/.gemini/antigravity-cli/settings.json#model`. agy has no `--model`
- * flag, so this map is what the driver will use IF we ever implement the
- * settings.json rewrite-before-spawn (currently not wired — the picker is
- * decorative for Antigravity until then).
- */
-export const AGY_DISPLAY_BY_SLUG: Readonly<Record<string, string>> = {
-  "gemini-3.1-pro-high": "Gemini 3.1 Pro (High)",
-  "gemini-3.1-pro-low": "Gemini 3.1 Pro (Low)",
-  "gemini-3.5-flash-high": "Gemini 3.5 Flash (High)",
-  "gemini-3.5-flash-medium": "Gemini 3.5 Flash (Medium)",
-  "gemini-3.5-flash-low": "Gemini 3.5 Flash (Low)",
-  "claude-sonnet-4-6-thinking": "Claude Sonnet 4.6 (Thinking)",
-  "claude-opus-4-6-thinking": "Claude Opus 4.6 (Thinking)",
-  "gpt-oss-120b-medium": "GPT-OSS 120B (Medium)",
+export const DEFAULT_MODEL = "gpt-5.4";
+export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.4-mini";
+
+export const DEFAULT_MODEL_BY_PROVIDER: Partial<Record<ProviderDriverKind, string>> = {
+  [CODEX_DRIVER_KIND]: DEFAULT_MODEL,
+  [CLAUDE_DRIVER_KIND]: "claude-sonnet-4-6",
+  [CURSOR_DRIVER_KIND]: "auto",
+  [OPENCODE_DRIVER_KIND]: "openai/gpt-5",
 };
-
-export const MODEL_OPTIONS = MODEL_OPTIONS_BY_PROVIDER.codex;
-export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
 
 /** Per-provider text generation model defaults. */
-export const DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER: Record<ProviderKind, ModelSlug> = {
-  codex: "gpt-5.4-mini",
-  // Text generation should be fast and cheap; pick the flash variant.
-  antigravity: "gemini-3.5-flash-medium",
-  claudeAgent: "claude-haiku-4-5",
-  opencode: "opencode/big-pickle",
-  copilotAgent: "claude-haiku-4.5",
+export const DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER: Partial<
+  Record<ProviderDriverKind, string>
+> = {
+  [CODEX_DRIVER_KIND]: DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  [CLAUDE_DRIVER_KIND]: "claude-haiku-4-5",
+  [CURSOR_DRIVER_KIND]: "composer-2",
+  [OPENCODE_DRIVER_KIND]: "openai/gpt-5",
 };
 
-export const DEFAULT_GIT_TEXT_GENERATION_MODEL =
-  DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER.codex;
-
-export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string, ModelSlug>> = {
-  codex: {
+export const MODEL_SLUG_ALIASES_BY_PROVIDER: Partial<
+  Record<ProviderDriverKind, Record<string, string>>
+> = {
+  [CODEX_DRIVER_KIND]: {
     "gpt-5-codex": "gpt-5.4",
     "5.4": "gpt-5.4",
     "5.3": "gpt-5.3-codex",
@@ -377,21 +362,7 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "5.3-spark": "gpt-5.3-codex-spark",
     "gpt-5.3-spark": "gpt-5.3-codex-spark",
   },
-  antigravity: {
-    // Legacy gemini-2.x slugs from the old Gemini-ACP provider — map onto
-    // the closest agy entry so persisted thread/project rows still resolve.
-    "gemini-2.5-pro": "gemini-3.1-pro-high",
-    "gemini-2.5-flash": "gemini-3.5-flash-medium",
-    "gemini-2.5-flash-lite": "gemini-3.5-flash-low",
-    // Pre-Phase-7 catalog (the made-up slugs we shipped briefly).
-    "gemini-3.1-pro": "gemini-3.1-pro-high",
-    "gemini-3.1-pro-preview": "gemini-3.1-pro-high",
-    "gemini-3-flash-preview": "gemini-3.5-flash-medium",
-    // Convenience shorthands.
-    pro: "gemini-3.1-pro-high",
-    flash: "gemini-3.5-flash-medium",
-  },
-  claudeAgent: {
+  [CLAUDE_DRIVER_KIND]: {
     opus: "claude-opus-4-7",
     "opus-4.7": "claude-opus-4-7",
     "claude-opus-4.7": "claude-opus-4-7",
@@ -407,52 +378,27 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "claude-haiku-4.5": "claude-haiku-4-5",
     "claude-haiku-4-5-20251001": "claude-haiku-4-5",
   },
-  opencode: {
-    "big-pickle": "opencode/big-pickle",
-    "deepseek-v4-flash-free": "opencode/deepseek-v4-flash-free",
-    nemotron: "opencode/nemotron-3-super-free",
-    "deepseek-v4-flash": "opencode-go/deepseek-v4-flash",
-    "deepseek-v4-pro": "opencode-go/deepseek-v4-pro",
-    deepseek: "opencode-go/deepseek-v4-pro",
-    "glm-5": "opencode-go/glm-5",
-    "glm-5.1": "opencode-go/glm-5.1",
-    glm: "opencode-go/glm-5.1",
-    "kimi-k2.5": "opencode-go/kimi-k2.5",
-    "kimi-k2.6": "opencode-go/kimi-k2.6",
-    kimi: "opencode-go/kimi-k2.6",
-    "mimo-v2.5": "opencode-go/mimo-v2.5",
-    "mimo-v2.5-pro": "opencode-go/mimo-v2.5-pro",
-    mimo: "opencode-go/mimo-v2.5-pro",
-    "minimax-m2.5": "opencode-go/minimax-m2.5",
-    "minimax-m2.7": "opencode-go/minimax-m2.7",
-    minimax: "opencode-go/minimax-m2.7",
-    "qwen3.5-plus": "opencode-go/qwen3.5-plus",
-    "qwen3.6-plus": "opencode-go/qwen3.6-plus",
-    "qwen3.7-max": "opencode-go/qwen3.7-max",
-    qwen: "opencode-go/qwen3.7-max",
+  [CURSOR_DRIVER_KIND]: {
+    composer: "composer-2",
+    "composer-1.5": "composer-1.5",
+    "composer-1": "composer-1.5",
+    "opus-4.6-thinking": "claude-opus-4-6",
+    "opus-4.6": "claude-opus-4-6",
+    "sonnet-4.6-thinking": "claude-sonnet-4-6",
+    "sonnet-4.6": "claude-sonnet-4-6",
+    "opus-4.5-thinking": "claude-opus-4-5",
+    "opus-4.5": "claude-opus-4-5",
   },
-  copilotAgent: {
-    "claude-sonnet-4.6": "claude-sonnet-4.6",
-    "claude-sonnet-4.5": "claude-sonnet-4.5",
-    "claude-haiku-4.5": "claude-haiku-4.5",
-    "claude-opus-4.6": "claude-opus-4.6",
-    "claude-opus-4.6-fast": "claude-opus-4.6-fast",
-    opus: "claude-opus-4.6",
-    sonnet: "claude-sonnet-4.6",
-    haiku: "claude-haiku-4.5",
-    "gpt-5.4": "gpt-5.4",
-    "gpt-5.3": "gpt-5.3-codex",
-    "gpt-5.2": "gpt-5.2",
-    "gpt-5.1": "gpt-5.1",
-  },
+  [OPENCODE_DRIVER_KIND]: {},
 };
 
-export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
-  codex: "Codex",
-  antigravity: "Antigravity",
-  claudeAgent: "Claude",
-  opencode: "OpenCode",
-  copilotAgent: "Copilot",
+// ── Provider display names ────────────────────────────────────────────
+
+export const PROVIDER_DISPLAY_NAMES: Partial<Record<ProviderDriverKind, string>> = {
+  [CODEX_DRIVER_KIND]: "Codex",
+  [CLAUDE_DRIVER_KIND]: "Claude",
+  [CURSOR_DRIVER_KIND]: "Cursor",
+  [OPENCODE_DRIVER_KIND]: "OpenCode",
 };
 
 export const REASONING_EFFORT_OPTIONS_BY_PROVIDER = {
