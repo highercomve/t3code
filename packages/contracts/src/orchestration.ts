@@ -1,5 +1,6 @@
 import { Effect, Option, Schema, SchemaIssue, Struct } from "effect";
 import {
+  TolerantAntigravityModelOptions,
   TolerantClaudeModelOptions,
   TolerantCopilotModelOptions,
   TolerantCodexModelOptions,
@@ -33,6 +34,7 @@ export const ORCHESTRATION_WS_METHODS = {
 
 export const PROVIDER_CODEX = "codex" as const;
 export const PROVIDER_GEMINI = "gemini" as const;
+export const PROVIDER_ANTIGRAVITY = "antigravity" as const;
 export const PROVIDER_CLAUDE_AGENT = "claudeAgent" as const;
 export const PROVIDER_OPENCODE = "opencode" as const;
 export const PROVIDER_COPILOT = "copilotAgent" as const;
@@ -40,6 +42,7 @@ export const PROVIDER_COPILOT = "copilotAgent" as const;
 const PROVIDER_KIND_VALUES = [
   PROVIDER_CODEX,
   PROVIDER_GEMINI,
+  PROVIDER_ANTIGRAVITY,
   PROVIDER_CLAUDE_AGENT,
   PROVIDER_OPENCODE,
   PROVIDER_COPILOT,
@@ -86,6 +89,12 @@ export const GeminiProviderStartOptions = Schema.Struct({
   homePath: Schema.optional(TrimmedNonEmptyString),
 });
 
+export const AntigravityProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  dangerouslySkipPermissions: Schema.optional(Schema.Boolean),
+  conversationId: Schema.optional(Schema.String),
+});
+
 export const OpencodeProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   apiKey: Schema.optional(TrimmedNonEmptyString),
@@ -98,6 +107,7 @@ export const CopilotProviderStartOptions = Schema.Struct({
 export const ProviderStartOptions = Schema.Struct({
   codex: Schema.optional(CodexProviderStartOptions),
   gemini: Schema.optional(GeminiProviderStartOptions),
+  antigravity: Schema.optional(AntigravityProviderStartOptions),
   claudeAgent: Schema.optional(ClaudeProviderStartOptions),
   opencode: Schema.optional(OpencodeProviderStartOptions),
   copilotAgent: Schema.optional(CopilotProviderStartOptions),
@@ -117,6 +127,13 @@ export const GeminiModelSelection = Schema.Struct({
   options: Schema.optionalKey(TolerantGeminiModelOptions),
 });
 export type GeminiModelSelection = typeof GeminiModelSelection.Type;
+
+export const AntigravityModelSelection = Schema.Struct({
+  provider: Schema.Literal("antigravity"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optionalKey(TolerantAntigravityModelOptions),
+});
+export type AntigravityModelSelection = typeof AntigravityModelSelection.Type;
 
 export const ClaudeModelSelection = Schema.Struct({
   provider: Schema.Literal("claudeAgent"),
@@ -142,6 +159,7 @@ export type CopilotModelSelection = typeof CopilotModelSelection.Type;
 export const ModelSelection = Schema.Union([
   CodexModelSelection,
   GeminiModelSelection,
+  AntigravityModelSelection,
   ClaudeModelSelection,
   OpencodeModelSelection,
   CopilotModelSelection,

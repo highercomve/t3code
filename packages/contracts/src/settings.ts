@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema";
 import * as SchemaTransformation from "effect/SchemaTransformation";
 import { TrimmedNonEmptyString, TrimmedString } from "./baseSchemas.ts";
 import {
+  AntigravityModelOptions,
   ClaudeModelOptions,
   CodexModelOptions,
   CopilotModelOptions,
@@ -107,6 +108,14 @@ export const GeminiSettings = Schema.Struct({
 });
 export type GeminiSettings = typeof GeminiSettings.Type;
 
+export const AntigravitySettings = Schema.Struct({
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  binaryPath: makeBinaryPathSetting("agy"),
+  dangerouslySkipPermissions: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  customModels: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
+});
+export type AntigravitySettings = typeof AntigravitySettings.Type;
+
 export const OpencodeSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   binaryPath: makeBinaryPathSetting("opencode"),
@@ -149,6 +158,7 @@ export const ServerSettings = Schema.Struct({
   providers: Schema.Struct({
     codex: CodexSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     gemini: GeminiSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+    antigravity: AntigravitySettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     claudeAgent: ClaudeSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     opencode: OpencodeSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     copilotAgent: CopilotSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
@@ -198,6 +208,10 @@ const GeminiModelOptionsPatch = Schema.Struct({
   thinkingBudget: Schema.optionalKey(GeminiModelOptions.fields.thinkingBudget),
 });
 
+const AntigravityModelOptionsPatch = Schema.Struct({
+  reasoningEffort: Schema.optionalKey(AntigravityModelOptions.fields.reasoningEffort),
+});
+
 const OpencodeModelOptionsPatch = Schema.Struct({
   reasoningEffort: Schema.optionalKey(OpencodeModelOptions.fields.reasoningEffort),
 });
@@ -216,6 +230,11 @@ const ModelSelectionPatch = Schema.Union([
     provider: Schema.optionalKey(Schema.Literal("gemini")),
     model: Schema.optionalKey(TrimmedNonEmptyString),
     options: Schema.optionalKey(GeminiModelOptionsPatch),
+  }),
+  Schema.Struct({
+    provider: Schema.optionalKey(Schema.Literal("antigravity")),
+    model: Schema.optionalKey(TrimmedNonEmptyString),
+    options: Schema.optionalKey(AntigravityModelOptionsPatch),
   }),
   Schema.Struct({
     provider: Schema.optionalKey(Schema.Literal("claudeAgent")),
@@ -255,6 +274,13 @@ const GeminiSettingsPatch = Schema.Struct({
   customModels: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
+const AntigravitySettingsPatch = Schema.Struct({
+  enabled: Schema.optionalKey(Schema.Boolean),
+  binaryPath: Schema.optionalKey(Schema.String),
+  dangerouslySkipPermissions: Schema.optionalKey(Schema.Boolean),
+  customModels: Schema.optionalKey(Schema.Array(Schema.String)),
+});
+
 const OpencodeSettingsPatch = Schema.Struct({
   enabled: Schema.optionalKey(Schema.Boolean),
   binaryPath: Schema.optionalKey(Schema.String),
@@ -286,6 +312,7 @@ export const ServerSettingsPatch = Schema.Struct({
     Schema.Struct({
       codex: Schema.optionalKey(CodexSettingsPatch),
       gemini: Schema.optionalKey(GeminiSettingsPatch),
+      antigravity: Schema.optionalKey(AntigravitySettingsPatch),
       claudeAgent: Schema.optionalKey(ClaudeSettingsPatch),
       opencode: Schema.optionalKey(OpencodeSettingsPatch),
       copilotAgent: Schema.optionalKey(CopilotSettingsPatch),

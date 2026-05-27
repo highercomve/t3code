@@ -40,6 +40,7 @@ export type ProviderCustomModelConfig = {
 const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>> = {
   codex: new Set(getModelOptions("codex").map((option) => option.slug)),
   gemini: new Set(getModelOptions("gemini").map((option) => option.slug)),
+  antigravity: new Set(getModelOptions("gemini").map((option) => option.slug)),
   claudeAgent: new Set(getModelOptions("claudeAgent").map((option) => option.slug)),
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
   copilotAgent: new Set(getModelOptions("copilotAgent").map((option) => option.slug)),
@@ -96,6 +97,15 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
   },
   gemini: {
     provider: "gemini",
+    settingsKey: "customGeminiModels",
+    defaultSettingsKey: "customGeminiModels",
+    title: "Gemini",
+    description: "Save additional Gemini model slugs for the picker and `/model` command.",
+    placeholder: "your-gemini-model-slug",
+    example: "gemini-3.5-ultra-preview",
+  },
+  antigravity: {
+    provider: "antigravity",
     settingsKey: "customGeminiModels",
     defaultSettingsKey: "customGeminiModels",
     title: "Gemini",
@@ -202,6 +212,7 @@ export function getCustomModelsByProvider(
   return {
     codex: getCustomModelsForProvider(settings, "codex"),
     gemini: getCustomModelsForProvider(settings, "gemini"),
+    antigravity: getCustomModelsForProvider(settings, "antigravity"),
     claudeAgent: getCustomModelsForProvider(settings, "claudeAgent"),
     opencode: getCustomModelsForProvider(settings, "opencode"),
     copilotAgent: getCustomModelsForProvider(settings, "copilotAgent"),
@@ -293,6 +304,12 @@ export function getCustomModelOptionsByProvider(
       customModelsByProvider.gemini,
       undefined,
       dynamicModelsByProvider?.gemini,
+    ),
+    antigravity: getAppModelOptions(
+      "antigravity",
+      customModelsByProvider.antigravity,
+      undefined,
+      dynamicModelsByProvider?.antigravity,
     ),
     claudeAgent: getAppModelOptions(
       "claudeAgent",

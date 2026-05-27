@@ -635,6 +635,8 @@ export const ChatComposer = memo(
         claudeAgent:
           providerStatuses.find((provider) => provider.provider === "claudeAgent")?.models ?? [],
         gemini: providerStatuses.find((provider) => provider.provider === "gemini")?.models ?? [],
+        antigravity:
+          providerStatuses.find((provider) => provider.provider === "antigravity")?.models ?? [],
         opencode:
           providerStatuses.find((provider) => provider.provider === "opencode")?.models ?? [],
         copilotAgent:

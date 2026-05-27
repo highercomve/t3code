@@ -51,6 +51,8 @@ const makeRoutingTextGeneration = Effect.gen(function* () {
     codex,
     claudeAgent: claude,
     gemini,
+    // TODO(phase-3): replace with AntigravityTextGenerationLive
+    antigravity: gemini,
     opencode,
     // copilotAgent does not yet have a dedicated text-generation backend; fall
     // back to claude for commit/PR/title text generation tasks.

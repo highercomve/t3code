@@ -28,6 +28,8 @@ const RuntimeEventRawSource = Schema.Union([
   Schema.Literal("gemini.api.stream"),
   Schema.Literal("gemini.app-server.notification"),
   Schema.Literal("gemini.app-server.request"),
+  Schema.Literal("antigravity.cli.print"),
+  Schema.Literal("antigravity.cli.error"),
   Schema.Literal("claudeCode.acp.notification"),
   Schema.Literal("claudeCode.acp.request"),
   Schema.Literal("opencode.acp.notification"),

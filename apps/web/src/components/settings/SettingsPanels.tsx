@@ -563,6 +563,11 @@ export function GeneralSettingsPanel() {
         DEFAULT_UNIFIED_SETTINGS.providers.gemini.binaryPath ||
       settings.providers.gemini.customModels.length > 0,
     ),
+    antigravity: Boolean(
+      settings.providers.antigravity.binaryPath !==
+        DEFAULT_UNIFIED_SETTINGS.providers.antigravity.binaryPath ||
+      settings.providers.antigravity.customModels.length > 0,
+    ),
     opencode: Boolean(
       settings.providers.opencode.binaryPath !==
         DEFAULT_UNIFIED_SETTINGS.providers.opencode.binaryPath ||
@@ -584,6 +589,7 @@ export function GeneralSettingsPanel() {
     codex: "",
     claudeAgent: "",
     gemini: "",
+    antigravity: "",
     opencode: "",
     copilotAgent: "",
   });

@@ -285,7 +285,7 @@ A trial `git merge upstream/main --no-commit --no-ff` on 2026-05-27 produced
 **80 conflicting files**. The dominant sources of conflict are:
 
 1. **Cursor provider added upstream (#1355 `Add ACP support with Cursor
-   provider`)** — wholly new provider the fork lacks. Conflict shows up as
+provider`)** — wholly new provider the fork lacks. Conflict shows up as
    `DU` because upstream-added files (`provider/Layers/Cursor*`,
    `provider/Services/Cursor*`, `textGeneration/CursorTextGeneration.ts`,
    tests) collide with the fork's older provider layout. Resolution:
@@ -322,6 +322,7 @@ A trial `git merge upstream/main --no-commit --no-ff` on 2026-05-27 produced
 
 Notable upstream features in this batch worth surfacing to users once
 merged:
+
 - **#2526 Fix OpenCode raw text delta assembly** — drop our manual delta
   handling once this lands.
 - **#2435 / #2462 / #2473 VCS driver + GitLab / Bitbucket / Azure DevOps**

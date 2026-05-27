@@ -1,5 +1,6 @@
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER,
+  type AntigravityModelSelection,
   type GeminiModelSelection,
   type ModelSelection,
   type OpencodeModelSelection,
@@ -39,6 +40,7 @@ export interface AppModelOption {
 type ModelSelectionByProvider = {
   codex: CodexModelSelection;
   gemini: GeminiModelSelection;
+  antigravity: AntigravityModelSelection;
   claudeAgent: ClaudeModelSelection;
   opencode: OpencodeModelSelection;
   copilotAgent: CopilotModelSelection;
@@ -47,10 +49,7 @@ type ModelSelectionByProvider = {
 export function buildModelSelection<P extends ProviderKind>(
   provider: P,
   model: string,
-  options?:
-    | ModelSelectionByProvider[P]["options"]
-    | ReadonlyArray<ProviderOptionSelection>
-    | null,
+  options?: ModelSelectionByProvider[P]["options"] | ReadonlyArray<ProviderOptionSelection> | null,
 ): ModelSelectionByProvider[P] {
   const optionsStruct = Array.isArray(options)
     ? providerOptionSelectionsToStruct(options as ReadonlyArray<ProviderOptionSelection>)
@@ -87,6 +86,13 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
   },
   gemini: {
     provider: "gemini",
+    title: "Gemini",
+    description: "Save additional Gemini model slugs for the picker and `/model` command.",
+    placeholder: "your-gemini-model-slug",
+    example: "gemini-3.1-pro-preview",
+  },
+  antigravity: {
+    provider: "antigravity",
     title: "Gemini",
     description: "Save additional Gemini model slugs for the picker and `/model` command.",
     placeholder: "your-gemini-model-slug",
@@ -227,6 +233,12 @@ export function getCustomModelOptionsByProvider(
       providers,
       "gemini",
       selectedProvider === "gemini" ? selectedModel : undefined,
+    ),
+    antigravity: getAppModelOptions(
+      settings,
+      providers,
+      "antigravity",
+      selectedProvider === "antigravity" ? selectedModel : undefined,
     ),
     claudeAgent: getAppModelOptions(
       settings,
