@@ -86,7 +86,10 @@ function getRawSelectionValueById(
   selections: ReadonlyArray<ProviderOptionSelection> | null | undefined,
   id: string,
 ): string | boolean | undefined {
-  const selection = selections?.find((candidate) => candidate.id === id);
+  // Defensive against stale persisted state where selections was a record
+  // (pre-array schema). Treat anything non-array as empty.
+  if (!Array.isArray(selections)) return undefined;
+  const selection = selections.find((candidate) => candidate.id === id);
   return selection?.value;
 }
 

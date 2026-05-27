@@ -134,7 +134,7 @@ entirely — `agy` does NOT speak ACP. The on-disk provider id is
 - The prompt is the argument of `--print` — never use the `--`
   separator (empirically dropped by agy).
 - **agy has NO `--model` flag.** Verified empirically: `agy --print
-  --model X` exits 2 with `flags provided but not defined: -model`.
+--model X` exits 2 with `flags provided but not defined: -model`.
   Model selection is the value of `model` in
   `~/.gemini/antigravity-cli/settings.json` (full display string like
   `"Gemini 3.1 Pro (High)"` — effort is encoded in the name) and is

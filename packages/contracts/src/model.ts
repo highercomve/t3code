@@ -237,9 +237,17 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     { slug: "gpt-5.2", name: "GPT-5.2" },
   ],
   antigravity: [
-    { slug: "gemini-3.1-pro", name: "Gemini 3.1 Pro" },
-    { slug: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview" },
-    { slug: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
+    // Slugs are our kebab form. agy itself stores the display string in
+    // ~/.gemini/antigravity-cli/settings.json ("Gemini 3.1 Pro (High)" etc.).
+    // The mapping slug → display lives in AGY_DISPLAY_BY_SLUG below.
+    { slug: "gemini-3.1-pro-high", name: "Gemini 3.1 Pro (High)" },
+    { slug: "gemini-3.1-pro-low", name: "Gemini 3.1 Pro (Low)" },
+    { slug: "gemini-3.5-flash-high", name: "Gemini 3.5 Flash (High)" },
+    { slug: "gemini-3.5-flash-medium", name: "Gemini 3.5 Flash (Medium)" },
+    { slug: "gemini-3.5-flash-low", name: "Gemini 3.5 Flash (Low)" },
+    { slug: "claude-sonnet-4-6-thinking", name: "Claude Sonnet 4.6 (Thinking)" },
+    { slug: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 (Thinking)" },
+    { slug: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)" },
   ],
   claudeAgent: [
     { slug: "claude-opus-4-7", name: "Claude Opus 4.7" },
@@ -318,11 +326,31 @@ export type ModelCapabilities = typeof ModelCapabilities.Type;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderKind, ModelSlug> = {
   codex: "gpt-5.4",
-  antigravity: "gemini-3.1-pro",
+  // matches the agy default model surfaced in
+  // ~/.gemini/antigravity-cli/settings.json ("Gemini 3.1 Pro (High)").
+  antigravity: "gemini-3.1-pro-high",
   claudeAgent: "claude-sonnet-4-6",
   opencode: "opencode/big-pickle",
   copilotAgent: "claude-sonnet-4.6",
 } as const satisfies Record<ProviderKind, ModelSlug>;
+
+/**
+ * Maps our kebab slugs onto the exact display strings agy expects in
+ * `~/.gemini/antigravity-cli/settings.json#model`. agy has no `--model`
+ * flag, so this map is what the driver will use IF we ever implement the
+ * settings.json rewrite-before-spawn (currently not wired — the picker is
+ * decorative for Antigravity until then).
+ */
+export const AGY_DISPLAY_BY_SLUG: Readonly<Record<string, string>> = {
+  "gemini-3.1-pro-high": "Gemini 3.1 Pro (High)",
+  "gemini-3.1-pro-low": "Gemini 3.1 Pro (Low)",
+  "gemini-3.5-flash-high": "Gemini 3.5 Flash (High)",
+  "gemini-3.5-flash-medium": "Gemini 3.5 Flash (Medium)",
+  "gemini-3.5-flash-low": "Gemini 3.5 Flash (Low)",
+  "claude-sonnet-4-6-thinking": "Claude Sonnet 4.6 (Thinking)",
+  "claude-opus-4-6-thinking": "Claude Opus 4.6 (Thinking)",
+  "gpt-oss-120b-medium": "GPT-OSS 120B (Medium)",
+};
 
 export const MODEL_OPTIONS = MODEL_OPTIONS_BY_PROVIDER.codex;
 export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
@@ -330,7 +358,8 @@ export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
 /** Per-provider text generation model defaults. */
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER: Record<ProviderKind, ModelSlug> = {
   codex: "gpt-5.4-mini",
-  antigravity: "gemini-3.1-pro",
+  // Text generation should be fast and cheap; pick the flash variant.
+  antigravity: "gemini-3.5-flash-medium",
   claudeAgent: "claude-haiku-4-5",
   opencode: "opencode/big-pickle",
   copilotAgent: "claude-haiku-4.5",
@@ -349,12 +378,18 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "gpt-5.3-spark": "gpt-5.3-codex-spark",
   },
   antigravity: {
-    "gemini-2.5-pro": "gemini-3.1-pro",
-    "gemini-2.5-flash": "gemini-3-flash-preview",
-    "gemini-2.5-flash-lite": "gemini-3-flash-preview",
-    "gemini-3.1-pro-preview": "gemini-3.1-pro-preview",
-    pro: "gemini-3.1-pro",
-    flash: "gemini-3-flash-preview",
+    // Legacy gemini-2.x slugs from the old Gemini-ACP provider — map onto
+    // the closest agy entry so persisted thread/project rows still resolve.
+    "gemini-2.5-pro": "gemini-3.1-pro-high",
+    "gemini-2.5-flash": "gemini-3.5-flash-medium",
+    "gemini-2.5-flash-lite": "gemini-3.5-flash-low",
+    // Pre-Phase-7 catalog (the made-up slugs we shipped briefly).
+    "gemini-3.1-pro": "gemini-3.1-pro-high",
+    "gemini-3.1-pro-preview": "gemini-3.1-pro-high",
+    "gemini-3-flash-preview": "gemini-3.5-flash-medium",
+    // Convenience shorthands.
+    pro: "gemini-3.1-pro-high",
+    flash: "gemini-3.5-flash-medium",
   },
   claudeAgent: {
     opus: "claude-opus-4-7",
