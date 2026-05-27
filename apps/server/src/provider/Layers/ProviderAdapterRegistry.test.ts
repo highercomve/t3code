@@ -6,7 +6,10 @@ import { Effect, Layer, Stream } from "effect";
 
 import { ClaudeAdapter, type ClaudeAdapterShape } from "../Services/ClaudeAdapter.ts";
 import { CodexAdapter, type CodexAdapterShape } from "../Services/CodexAdapter.ts";
-import { GeminiAdapter, type GeminiAdapterShape } from "../Services/GeminiAdapter.ts";
+import {
+  AntigravityAdapter,
+  type AntigravityAdapterShape,
+} from "../Services/AntigravityAdapter.ts";
 import { OpencodeAdapter, type OpencodeAdapterShape } from "../Services/OpencodeAdapter.ts";
 import { CopilotAdapter, type CopilotAdapterShape } from "../Services/CopilotAdapter.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
@@ -48,8 +51,8 @@ const fakeClaudeAdapter: ClaudeAdapterShape = {
   streamEvents: Stream.empty,
 };
 
-const fakeGeminiAdapter: GeminiAdapterShape = {
-  provider: "gemini",
+const fakeAntigravityAdapter: AntigravityAdapterShape = {
+  provider: "antigravity",
   capabilities: { sessionModelSwitch: "in-session" },
   startSession: vi.fn(),
   sendTurn: vi.fn(),
@@ -106,7 +109,7 @@ const layer = it.layer(
       Layer.mergeAll(
         Layer.succeed(CodexAdapter, fakeCodexAdapter),
         Layer.succeed(ClaudeAdapter, fakeClaudeAdapter),
-        Layer.succeed(GeminiAdapter, fakeGeminiAdapter),
+        Layer.succeed(AntigravityAdapter, fakeAntigravityAdapter),
         Layer.succeed(OpencodeAdapter, fakeOpencodeAdapter),
         Layer.succeed(CopilotAdapter, fakeCopilotAdapter),
       ),
@@ -121,17 +124,23 @@ layer("ProviderAdapterRegistryLive", (it) => {
       const registry = yield* ProviderAdapterRegistry;
       const codex = yield* registry.getByProvider("codex");
       const claude = yield* registry.getByProvider("claudeAgent");
-      const gemini = yield* registry.getByProvider("gemini");
+      const antigravity = yield* registry.getByProvider("antigravity");
       const opencode = yield* registry.getByProvider("opencode");
       const copilot = yield* registry.getByProvider("copilotAgent");
       assert.equal(codex, fakeCodexAdapter);
       assert.equal(claude, fakeClaudeAdapter);
-      assert.equal(gemini, fakeGeminiAdapter);
+      assert.equal(antigravity, fakeAntigravityAdapter);
       assert.equal(opencode, fakeOpencodeAdapter);
       assert.equal(copilot, fakeCopilotAdapter);
 
       const providers = yield* registry.listProviders();
-      assert.deepEqual(providers, ["codex", "claudeAgent", "gemini", "opencode", "copilotAgent"]);
+      assert.deepEqual(providers, [
+        "codex",
+        "claudeAgent",
+        "antigravity",
+        "opencode",
+        "copilotAgent",
+      ]);
     }),
   );
 

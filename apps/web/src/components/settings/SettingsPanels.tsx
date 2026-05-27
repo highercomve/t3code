@@ -133,10 +133,10 @@ const PROVIDER_SETTINGS: readonly InstallProviderSettings[] = [
     binaryDescription: "Path to the Claude binary",
   },
   {
-    provider: "gemini",
-    title: "Gemini",
-    binaryPlaceholder: "Gemini binary path",
-    binaryDescription: "Path to the Gemini CLI binary",
+    provider: "antigravity",
+    title: "Antigravity",
+    binaryPlaceholder: "Antigravity binary path",
+    binaryDescription: "Path to the agy binary (Antigravity CLI)",
   },
   {
     provider: "opencode",
@@ -558,11 +558,6 @@ export function GeneralSettingsPanel() {
       settings.providers.claudeAgent.customModels.length > 0 ||
       settings.providers.claudeAgent.launchArgs !== "",
     ),
-    gemini: Boolean(
-      settings.providers.gemini.binaryPath !==
-        DEFAULT_UNIFIED_SETTINGS.providers.gemini.binaryPath ||
-      settings.providers.gemini.customModels.length > 0,
-    ),
     antigravity: Boolean(
       settings.providers.antigravity.binaryPath !==
         DEFAULT_UNIFIED_SETTINGS.providers.antigravity.binaryPath ||
@@ -588,7 +583,6 @@ export function GeneralSettingsPanel() {
   >({
     codex: "",
     claudeAgent: "",
-    gemini: "",
     antigravity: "",
     opencode: "",
     copilotAgent: "",

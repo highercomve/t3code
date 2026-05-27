@@ -98,7 +98,6 @@ function createBaseServerConfig(): ServerConfig {
       textGenerationModelSelection: { provider: "codex" as const, model: "gpt-5.4-mini" },
       providers: {
         codex: { enabled: true, binaryPath: "", homePath: "", customModels: [] },
-        gemini: { enabled: true, binaryPath: "", homePath: "", customModels: [] },
         antigravity: {
           enabled: true,
           binaryPath: "",

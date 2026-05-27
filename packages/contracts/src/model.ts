@@ -21,22 +21,6 @@ export const CodexModelOptions = Schema.Struct({
 });
 export type CodexModelOptions = typeof CodexModelOptions.Type;
 
-export const GEMINI_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
-export type GeminiEffort = (typeof GEMINI_EFFORT_OPTIONS)[number];
-
-export const GeminiModelOptions = Schema.Struct({
-  thinkingBudget: Schema.optional(Schema.Int),
-  reasoningEffort: Schema.optional(Schema.Literals(GEMINI_EFFORT_OPTIONS)),
-});
-export type GeminiModelOptions = typeof GeminiModelOptions.Type;
-
-export const GEMINI_EFFORT_TO_THINKING_BUDGET: Record<GeminiEffort, number> = {
-  low: 1024,
-  medium: 8192,
-  high: 16384,
-  xhigh: 24576,
-};
-
 export const ANTIGRAVITY_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
 export type AntigravityEffort = (typeof ANTIGRAVITY_EFFORT_OPTIONS)[number];
 
@@ -67,7 +51,6 @@ export type CopilotModelOptions = typeof CopilotModelOptions.Type;
 
 export const ProviderModelOptions = Schema.Struct({
   codex: Schema.optional(CodexModelOptions),
-  gemini: Schema.optional(GeminiModelOptions),
   antigravity: Schema.optional(AntigravityModelOptions),
   claudeAgent: Schema.optional(ClaudeModelOptions),
   opencode: Schema.optional(OpencodeModelOptions),
@@ -234,7 +217,6 @@ function tolerantProviderOptions<S extends Schema.Top>(structSchema: S) {
 }
 
 export const TolerantCodexModelOptions = tolerantProviderOptions(CodexModelOptions);
-export const TolerantGeminiModelOptions = tolerantProviderOptions(GeminiModelOptions);
 export const TolerantAntigravityModelOptions = tolerantProviderOptions(AntigravityModelOptions);
 export const TolerantClaudeModelOptions = tolerantProviderOptions(ClaudeModelOptions);
 export const TolerantOpencodeModelOptions = tolerantProviderOptions(OpencodeModelOptions);
@@ -253,13 +235,6 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     { slug: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark" },
     { slug: "gpt-5.2-codex", name: "GPT-5.2 Codex" },
     { slug: "gpt-5.2", name: "GPT-5.2" },
-  ],
-  gemini: [
-    { slug: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview" },
-    { slug: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
-    { slug: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
-    { slug: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
-    { slug: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite" },
   ],
   antigravity: [
     { slug: "gemini-3.1-pro", name: "Gemini 3.1 Pro" },
@@ -343,7 +318,6 @@ export type ModelCapabilities = typeof ModelCapabilities.Type;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderKind, ModelSlug> = {
   codex: "gpt-5.4",
-  gemini: "gemini-3.1-pro-preview",
   antigravity: "gemini-3.1-pro",
   claudeAgent: "claude-sonnet-4-6",
   opencode: "opencode/big-pickle",
@@ -356,7 +330,6 @@ export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
 /** Per-provider text generation model defaults. */
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER: Record<ProviderKind, ModelSlug> = {
   codex: "gpt-5.4-mini",
-  gemini: "gemini-2.5-flash",
   antigravity: "gemini-3.1-pro",
   claudeAgent: "claude-haiku-4-5",
   opencode: "opencode/big-pickle",
@@ -375,20 +348,11 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "5.3-spark": "gpt-5.3-codex-spark",
     "gpt-5.3-spark": "gpt-5.3-codex-spark",
   },
-  gemini: {
-    "3.1-pro": "gemini-3.1-pro-preview",
-    pro: "gemini-3.1-pro-preview",
-    "3-flash": "gemini-3-flash-preview",
-    flash: "gemini-3-flash-preview",
-    "2.5-pro": "gemini-2.5-pro",
-    "2.5-flash": "gemini-2.5-flash",
-    "2.5-flash-lite": "gemini-2.5-flash-lite",
-    "flash-lite": "gemini-2.5-flash-lite",
-  },
   antigravity: {
     "gemini-2.5-pro": "gemini-3.1-pro",
     "gemini-2.5-flash": "gemini-3-flash-preview",
     "gemini-2.5-flash-lite": "gemini-3-flash-preview",
+    "gemini-3.1-pro-preview": "gemini-3.1-pro-preview",
     pro: "gemini-3.1-pro",
     flash: "gemini-3-flash-preview",
   },
@@ -450,7 +414,6 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
 
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
   codex: "Codex",
-  gemini: "Gemini",
   antigravity: "Antigravity",
   claudeAgent: "Claude",
   opencode: "OpenCode",
@@ -459,7 +422,6 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
 
 export const REASONING_EFFORT_OPTIONS_BY_PROVIDER = {
   codex: CODEX_REASONING_EFFORT_OPTIONS,
-  gemini: CODEX_REASONING_EFFORT_OPTIONS,
   antigravity: ANTIGRAVITY_EFFORT_OPTIONS,
   claudeAgent: CLAUDE_CODE_EFFORT_OPTIONS,
   opencode: CODEX_REASONING_EFFORT_OPTIONS,
@@ -468,7 +430,6 @@ export const REASONING_EFFORT_OPTIONS_BY_PROVIDER = {
 
 export const DEFAULT_REASONING_EFFORT_BY_PROVIDER = {
   codex: "high",
-  gemini: "high",
   antigravity: "high",
   claudeAgent: "high",
   opencode: "high",

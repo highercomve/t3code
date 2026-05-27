@@ -33,7 +33,7 @@ export const PROVIDER_OPTIONS: Array<{
 }> = [
   { value: "codex", label: "Codex", available: true },
   { value: "claudeAgent", label: "Claude", available: true },
-  { value: "gemini", label: "Gemini", available: true },
+  { value: "antigravity", label: "Antigravity", available: true },
   { value: "opencode", label: "OpenCode", available: true },
   { value: "copilotAgent", label: "Copilot", available: true },
 ];

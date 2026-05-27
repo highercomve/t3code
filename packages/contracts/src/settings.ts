@@ -7,7 +7,6 @@ import {
   ClaudeModelOptions,
   CodexModelOptions,
   CopilotModelOptions,
-  GeminiModelOptions,
   OpencodeModelOptions,
   DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER,
 } from "./model.ts";
@@ -100,14 +99,6 @@ export const ClaudeSettings = Schema.Struct({
 });
 export type ClaudeSettings = typeof ClaudeSettings.Type;
 
-export const GeminiSettings = Schema.Struct({
-  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
-  binaryPath: makeBinaryPathSetting("gemini"),
-  homePath: TrimmedString.pipe(Schema.withDecodingDefault(Effect.succeed(""))),
-  customModels: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
-});
-export type GeminiSettings = typeof GeminiSettings.Type;
-
 export const AntigravitySettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   binaryPath: makeBinaryPathSetting("agy"),
@@ -148,8 +139,8 @@ export const ServerSettings = Schema.Struct({
   textGenerationModelSelection: ModelSelection.pipe(
     Schema.withDecodingDefault(
       Effect.succeed({
-        provider: "gemini" as const,
-        model: DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER.gemini,
+        provider: "antigravity" as const,
+        model: DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER.antigravity,
       }),
     ),
   ),
@@ -157,7 +148,6 @@ export const ServerSettings = Schema.Struct({
   // Provider specific settings
   providers: Schema.Struct({
     codex: CodexSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
-    gemini: GeminiSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     antigravity: AntigravitySettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     claudeAgent: ClaudeSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     opencode: OpencodeSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
@@ -204,10 +194,6 @@ const ClaudeModelOptionsPatch = Schema.Struct({
   contextWindow: Schema.optionalKey(ClaudeModelOptions.fields.contextWindow),
 });
 
-const GeminiModelOptionsPatch = Schema.Struct({
-  thinkingBudget: Schema.optionalKey(GeminiModelOptions.fields.thinkingBudget),
-});
-
 const AntigravityModelOptionsPatch = Schema.Struct({
   reasoningEffort: Schema.optionalKey(AntigravityModelOptions.fields.reasoningEffort),
 });
@@ -225,11 +211,6 @@ const ModelSelectionPatch = Schema.Union([
     provider: Schema.optionalKey(Schema.Literal("codex")),
     model: Schema.optionalKey(TrimmedNonEmptyString),
     options: Schema.optionalKey(CodexModelOptionsPatch),
-  }),
-  Schema.Struct({
-    provider: Schema.optionalKey(Schema.Literal("gemini")),
-    model: Schema.optionalKey(TrimmedNonEmptyString),
-    options: Schema.optionalKey(GeminiModelOptionsPatch),
   }),
   Schema.Struct({
     provider: Schema.optionalKey(Schema.Literal("antigravity")),
@@ -265,13 +246,6 @@ const ClaudeSettingsPatch = Schema.Struct({
   binaryPath: Schema.optionalKey(Schema.String),
   customModels: Schema.optionalKey(Schema.Array(Schema.String)),
   launchArgs: Schema.optionalKey(Schema.String),
-});
-
-const GeminiSettingsPatch = Schema.Struct({
-  enabled: Schema.optionalKey(Schema.Boolean),
-  binaryPath: Schema.optionalKey(Schema.String),
-  homePath: Schema.optionalKey(Schema.String),
-  customModels: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 const AntigravitySettingsPatch = Schema.Struct({
@@ -311,7 +285,6 @@ export const ServerSettingsPatch = Schema.Struct({
   providers: Schema.optionalKey(
     Schema.Struct({
       codex: Schema.optionalKey(CodexSettingsPatch),
-      gemini: Schema.optionalKey(GeminiSettingsPatch),
       antigravity: Schema.optionalKey(AntigravitySettingsPatch),
       claudeAgent: Schema.optionalKey(ClaudeSettingsPatch),
       opencode: Schema.optionalKey(OpencodeSettingsPatch),

@@ -2,7 +2,6 @@ import {
   CODEX_REASONING_EFFORT_OPTIONS,
   type ClaudeCodeEffort,
   type CodexReasoningEffort,
-  type GeminiEffort,
   DEFAULT_MODEL_BY_PROVIDER,
   type EnvironmentId,
   isProviderKind,
@@ -717,30 +716,21 @@ function normalizeProviderModelOptions(
         }
       : undefined;
 
-  // ── Gemini options ────────────────────────────────────────────
-  const geminiCandidate =
-    candidate?.gemini && typeof candidate.gemini === "object"
-      ? (candidate.gemini as Record<string, unknown>)
+  // ── Antigravity options ───────────────────────────────────────
+  const antigravityCandidate =
+    candidate?.antigravity && typeof candidate.antigravity === "object"
+      ? (candidate.antigravity as Record<string, unknown>)
       : null;
-  const geminiThinkingBudget =
-    typeof geminiCandidate?.thinkingBudget === "number"
-      ? geminiCandidate.thinkingBudget
+  const antigravityReasoningEffort =
+    antigravityCandidate?.reasoningEffort === "low" ||
+    antigravityCandidate?.reasoningEffort === "medium" ||
+    antigravityCandidate?.reasoningEffort === "high" ||
+    antigravityCandidate?.reasoningEffort === "xhigh"
+      ? (antigravityCandidate.reasoningEffort as "low" | "medium" | "high" | "xhigh")
       : undefined;
-  const geminiReasoningEffort: GeminiEffort | undefined =
-    geminiCandidate?.reasoningEffort === "low" ||
-    geminiCandidate?.reasoningEffort === "medium" ||
-    geminiCandidate?.reasoningEffort === "high" ||
-    geminiCandidate?.reasoningEffort === "xhigh"
-      ? geminiCandidate.reasoningEffort
-      : undefined;
-  const gemini =
-    geminiThinkingBudget !== undefined || geminiReasoningEffort !== undefined
-      ? {
-          ...(geminiThinkingBudget !== undefined ? { thinkingBudget: geminiThinkingBudget } : {}),
-          ...(geminiReasoningEffort !== undefined
-            ? { reasoningEffort: geminiReasoningEffort }
-            : {}),
-        }
+  const antigravity =
+    antigravityReasoningEffort !== undefined
+      ? { reasoningEffort: antigravityReasoningEffort }
       : undefined;
 
   // ── OpenCode options ─────────────────────────────────────────
@@ -775,7 +765,7 @@ function normalizeProviderModelOptions(
   const copilotAgent =
     copilotReasoningEffort !== undefined ? { reasoningEffort: copilotReasoningEffort } : undefined;
 
-  if (!codex && !claude && !gemini && !opencode && !copilotAgent) {
+  if (!codex && !claude && !antigravity && !opencode && !copilotAgent) {
     return null;
   }
   const structToArray = (
@@ -800,9 +790,9 @@ function normalizeProviderModelOptions(
     const arr = structToArray(claude);
     if (arr) result.claudeAgent = arr;
   }
-  if (gemini) {
-    const arr = structToArray(gemini);
-    if (arr) result.gemini = arr;
+  if (antigravity) {
+    const arr = structToArray(antigravity);
+    if (arr) result.antigravity = arr;
   }
   if (opencode) {
     const arr = structToArray(opencode);

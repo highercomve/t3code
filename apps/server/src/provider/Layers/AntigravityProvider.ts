@@ -1,5 +1,5 @@
 import type {
-  GeminiSettings,
+  AntigravitySettings,
   ModelCapabilities,
   ServerProvider,
   ServerProviderModel,
@@ -17,11 +17,11 @@ import {
   spawnAndCollect,
 } from "../providerSnapshot.ts";
 import { makeManagedServerProvider } from "../makeManagedServerProvider.ts";
-import { GeminiProvider } from "../Services/GeminiProvider.ts";
+import { AntigravityProvider } from "../Services/AntigravityProvider.ts";
 import { ServerSettingsError } from "@t3tools/contracts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 
-const GEMINI_EFFORT_CAPABILITIES: ModelCapabilities = {
+const ANTIGRAVITY_EFFORT_CAPABILITIES: ModelCapabilities = {
   reasoningEffortLevels: [
     { value: "low", label: "Low" },
     { value: "medium", label: "Medium" },
@@ -34,104 +34,75 @@ const GEMINI_EFFORT_CAPABILITIES: ModelCapabilities = {
   promptInjectedEffortLevels: [],
 };
 
-const DEFAULT_GEMINI_MODEL_CAPABILITIES: ModelCapabilities = GEMINI_EFFORT_CAPABILITIES;
+const DEFAULT_ANTIGRAVITY_MODEL_CAPABILITIES: ModelCapabilities = ANTIGRAVITY_EFFORT_CAPABILITIES;
 
-const PROVIDER = "gemini" as const;
-const GEMINI_PRESENTATION = {
-  displayName: "Gemini",
-  showInteractionModeToggle: true,
+const PROVIDER = "antigravity" as const;
+const ANTIGRAVITY_PRESENTATION = {
+  displayName: "Antigravity",
+  showInteractionModeToggle: false,
 } as const;
+
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
+  {
+    slug: "gemini-3.1-pro",
+    name: "Gemini 3.1 Pro",
+    isCustom: false,
+    capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
+  },
   {
     slug: "gemini-3.1-pro-preview",
     name: "Gemini 3.1 Pro Preview",
     isCustom: false,
-    capabilities: GEMINI_EFFORT_CAPABILITIES,
+    capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
   },
   {
     slug: "gemini-3-flash-preview",
     name: "Gemini 3 Flash Preview",
     isCustom: false,
-    capabilities: GEMINI_EFFORT_CAPABILITIES,
-  },
-  {
-    slug: "gemini-2.5-pro",
-    name: "Gemini 2.5 Pro",
-    isCustom: false,
-    capabilities: GEMINI_EFFORT_CAPABILITIES,
-  },
-  {
-    slug: "gemini-2.5-flash",
-    name: "Gemini 2.5 Flash",
-    isCustom: false,
-    capabilities: GEMINI_EFFORT_CAPABILITIES,
-  },
-  {
-    slug: "gemini-2.5-flash-lite",
-    name: "Gemini 2.5 Flash Lite",
-    isCustom: false,
-    capabilities: null,
+    capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
   },
 ];
 
-const runGeminiCommand = (args: ReadonlyArray<string>) =>
+const runAntigravityCommand = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const settingsService = yield* ServerSettingsService;
-    const geminiSettings = yield* settingsService.getSettings.pipe(
-      Effect.map((settings) => settings.providers.gemini),
+    const settings = yield* settingsService.getSettings.pipe(
+      Effect.map((s) => s.providers.antigravity),
     );
-    const command = ChildProcess.make(geminiSettings.binaryPath, [...args], {
+    const command = ChildProcess.make(settings.binaryPath, [...args], {
       shell: process.platform === "win32",
       env: process.env,
     });
-    return yield* spawnAndCollect(geminiSettings.binaryPath, command);
+    return yield* spawnAndCollect(settings.binaryPath, command);
   });
 
-/**
- * Check Gemini authentication by reading the google_accounts.json file
- * from the Gemini home directory.
- *
- * If `homePath` is set in settings, that is used as the base directory;
- * otherwise the default `~/.gemini` is used.
- */
-function parseGeminiAccountsJson(content: string): boolean {
+// agy reuses Gemini's ~/.gemini/ tree, so auth presence is detected via
+// google_accounts.json — same shape as the deprecated gemini integration.
+function parseGoogleAccountsJson(content: string): boolean {
   const trimmed = content.trim();
   if (!trimmed) return false;
   try {
-    const parsed = JSON.parse(trimmed);
-    return parsed && typeof parsed === "object" && "active" in parsed;
+    const parsed: unknown = JSON.parse(trimmed);
+    return !!parsed && typeof parsed === "object" && "active" in (parsed as object);
   } catch {
     return false;
   }
 }
 
-const checkGeminiAuth = (geminiSettings: GeminiSettings) =>
-  Effect.gen(function* () {
-    const fileSystem = yield* FileSystem.FileSystem;
-    const pathService = yield* Path.Path;
+const checkAntigravityAuth = Effect.gen(function* () {
+  const fileSystem = yield* FileSystem.FileSystem;
+  const pathService = yield* Path.Path;
+  const home = process.env.HOME ?? "~";
+  const accountsFilePath = pathService.join(home, ".gemini", "google_accounts.json");
+  const exists = yield* fileSystem.exists(accountsFilePath).pipe(Effect.orElseSucceed(() => false));
+  if (!exists) return false;
+  const content = yield* fileSystem
+    .readFileString(accountsFilePath)
+    .pipe(Effect.orElseSucceed(() => ""));
+  return parseGoogleAccountsJson(content);
+});
 
-    const homeDir =
-      geminiSettings.homePath && geminiSettings.homePath.trim().length > 0
-        ? geminiSettings.homePath.trim()
-        : pathService.join(process.env.HOME ?? "~", ".gemini");
-
-    const accountsFilePath = pathService.join(homeDir, "google_accounts.json");
-
-    const fileExists = yield* fileSystem
-      .exists(accountsFilePath)
-      .pipe(Effect.orElseSucceed(() => false));
-    if (!fileExists) {
-      return false;
-    }
-
-    const content = yield* fileSystem
-      .readFileString(accountsFilePath)
-      .pipe(Effect.orElseSucceed(() => ""));
-
-    return parseGeminiAccountsJson(content);
-  });
-
-export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
+export const checkAntigravityProviderStatus = Effect.fn("checkAntigravityProviderStatus")(
   function* (): Effect.fn.Return<
     ServerProvider,
     ServerSettingsError,
@@ -140,22 +111,22 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
     | Path.Path
     | ServerSettingsService
   > {
-    const geminiSettings = yield* Effect.service(ServerSettingsService).pipe(
+    const settings = yield* Effect.service(ServerSettingsService).pipe(
       Effect.flatMap((service) => service.getSettings),
-      Effect.map((settings) => settings.providers.gemini),
+      Effect.map((s) => s.providers.antigravity),
     );
     const checkedAt = new Date().toISOString();
     const models = providerModelsFromSettings(
       BUILT_IN_MODELS,
       PROVIDER,
-      geminiSettings.customModels,
-      DEFAULT_GEMINI_MODEL_CAPABILITIES,
+      settings.customModels,
+      DEFAULT_ANTIGRAVITY_MODEL_CAPABILITIES,
     );
 
-    if (!geminiSettings.enabled) {
+    if (!settings.enabled) {
       return buildServerProvider({
         provider: PROVIDER,
-        presentation: GEMINI_PRESENTATION,
+        presentation: ANTIGRAVITY_PRESENTATION,
         enabled: false,
         checkedAt,
         models,
@@ -164,14 +135,12 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
           version: null,
           status: "warning",
           auth: { status: "unknown" },
-          message: "Gemini is disabled in T3 Code settings.",
+          message: "Antigravity is disabled in T3 Code settings.",
         },
       });
     }
 
-    // ── Version check ────────────────────────────────────────────────────
-
-    const versionProbe = yield* runGeminiCommand(["--version"]).pipe(
+    const versionProbe = yield* runAntigravityCommand(["--version"]).pipe(
       Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
       Effect.result,
     );
@@ -180,8 +149,8 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
       const error = versionProbe.failure;
       return buildServerProvider({
         provider: PROVIDER,
-        presentation: GEMINI_PRESENTATION,
-        enabled: geminiSettings.enabled,
+        presentation: ANTIGRAVITY_PRESENTATION,
+        enabled: settings.enabled,
         checkedAt,
         models,
         probe: {
@@ -190,8 +159,8 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
           status: "error",
           auth: { status: "unknown" },
           message: isCommandMissingCause(error)
-            ? "Gemini CLI (`gemini`) is not installed or not on PATH."
-            : `Failed to execute Gemini CLI health check: ${error instanceof Error ? error.message : String(error)}.`,
+            ? "Antigravity CLI (`agy`) is not installed or not on PATH."
+            : `Failed to execute Antigravity CLI health check: ${error instanceof Error ? error.message : String(error)}.`,
         },
       });
     }
@@ -199,8 +168,8 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
     if (Option.isNone(versionProbe.success)) {
       return buildServerProvider({
         provider: PROVIDER,
-        presentation: GEMINI_PRESENTATION,
-        enabled: geminiSettings.enabled,
+        presentation: ANTIGRAVITY_PRESENTATION,
+        enabled: settings.enabled,
         checkedAt,
         models,
         probe: {
@@ -208,7 +177,8 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
           version: null,
           status: "error",
           auth: { status: "unknown" },
-          message: "Gemini CLI is installed but failed to run. Timed out while running command.",
+          message:
+            "Antigravity CLI is installed but failed to run. Timed out while running command.",
         },
       });
     }
@@ -219,8 +189,8 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
       const detail = detailFromResult(version);
       return buildServerProvider({
         provider: PROVIDER,
-        presentation: GEMINI_PRESENTATION,
-        enabled: geminiSettings.enabled,
+        presentation: ANTIGRAVITY_PRESENTATION,
+        enabled: settings.enabled,
         checkedAt,
         models,
         probe: {
@@ -229,23 +199,19 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
           status: "error",
           auth: { status: "unknown" },
           message: detail
-            ? `Gemini CLI is installed but failed to run. ${detail}`
-            : "Gemini CLI is installed but failed to run.",
+            ? `Antigravity CLI is installed but failed to run. ${detail}`
+            : "Antigravity CLI is installed but failed to run.",
         },
       });
     }
 
-    // ── Auth check (file-based) ──────────────────────────────────────────
-
-    const authenticated = yield* checkGeminiAuth(geminiSettings).pipe(
-      Effect.orElseSucceed(() => false),
-    );
+    const authenticated = yield* checkAntigravityAuth.pipe(Effect.orElseSucceed(() => false));
 
     if (authenticated) {
       return buildServerProvider({
         provider: PROVIDER,
-        presentation: GEMINI_PRESENTATION,
-        enabled: geminiSettings.enabled,
+        presentation: ANTIGRAVITY_PRESENTATION,
+        enabled: settings.enabled,
         checkedAt,
         models,
         probe: {
@@ -253,15 +219,15 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
           version: parsedVersion,
           status: "ready",
           auth: { status: "authenticated", type: "oauth-personal", label: "Google Account" },
-          message: "Gemini CLI is installed and authenticated.",
+          message: "Antigravity CLI is installed and authenticated.",
         },
       });
     }
 
     return buildServerProvider({
       provider: PROVIDER,
-      presentation: GEMINI_PRESENTATION,
-      enabled: geminiSettings.enabled,
+      presentation: ANTIGRAVITY_PRESENTATION,
+      enabled: settings.enabled,
       checkedAt,
       models,
       probe: {
@@ -269,25 +235,25 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
         version: parsedVersion,
         status: "error",
         auth: { status: "unauthenticated" },
-        message: "Gemini CLI is installed but not authenticated. Run `gemini` to log in.",
+        message: "Antigravity CLI is installed but not authenticated. Run `agy` to log in.",
       },
     });
   },
 );
 
-const makePendingGeminiProvider = (geminiSettings: GeminiSettings): ServerProvider => {
+const makePendingAntigravityProvider = (settings: AntigravitySettings): ServerProvider => {
   const checkedAt = new Date().toISOString();
   const models = providerModelsFromSettings(
     BUILT_IN_MODELS,
     PROVIDER,
-    geminiSettings.customModels,
-    DEFAULT_GEMINI_MODEL_CAPABILITIES,
+    settings.customModels,
+    DEFAULT_ANTIGRAVITY_MODEL_CAPABILITIES,
   );
 
-  if (!geminiSettings.enabled) {
+  if (!settings.enabled) {
     return buildServerProvider({
       provider: PROVIDER,
-      presentation: GEMINI_PRESENTATION,
+      presentation: ANTIGRAVITY_PRESENTATION,
       enabled: false,
       checkedAt,
       models,
@@ -296,14 +262,14 @@ const makePendingGeminiProvider = (geminiSettings: GeminiSettings): ServerProvid
         version: null,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Gemini is disabled in T3 Code settings.",
+        message: "Antigravity is disabled in T3 Code settings.",
       },
     });
   }
 
   return buildServerProvider({
     provider: PROVIDER,
-    presentation: GEMINI_PRESENTATION,
+    presentation: ANTIGRAVITY_PRESENTATION,
     enabled: true,
     checkedAt,
     models,
@@ -312,36 +278,34 @@ const makePendingGeminiProvider = (geminiSettings: GeminiSettings): ServerProvid
       version: null,
       status: "warning",
       auth: { status: "unknown" },
-      message: "Gemini provider status has not been checked in this session yet.",
+      message: "Antigravity provider status has not been checked in this session yet.",
     },
   });
 };
 
-export const GeminiProviderLive = Layer.effect(
-  GeminiProvider,
+export const AntigravityProviderLive = Layer.effect(
+  AntigravityProvider,
   Effect.gen(function* () {
     const serverSettings = yield* ServerSettingsService;
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
 
-    const checkProvider = checkGeminiProviderStatus().pipe(
+    const checkProvider = checkAntigravityProviderStatus().pipe(
       Effect.provideService(ServerSettingsService, serverSettings),
       Effect.provideService(FileSystem.FileSystem, fileSystem),
       Effect.provideService(Path.Path, path),
       Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
     );
 
-    return yield* makeManagedServerProvider<GeminiSettings>({
+    return yield* makeManagedServerProvider<AntigravitySettings>({
       getSettings: serverSettings.getSettings.pipe(
-        Effect.map((settings) => settings.providers.gemini),
+        Effect.map((s) => s.providers.antigravity),
         Effect.orDie,
       ),
-      streamSettings: serverSettings.streamChanges.pipe(
-        Stream.map((settings) => settings.providers.gemini),
-      ),
+      streamSettings: serverSettings.streamChanges.pipe(Stream.map((s) => s.providers.antigravity)),
       haveSettingsChanged: (previous, next) => !Equal.equals(previous, next),
-      initialSnapshot: makePendingGeminiProvider,
+      initialSnapshot: makePendingAntigravityProvider,
       checkProvider,
     });
   }),

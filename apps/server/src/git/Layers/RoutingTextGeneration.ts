@@ -50,7 +50,6 @@ const makeRoutingTextGeneration = Effect.gen(function* () {
   const byProvider = {
     codex,
     claudeAgent: claude,
-    gemini,
     // TODO(phase-3): replace with AntigravityTextGenerationLive
     antigravity: gemini,
     opencode,

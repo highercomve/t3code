@@ -1,23 +1,26 @@
 /**
- * GeminiTextGeneration – Text generation layer using the Gemini CLI.
+ * Phase 2 stub — kept only so `RoutingTextGeneration.ts` can route `antigravity`
+ * to this layer until Phase 3 lands the real `AntigravityTextGeneration`.
  *
- * Delegates to the `gemini` CLI in ACP mode
- * (`gemini --experimental-acp --model <model>`). The model is passed via
- * CLI args; structured output is extracted from the free-text response.
- *
- * @module GeminiTextGeneration
+ * TODO(phase-3): replace with `AntigravityTextGenerationLive` and delete this
+ * file. The orchestrator will `git rm` it after Phase 3 commits.
  */
-import type { GeminiSettings } from "@t3tools/contracts";
-import { makeAcpTextGenerationLayer } from "./AcpTextGeneration.ts";
+import { TextGenerationError } from "@t3tools/contracts";
+import { Effect, Layer } from "effect";
 
-export const GeminiTextGenerationLive = makeAcpTextGenerationLayer({
-  providerName: "GeminiTextGeneration",
-  providerKey: "gemini",
-  defaultBinaryName: "gemini",
-  makeArgs: (model) => ["--experimental-acp", "--model", model],
-  modelInSessionNew: false,
-  makeEnv: (settings: GeminiSettings | undefined) => ({
-    ...(settings?.homePath ? { GEMINI_HOME: settings.homePath } : {}),
-  }),
-  timeoutMs: 180_000,
-});
+import { TextGeneration, type TextGenerationShape } from "../Services/TextGeneration.ts";
+
+const fail = <T>(operation: string): Effect.Effect<T, TextGenerationError> =>
+  Effect.fail(
+    new TextGenerationError({
+      operation,
+      detail: `Antigravity text generation (${operation}) is not yet wired in Phase 2; landing in Phase 3.`,
+    }),
+  );
+
+export const GeminiTextGenerationLive = Layer.succeed(TextGeneration, {
+  generateCommitMessage: () => fail("generateCommitMessage"),
+  generatePrContent: () => fail("generatePrContent"),
+  generateBranchName: () => fail("generateBranchName"),
+  generateThreadTitle: () => fail("generateThreadTitle"),
+} satisfies TextGenerationShape);

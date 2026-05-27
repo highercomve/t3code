@@ -2,9 +2,10 @@
  * AcpTextGeneration – Lightweight ACP (Agent Client Protocol) client for
  * single-shot text generation, plus a factory for building provider layers.
  *
- * Used by providers whose CLIs only expose the ACP protocol (Gemini, OpenCode)
- * and lack native structured-output flags like `--output-schema` (Codex) or
- * `--json-schema` (Claude).
+ * Used by providers whose CLIs only expose the ACP protocol (OpenCode) and
+ * lack native structured-output flags like `--output-schema` (Codex) or
+ * `--json-schema` (Claude). Antigravity is one-shot CLI, not ACP, so it does
+ * not use this layer.
  *
  * Protocol flow:
  *   1. Spawn CLI in ACP mode
@@ -21,7 +22,7 @@ import readline from "node:readline";
 
 import { Effect, Layer, Schema } from "effect";
 
-import type { GeminiSettings, ModelSelection, OpencodeSettings } from "@t3tools/contracts";
+import type { ModelSelection, OpencodeSettings } from "@t3tools/contracts";
 import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@t3tools/shared/git";
 
 import { ServerSettingsService } from "../../serverSettings.ts";
@@ -138,10 +139,10 @@ function decodeAcpResponse<S extends Schema.Top>(
 // Layer factory – builds a TextGenerationShape from a config resolver
 // ---------------------------------------------------------------------------
 
-type AcpProviderKey = "gemini" | "opencode";
-type ProviderSettingsFor<K extends AcpProviderKey> = K extends "gemini"
-  ? GeminiSettings
-  : OpencodeSettings;
+type AcpProviderKey = "opencode";
+type ProviderSettingsFor<K extends AcpProviderKey> = K extends "opencode"
+  ? OpencodeSettings
+  : never;
 
 export interface AcpProviderLayerConfig<K extends AcpProviderKey> {
   /** Provider name used in Effect span names (e.g. "GeminiTextGeneration"). */
@@ -153,7 +154,7 @@ export interface AcpProviderLayerConfig<K extends AcpProviderKey> {
   /** CLI arguments to start ACP mode. */
   readonly makeArgs: (model: string) => readonly string[];
   /** Whether the model slug is sent in the ACP `session/new` params
-   *  (true for OpenCode) or via CLI args (false for Gemini). */
+   *  (true for OpenCode) or via CLI args. */
   readonly modelInSessionNew: boolean;
   /** Build extra env vars from the provider's settings block. */
   readonly makeEnv: (settings: ProviderSettingsFor<K> | undefined) => Record<string, string>;
@@ -163,7 +164,6 @@ export interface AcpProviderLayerConfig<K extends AcpProviderKey> {
 
 /**
  * Create a full `TextGenerationShape` Effect backed by ACP text generation.
- * Eliminates duplication between Gemini and OpenCode layers.
  */
 export function makeAcpTextGenerationLayer<K extends AcpProviderKey>(
   layerConfig: AcpProviderLayerConfig<K>,

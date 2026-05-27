@@ -12,7 +12,6 @@ import {
 const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>> = {
   claudeAgent: new Set(MODEL_OPTIONS_BY_PROVIDER.claudeAgent.map((option) => option.slug)),
   codex: new Set(MODEL_OPTIONS_BY_PROVIDER.codex.map((option) => option.slug)),
-  gemini: new Set(MODEL_OPTIONS_BY_PROVIDER.gemini.map((option) => option.slug)),
   antigravity: new Set(MODEL_OPTIONS_BY_PROVIDER.antigravity.map((option) => option.slug)),
   opencode: new Set(MODEL_OPTIONS_BY_PROVIDER.opencode.map((option) => option.slug)),
   copilotAgent: new Set(MODEL_OPTIONS_BY_PROVIDER.copilotAgent.map((option) => option.slug)),
@@ -436,13 +435,6 @@ export function inferProviderForModel(
     return "codex";
   }
 
-  const normalizedGemini = normalizeModelSlug(model, "gemini");
-  if (normalizedGemini && MODEL_SLUG_SET_BY_PROVIDER.gemini.has(normalizedGemini)) {
-    return "gemini";
-  }
-
-  // TODO(phase-2): once gemini is removed, antigravity should claim the
-  // `gemini-*` slugs that previously routed to gemini above.
   const normalizedAntigravity = normalizeModelSlug(model, "antigravity");
   if (normalizedAntigravity && MODEL_SLUG_SET_BY_PROVIDER.antigravity.has(normalizedAntigravity)) {
     return "antigravity";
@@ -456,7 +448,7 @@ export function inferProviderForModel(
   if (typeof model === "string") {
     const trimmed = model.trim();
     if (trimmed.startsWith("claude-")) return "claudeAgent";
-    if (trimmed.startsWith("gemini-")) return "gemini";
+    if (trimmed.startsWith("gemini-")) return "antigravity";
     if (trimmed.startsWith("opencode/") || trimmed.startsWith("anthropic/")) return "opencode";
   }
   return fallback;

@@ -39,8 +39,7 @@ export type ProviderCustomModelConfig = {
 
 const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>> = {
   codex: new Set(getModelOptions("codex").map((option) => option.slug)),
-  gemini: new Set(getModelOptions("gemini").map((option) => option.slug)),
-  antigravity: new Set(getModelOptions("gemini").map((option) => option.slug)),
+  antigravity: new Set(getModelOptions("antigravity").map((option) => option.slug)),
   claudeAgent: new Set(getModelOptions("claudeAgent").map((option) => option.slug)),
   opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
   copilotAgent: new Set(getModelOptions("copilotAgent").map((option) => option.slug)),
@@ -94,15 +93,6 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     description: "Save additional Codex model slugs for the picker and `/model` command.",
     placeholder: "your-codex-model-slug",
     example: "gpt-6.7-codex-ultra-preview",
-  },
-  gemini: {
-    provider: "gemini",
-    settingsKey: "customGeminiModels",
-    defaultSettingsKey: "customGeminiModels",
-    title: "Gemini",
-    description: "Save additional Gemini model slugs for the picker and `/model` command.",
-    placeholder: "your-gemini-model-slug",
-    example: "gemini-3.5-ultra-preview",
   },
   antigravity: {
     provider: "antigravity",
@@ -177,7 +167,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     ...settings,
     customCodexModels: normalizeCustomModelSlugs(settings.customCodexModels, "codex"),
     customClaudeModels: normalizeCustomModelSlugs(settings.customClaudeModels, "claudeAgent"),
-    customGeminiModels: normalizeCustomModelSlugs(settings.customGeminiModels, "gemini"),
+    customGeminiModels: normalizeCustomModelSlugs(settings.customGeminiModels, "antigravity"),
     customOpencodeModels: normalizeCustomModelSlugs(settings.customOpencodeModels, "opencode"),
     customCopilotModels: normalizeCustomModelSlugs(settings.customCopilotModels, "copilotAgent"),
   };
@@ -211,7 +201,6 @@ export function getCustomModelsByProvider(
 ): Record<ProviderKind, readonly string[]> {
   return {
     codex: getCustomModelsForProvider(settings, "codex"),
-    gemini: getCustomModelsForProvider(settings, "gemini"),
     antigravity: getCustomModelsForProvider(settings, "antigravity"),
     claudeAgent: getCustomModelsForProvider(settings, "claudeAgent"),
     opencode: getCustomModelsForProvider(settings, "opencode"),
@@ -298,12 +287,6 @@ export function getCustomModelOptionsByProvider(
       customModelsByProvider.codex,
       undefined,
       dynamicModelsByProvider?.codex,
-    ),
-    gemini: getAppModelOptions(
-      "gemini",
-      customModelsByProvider.gemini,
-      undefined,
-      dynamicModelsByProvider?.gemini,
     ),
     antigravity: getAppModelOptions(
       "antigravity",

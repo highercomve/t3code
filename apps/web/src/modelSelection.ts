@@ -1,7 +1,6 @@
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER,
   type AntigravityModelSelection,
-  type GeminiModelSelection,
   type ModelSelection,
   type OpencodeModelSelection,
   type ProviderKind,
@@ -39,7 +38,6 @@ export interface AppModelOption {
 
 type ModelSelectionByProvider = {
   codex: CodexModelSelection;
-  gemini: GeminiModelSelection;
   antigravity: AntigravityModelSelection;
   claudeAgent: ClaudeModelSelection;
   opencode: OpencodeModelSelection;
@@ -83,13 +81,6 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     description: "Save additional Claude model slugs for the picker and `/model` command.",
     placeholder: "your-claude-model-slug",
     example: "claude-sonnet-5-0",
-  },
-  gemini: {
-    provider: "gemini",
-    title: "Gemini",
-    description: "Save additional Gemini model slugs for the picker and `/model` command.",
-    placeholder: "your-gemini-model-slug",
-    example: "gemini-3.1-pro-preview",
   },
   antigravity: {
     provider: "antigravity",
@@ -227,12 +218,6 @@ export function getCustomModelOptionsByProvider(
       providers,
       "codex",
       selectedProvider === "codex" ? selectedModel : undefined,
-    ),
-    gemini: getAppModelOptions(
-      settings,
-      providers,
-      "gemini",
-      selectedProvider === "gemini" ? selectedModel : undefined,
     ),
     antigravity: getAppModelOptions(
       settings,

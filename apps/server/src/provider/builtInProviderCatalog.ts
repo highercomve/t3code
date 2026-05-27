@@ -15,7 +15,7 @@ type BuiltInProviderServiceMap = Record<ProviderKind, ServerProviderShape>;
 type BuiltInAdapterMap = {
   readonly codex: ProviderAdapterShape<ProviderAdapterError>;
   readonly claudeAgent: ProviderAdapterShape<ProviderAdapterError>;
-  readonly gemini: ProviderAdapterShape<ProviderAdapterError>;
+  readonly antigravity: ProviderAdapterShape<ProviderAdapterError>;
   readonly opencode: ProviderAdapterShape<ProviderAdapterError>;
   readonly copilotAgent: ProviderAdapterShape<ProviderAdapterError>;
 };
@@ -23,7 +23,7 @@ type BuiltInAdapterMap = {
 export const BUILT_IN_PROVIDER_ORDER = [
   "codex",
   "claudeAgent",
-  "gemini",
+  "antigravity",
   "opencode",
   "copilotAgent",
 ] as const satisfies ReadonlyArray<ProviderKind>;
@@ -45,7 +45,7 @@ export function createBuiltInAdapterList(
   return [
     adapters.codex,
     adapters.claudeAgent,
-    adapters.gemini,
+    adapters.antigravity,
     adapters.opencode,
     adapters.copilotAgent,
   ];

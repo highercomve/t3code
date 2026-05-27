@@ -1,9 +1,9 @@
 import {
   DEFAULT_MODEL_BY_PROVIDER,
   MODEL_OPTIONS_BY_PROVIDER,
+  type AntigravityModelOptions,
   type ClaudeModelOptions,
   type CodexModelOptions,
-  type GeminiModelOptions,
   type ModelCapabilities,
   type OpencodeModelOptions,
   type ProviderKind,
@@ -141,20 +141,14 @@ export function normalizeClaudeModelOptionsWithCapabilities(
   return Object.keys(nextOptions).length > 0 ? nextOptions : undefined;
 }
 
-export function normalizeGeminiModelOptionsWithCapabilities(
+export function normalizeAntigravityModelOptionsWithCapabilities(
   caps: ModelCapabilities,
-  modelOptions: GeminiModelOptions | null | undefined,
-): GeminiModelOptions | undefined {
-  const thinkingBudget =
-    typeof modelOptions?.thinkingBudget === "number" &&
-    Number.isInteger(modelOptions.thinkingBudget)
-      ? modelOptions.thinkingBudget
-      : undefined;
+  modelOptions: AntigravityModelOptions | null | undefined,
+): AntigravityModelOptions | undefined {
   const reasoningEffort = resolveEffort(caps, modelOptions?.reasoningEffort);
-  const nextOptions: GeminiModelOptions = {
-    ...(thinkingBudget !== undefined ? { thinkingBudget } : {}),
+  const nextOptions: AntigravityModelOptions = {
     ...(reasoningEffort
-      ? { reasoningEffort: reasoningEffort as GeminiModelOptions["reasoningEffort"] }
+      ? { reasoningEffort: reasoningEffort as AntigravityModelOptions["reasoningEffort"] }
       : {}),
   };
   return Object.keys(nextOptions).length > 0 ? nextOptions : undefined;

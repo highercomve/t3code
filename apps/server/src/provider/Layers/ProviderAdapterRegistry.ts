@@ -17,7 +17,7 @@ import {
 } from "../Services/ProviderAdapterRegistry.ts";
 import { ClaudeAdapter } from "../Services/ClaudeAdapter.ts";
 import { CodexAdapter } from "../Services/CodexAdapter.ts";
-import { GeminiAdapter } from "../Services/GeminiAdapter.ts";
+import { AntigravityAdapter } from "../Services/AntigravityAdapter.ts";
 import { OpencodeAdapter } from "../Services/OpencodeAdapter.ts";
 import { CopilotAdapter } from "../Services/CopilotAdapter.ts";
 import { createBuiltInAdapterList } from "../builtInProviderCatalog.ts";
@@ -35,7 +35,7 @@ const makeProviderAdapterRegistry = Effect.fn("makeProviderAdapterRegistry")(fun
       : createBuiltInAdapterList({
           codex: yield* CodexAdapter,
           claudeAgent: yield* ClaudeAdapter,
-          gemini: yield* GeminiAdapter,
+          antigravity: yield* AntigravityAdapter,
           opencode: yield* OpencodeAdapter,
           copilotAgent: yield* CopilotAdapter,
         });

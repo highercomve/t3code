@@ -121,7 +121,7 @@ function resetComposerDraftStore() {
 }
 
 function modelSelection(
-  provider: "codex" | "claudeAgent" | "gemini" | "opencode" | "copilotAgent",
+  provider: "codex" | "claudeAgent" | "antigravity" | "opencode" | "copilotAgent",
   model: string,
   options?: Record<string, string | boolean | undefined>,
 ): ModelSelection {

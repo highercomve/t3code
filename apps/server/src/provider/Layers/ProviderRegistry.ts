@@ -10,7 +10,7 @@ import { ServerConfig } from "../../config.ts";
 import { ClaudeProviderLive } from "./ClaudeProvider.ts";
 import { CodexProviderLive } from "./CodexProvider.ts";
 import { CopilotProviderLive } from "./CopilotProvider.ts";
-import { GeminiProviderLive } from "./GeminiProvider.ts";
+import { AntigravityProviderLive } from "./AntigravityProvider.ts";
 import { OpencodeProviderLive } from "./OpencodeProvider.ts";
 import type { ClaudeProviderShape } from "../Services/ClaudeProvider.ts";
 import { ClaudeProvider } from "../Services/ClaudeProvider.ts";
@@ -18,8 +18,8 @@ import type { CodexProviderShape } from "../Services/CodexProvider.ts";
 import { CodexProvider } from "../Services/CodexProvider.ts";
 import type { CopilotProviderShape } from "../Services/CopilotProvider.ts";
 import { CopilotProvider } from "../Services/CopilotProvider.ts";
-import type { GeminiProviderShape } from "../Services/GeminiProvider.ts";
-import { GeminiProvider } from "../Services/GeminiProvider.ts";
+import type { AntigravityProviderShape } from "../Services/AntigravityProvider.ts";
+import { AntigravityProvider } from "../Services/AntigravityProvider.ts";
 import type { OpencodeProviderShape } from "../Services/OpencodeProvider.ts";
 import { OpencodeProvider } from "../Services/OpencodeProvider.ts";
 import { ProviderRegistry, type ProviderRegistryShape } from "../Services/ProviderRegistry.ts";
@@ -36,7 +36,7 @@ const loadProviders = (
   codexProvider: CodexProviderShape,
   claudeProvider: ClaudeProviderShape,
   copilotProvider: CopilotProviderShape,
-  geminiProvider: GeminiProviderShape,
+  antigravityProvider: AntigravityProviderShape,
   opencodeProvider: OpencodeProviderShape,
 ): Effect.Effect<
   readonly [ServerProvider, ServerProvider, ServerProvider, ServerProvider, ServerProvider]
@@ -46,7 +46,7 @@ const loadProviders = (
       codexProvider.getSnapshot,
       claudeProvider.getSnapshot,
       copilotProvider.getSnapshot,
-      geminiProvider.getSnapshot,
+      antigravityProvider.getSnapshot,
       opencodeProvider.getSnapshot,
     ],
     {
@@ -104,7 +104,7 @@ export const ProviderRegistryLive = Layer.effect(
     const codexProvider = yield* CodexProvider;
     const claudeProvider = yield* ClaudeProvider;
     const copilotProvider = yield* CopilotProvider;
-    const geminiProvider = yield* GeminiProvider;
+    const antigravityProvider = yield* AntigravityProvider;
     const opencodeProvider = yield* OpencodeProvider;
     const config = yield* ServerConfig;
     const fileSystem = yield* FileSystem.FileSystem;
@@ -119,7 +119,7 @@ export const ProviderRegistryLive = Layer.effect(
       codexProvider,
       claudeProvider,
       copilotProvider,
-      geminiProvider,
+      antigravityProvider,
       opencodeProvider,
     );
     const cachePathByProvider = new Map(
@@ -237,8 +237,8 @@ export const ProviderRegistryLive = Layer.effect(
           return yield* copilotProvider.refresh.pipe(
             Effect.flatMap((nextProvider) => syncProvider(nextProvider)),
           );
-        case "gemini":
-          return yield* geminiProvider.refresh.pipe(
+        case "antigravity":
+          return yield* antigravityProvider.refresh.pipe(
             Effect.flatMap((nextProvider) => syncProvider(nextProvider)),
           );
         case "opencode":
@@ -257,7 +257,7 @@ export const ProviderRegistryLive = Layer.effect(
               copilotProvider.refresh.pipe(
                 Effect.flatMap((nextProvider) => syncProvider(nextProvider)),
               ),
-              geminiProvider.refresh.pipe(
+              antigravityProvider.refresh.pipe(
                 Effect.flatMap((nextProvider) => syncProvider(nextProvider)),
               ),
               opencodeProvider.refresh.pipe(
@@ -281,7 +281,7 @@ export const ProviderRegistryLive = Layer.effect(
     yield* Stream.runForEach(copilotProvider.streamChanges, (provider) =>
       syncProvider(provider),
     ).pipe(Effect.forkScoped);
-    yield* Stream.runForEach(geminiProvider.streamChanges, (provider) =>
+    yield* Stream.runForEach(antigravityProvider.streamChanges, (provider) =>
       syncProvider(provider),
     ).pipe(Effect.forkScoped);
     yield* Stream.runForEach(opencodeProvider.streamChanges, (provider) =>
@@ -304,6 +304,6 @@ export const ProviderRegistryLive = Layer.effect(
   Layer.provideMerge(CodexProviderLive),
   Layer.provideMerge(ClaudeProviderLive),
   Layer.provideMerge(CopilotProviderLive),
-  Layer.provideMerge(GeminiProviderLive),
+  Layer.provideMerge(AntigravityProviderLive),
   Layer.provideMerge(OpencodeProviderLive),
 );

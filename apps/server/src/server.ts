@@ -21,7 +21,8 @@ import { ProviderSessionDirectoryLive } from "./provider/Layers/ProviderSessionD
 import { ProviderSessionRuntimeRepositoryLive } from "./persistence/Layers/ProviderSessionRuntime.ts";
 import { makeCodexAdapterLive } from "./provider/Layers/CodexAdapter.ts";
 import { makeClaudeAdapterLive } from "./provider/Layers/ClaudeAdapter.ts";
-import { makeGeminiAdapterLive } from "./provider/Layers/GeminiAdapter.ts";
+import { makeAntigravityAdapterLive } from "./provider/Layers/AntigravityAdapter.ts";
+import { AntigravityConversationStoreLive } from "./persistence/Layers/AntigravityConversationStore.ts";
 import { makeOpencodeAdapterLive } from "./provider/Layers/OpencodeAdapter.ts";
 import { makeCopilotAdapterLive } from "./provider/Layers/CopilotAdapter.ts";
 import { ProviderAdapterRegistryLive } from "./provider/Layers/ProviderAdapterRegistry.ts";
@@ -160,13 +161,15 @@ const ProviderLayerLive = Layer.unwrap(
     const claudeAdapterLayer = makeClaudeAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     );
-    const geminiAdapterLayer = makeGeminiAdapterLive();
+    const antigravityAdapterLayer = makeAntigravityAdapterLive().pipe(
+      Layer.provide(AntigravityConversationStoreLive),
+    );
     const opencodeAdapterLayer = makeOpencodeAdapterLive();
     const copilotAdapterLayer = makeCopilotAdapterLive();
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
-      Layer.provide(geminiAdapterLayer),
+      Layer.provide(antigravityAdapterLayer),
       Layer.provide(opencodeAdapterLayer),
       Layer.provide(copilotAdapterLayer),
       Layer.provideMerge(ProviderSessionDirectoryLayerLive),
