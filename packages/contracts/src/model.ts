@@ -10,55 +10,10 @@ export const CLAUDE_CODE_EFFORT_OPTIONS = [
   "low",
   "medium",
   "high",
-  "xhigh",
   "max",
   "ultrathink",
 ] as const;
 export type ClaudeCodeEffort = (typeof CLAUDE_CODE_EFFORT_OPTIONS)[number];
-export type ProviderReasoningEffort = CodexReasoningEffort | ClaudeCodeEffort;
-
-export const CodexModelOptions = Schema.Struct({
-  reasoningEffort: Schema.optional(Schema.Literals(CODEX_REASONING_EFFORT_OPTIONS)),
-  fastMode: Schema.optional(Schema.Boolean),
-});
-export type CodexModelOptions = typeof CodexModelOptions.Type;
-
-export const ANTIGRAVITY_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
-export type AntigravityEffort = (typeof ANTIGRAVITY_EFFORT_OPTIONS)[number];
-
-// `agy` exposes no thinking-budget / effort flag. The reasoning-effort field is
-// stored for forward-compat and UI parity but is not forwarded to the binary.
-export const AntigravityModelOptions = Schema.Struct({
-  reasoningEffort: Schema.optional(Schema.Literals(ANTIGRAVITY_EFFORT_OPTIONS)),
-});
-export type AntigravityModelOptions = typeof AntigravityModelOptions.Type;
-
-export const ClaudeModelOptions = Schema.Struct({
-  thinking: Schema.optional(Schema.Boolean),
-  effort: Schema.optional(Schema.Literals(CLAUDE_CODE_EFFORT_OPTIONS)),
-  fastMode: Schema.optional(Schema.Boolean),
-  contextWindow: Schema.optional(Schema.String),
-});
-export type ClaudeModelOptions = typeof ClaudeModelOptions.Type;
-
-export const OpencodeModelOptions = Schema.Struct({
-  reasoningEffort: Schema.optional(Schema.Literals(CODEX_REASONING_EFFORT_OPTIONS)),
-});
-export type OpencodeModelOptions = typeof OpencodeModelOptions.Type;
-
-export const CopilotModelOptions = Schema.Struct({
-  reasoningEffort: Schema.optional(Schema.Literals(CODEX_REASONING_EFFORT_OPTIONS)),
-});
-export type CopilotModelOptions = typeof CopilotModelOptions.Type;
-
-export const ProviderModelOptions = Schema.Struct({
-  codex: Schema.optional(CodexModelOptions),
-  antigravity: Schema.optional(AntigravityModelOptions),
-  claudeAgent: Schema.optional(ClaudeModelOptions),
-  opencode: Schema.optional(OpencodeModelOptions),
-  copilotAgent: Schema.optional(CopilotModelOptions),
-});
-export type ProviderModelOptions = typeof ProviderModelOptions.Type;
 
 export const ProviderOptionDescriptorType = Schema.Literals(["select", "boolean"]);
 export type ProviderOptionDescriptorType = typeof ProviderOptionDescriptorType.Type;
@@ -178,151 +133,8 @@ function canonicalSelectionsToLegacyObject(
   return out;
 }
 
-/**
- * Wraps a provider-specific options struct schema so it also accepts the
- * v3 array-of-selections format (`[{id, value}, …]`) and the legacy object
- * format (`{effort: "high", …}`) on decode.
- *
- * The array form was introduced by migration 026 but the current schema
- * expects provider-specific struct fields. Without this tolerance the server
- * crashes on startup when encountering stored array data.
- *
- * On encode the struct format is always produced, so any array data that
- * passes through a decode/encode round-trip is normalised to the struct form.
- */
-function tolerantProviderOptions<S extends Schema.Top>(structSchema: S) {
-  const fromLegacyObject = LegacyProviderOptionSelectionsObject.pipe(
-    Schema.decodeTo(
-      structSchema,
-      SchemaTransformation.transformOrFail({
-        decode: (record) =>
-          Effect.succeed(
-            coerceLegacyOptionsObjectToArray(record) as unknown as Schema.Schema.Type<S>,
-          ),
-        encode: () => Effect.succeed({} as Record<string, unknown>),
-      }) as never,
-    ),
-  );
-  const fromSelectionsArray = Schema.Array(ProviderOptionSelection).pipe(
-    Schema.decodeTo(
-      structSchema,
-      SchemaTransformation.transformOrFail({
-        decode: (selections) => {
-          const record = canonicalSelectionsToLegacyObject(selections);
-          return Effect.succeed(record as unknown as Schema.Schema.Type<S>);
-        },
-        encode: () => Effect.succeed([] as unknown as ProviderOptionSelection[]),
-      }) as never,
-    ),
-  );
-  return Schema.Union([structSchema, fromLegacyObject, fromSelectionsArray]);
-}
-
-export const TolerantCodexModelOptions = tolerantProviderOptions(CodexModelOptions);
-export const TolerantAntigravityModelOptions = tolerantProviderOptions(AntigravityModelOptions);
-export const TolerantClaudeModelOptions = tolerantProviderOptions(ClaudeModelOptions);
-export const TolerantOpencodeModelOptions = tolerantProviderOptions(OpencodeModelOptions);
-export const TolerantCopilotModelOptions = tolerantProviderOptions(CopilotModelOptions);
-
-type ModelOption = {
-  readonly slug: string;
-  readonly name: string;
-};
-
-export const MODEL_OPTIONS_BY_PROVIDER = {
-  codex: [
-    { slug: "gpt-5.4", name: "GPT-5.4" },
-    { slug: "gpt-5.4-mini", name: "GPT-5.4 Mini" },
-    { slug: "gpt-5.3-codex", name: "GPT-5.3 Codex" },
-    { slug: "gpt-5.3-codex-spark", name: "GPT-5.3 Codex Spark" },
-    { slug: "gpt-5.2-codex", name: "GPT-5.2 Codex" },
-    { slug: "gpt-5.2", name: "GPT-5.2" },
-  ],
-  antigravity: [
-    // Slugs are our kebab form. agy itself stores the display string in
-    // ~/.gemini/antigravity-cli/settings.json ("Gemini 3.1 Pro (High)" etc.).
-    // The mapping slug → display lives in AGY_DISPLAY_BY_SLUG below.
-    { slug: "gemini-3.1-pro-high", name: "Gemini 3.1 Pro (High)" },
-    { slug: "gemini-3.1-pro-low", name: "Gemini 3.1 Pro (Low)" },
-    { slug: "gemini-3.5-flash-high", name: "Gemini 3.5 Flash (High)" },
-    { slug: "gemini-3.5-flash-medium", name: "Gemini 3.5 Flash (Medium)" },
-    { slug: "gemini-3.5-flash-low", name: "Gemini 3.5 Flash (Low)" },
-    { slug: "claude-sonnet-4-6-thinking", name: "Claude Sonnet 4.6 (Thinking)" },
-    { slug: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 (Thinking)" },
-    { slug: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)" },
-  ],
-  claudeAgent: [
-    { slug: "claude-opus-4-7", name: "Claude Opus 4.7" },
-    { slug: "claude-opus-4-6", name: "Claude Opus 4.6" },
-    { slug: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
-    { slug: "claude-haiku-4-5", name: "Claude Haiku 4.5" },
-  ],
-  opencode: [
-    { slug: "opencode/big-pickle", name: "Big Pickle" },
-    { slug: "opencode/deepseek-v4-flash-free", name: "DeepSeek V4 Flash Free" },
-    { slug: "opencode/nemotron-3-super-free", name: "Nemotron 3 Super Free" },
-    { slug: "opencode-go/deepseek-v4-flash", name: "DeepSeek V4 Flash (Go)" },
-    { slug: "opencode-go/deepseek-v4-pro", name: "DeepSeek V4 Pro (Go)" },
-    { slug: "opencode-go/glm-5", name: "GLM-5 (Go)" },
-    { slug: "opencode-go/glm-5.1", name: "GLM-5.1 (Go)" },
-    { slug: "opencode-go/kimi-k2.5", name: "Kimi K2.5 (Go)" },
-    { slug: "opencode-go/kimi-k2.6", name: "Kimi K2.6 (Go)" },
-    { slug: "opencode-go/mimo-v2.5", name: "MiMo V2.5 (Go)" },
-    { slug: "opencode-go/mimo-v2.5-pro", name: "MiMo V2.5 Pro (Go)" },
-    { slug: "opencode-go/minimax-m2.5", name: "MiniMax M2.5 (Go)" },
-    { slug: "opencode-go/minimax-m2.7", name: "MiniMax M2.7 (Go)" },
-    { slug: "opencode-go/qwen3.5-plus", name: "Qwen 3.5 Plus (Go)" },
-    { slug: "opencode-go/qwen3.6-plus", name: "Qwen 3.6 Plus (Go)" },
-    { slug: "opencode-go/qwen3.7-max", name: "Qwen 3.7 Max (Go)" },
-  ],
-  copilotAgent: [
-    { slug: "claude-sonnet-4.6", name: "Claude Sonnet 4.6" },
-    { slug: "claude-sonnet-4.5", name: "Claude Sonnet 4.5" },
-    { slug: "claude-haiku-4.5", name: "Claude Haiku 4.5" },
-    { slug: "claude-opus-4.6", name: "Claude Opus 4.6" },
-    { slug: "claude-opus-4.6-fast", name: "Claude Opus 4.6 Fast" },
-    { slug: "claude-opus-4.5", name: "Claude Opus 4.5" },
-    { slug: "claude-sonnet-4", name: "Claude Sonnet 4" },
-    { slug: "gemini-3-pro-preview", name: "Gemini 3 Pro Preview" },
-    { slug: "gpt-5.4", name: "GPT-5.4" },
-    { slug: "gpt-5.3-codex", name: "GPT-5.3 Codex" },
-    { slug: "gpt-5.2-codex", name: "GPT-5.2 Codex" },
-    { slug: "gpt-5.2", name: "GPT-5.2" },
-    { slug: "gpt-5.1-codex-max", name: "GPT-5.1 Codex Max" },
-    { slug: "gpt-5.1-codex", name: "GPT-5.1 Codex" },
-    { slug: "gpt-5.1", name: "GPT-5.1" },
-    { slug: "gpt-5.4-mini", name: "GPT-5.4 Mini" },
-    { slug: "gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini" },
-    { slug: "gpt-5-mini", name: "GPT-5 Mini" },
-    { slug: "gpt-4.1", name: "GPT-4.1" },
-  ],
-} as const satisfies Record<ProviderKind, readonly ModelOption[]>;
-export type ModelOptionsByProvider = typeof MODEL_OPTIONS_BY_PROVIDER;
-
-type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_PROVIDER)[ProviderKind][number]["slug"];
-export type ModelSlug = BuiltInModelSlug | (string & {});
-
-export const EffortOption = Schema.Struct({
-  value: TrimmedNonEmptyString,
-  label: TrimmedNonEmptyString,
-  isDefault: Schema.optional(Schema.Boolean),
-});
-export type EffortOption = typeof EffortOption.Type;
-
-export const ContextWindowOption = Schema.Struct({
-  value: TrimmedNonEmptyString,
-  label: TrimmedNonEmptyString,
-  isDefault: Schema.optional(Schema.Boolean),
-});
-export type ContextWindowOption = typeof ContextWindowOption.Type;
-
 export const ModelCapabilities = Schema.Struct({
   optionDescriptors: Schema.optional(Schema.Array(ProviderOptionDescriptor)),
-  reasoningEffortLevels: Schema.Array(EffortOption),
-  supportsFastMode: Schema.Boolean,
-  supportsThinkingToggle: Schema.Boolean,
-  contextWindowOptions: Schema.Array(ContextWindowOption),
-  promptInjectedEffortLevels: Schema.Array(TrimmedNonEmptyString),
 });
 export type ModelCapabilities = typeof ModelCapabilities.Type;
 
@@ -330,6 +142,8 @@ const CODEX_DRIVER_KIND = ProviderDriverKind.make("codex");
 const CLAUDE_DRIVER_KIND = ProviderDriverKind.make("claudeAgent");
 const CURSOR_DRIVER_KIND = ProviderDriverKind.make("cursor");
 const OPENCODE_DRIVER_KIND = ProviderDriverKind.make("opencode");
+const ANTIGRAVITY_DRIVER_KIND = ProviderDriverKind.make("antigravity");
+const COPILOT_DRIVER_KIND = ProviderDriverKind.make("copilotAgent");
 
 export const DEFAULT_MODEL = "gpt-5.4";
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.4-mini";
@@ -339,6 +153,8 @@ export const DEFAULT_MODEL_BY_PROVIDER: Partial<Record<ProviderDriverKind, strin
   [CLAUDE_DRIVER_KIND]: "claude-sonnet-4-6",
   [CURSOR_DRIVER_KIND]: "auto",
   [OPENCODE_DRIVER_KIND]: "openai/gpt-5",
+  [ANTIGRAVITY_DRIVER_KIND]: "gemini-3.1-pro-high",
+  [COPILOT_DRIVER_KIND]: "claude-sonnet-4.6",
 };
 
 /** Per-provider text generation model defaults. */
@@ -349,6 +165,8 @@ export const DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER: Partial<
   [CLAUDE_DRIVER_KIND]: "claude-haiku-4-5",
   [CURSOR_DRIVER_KIND]: "composer-2",
   [OPENCODE_DRIVER_KIND]: "openai/gpt-5",
+  [ANTIGRAVITY_DRIVER_KIND]: "gemini-3.5-flash-medium",
+  [COPILOT_DRIVER_KIND]: "claude-haiku-4-5",
 };
 
 export const MODEL_SLUG_ALIASES_BY_PROVIDER: Partial<
@@ -390,6 +208,30 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Partial<
     "opus-4.5": "claude-opus-4-5",
   },
   [OPENCODE_DRIVER_KIND]: {},
+  [ANTIGRAVITY_DRIVER_KIND]: {
+    "gemini-2.5-pro": "gemini-3.1-pro-high",
+    "gemini-2.5-flash": "gemini-3.5-flash-medium",
+    "gemini-2.5-flash-lite": "gemini-3.5-flash-low",
+    "gemini-3.1-pro": "gemini-3.1-pro-high",
+    "gemini-3.1-pro-preview": "gemini-3.1-pro-high",
+    "gemini-3-flash-preview": "gemini-3.5-flash-medium",
+    pro: "gemini-3.1-pro-high",
+    flash: "gemini-3.5-flash-medium",
+  },
+  [COPILOT_DRIVER_KIND]: {
+    "claude-sonnet-4.6": "claude-sonnet-4.6",
+    "claude-sonnet-4.5": "claude-sonnet-4.5",
+    "claude-haiku-4.5": "claude-haiku-4.5",
+    "claude-opus-4.6": "claude-opus-4.6",
+    "claude-opus-4.6-fast": "claude-opus-4.6-fast",
+    opus: "claude-opus-4.6",
+    sonnet: "claude-sonnet-4.6",
+    haiku: "claude-haiku-4.5",
+    "gpt-5.4": "gpt-5.4",
+    "gpt-5.3": "gpt-5.3-codex",
+    "gpt-5.2": "gpt-5.2",
+    "gpt-5.1": "gpt-5.1",
+  },
 };
 
 // ── Provider display names ────────────────────────────────────────────
@@ -399,20 +241,61 @@ export const PROVIDER_DISPLAY_NAMES: Partial<Record<ProviderDriverKind, string>>
   [CLAUDE_DRIVER_KIND]: "Claude",
   [CURSOR_DRIVER_KIND]: "Cursor",
   [OPENCODE_DRIVER_KIND]: "OpenCode",
+  [ANTIGRAVITY_DRIVER_KIND]: "Antigravity",
+  [COPILOT_DRIVER_KIND]: "Copilot",
 };
 
-export const REASONING_EFFORT_OPTIONS_BY_PROVIDER = {
-  codex: CODEX_REASONING_EFFORT_OPTIONS,
-  antigravity: ANTIGRAVITY_EFFORT_OPTIONS,
-  claudeAgent: CLAUDE_CODE_EFFORT_OPTIONS,
-  opencode: CODEX_REASONING_EFFORT_OPTIONS,
-  copilotAgent: CODEX_REASONING_EFFORT_OPTIONS,
-} as const satisfies Record<ProviderKind, readonly ProviderReasoningEffort[]>;
+// ── Per-provider model options structs ─────────────────────────────────
 
-export const DEFAULT_REASONING_EFFORT_BY_PROVIDER = {
-  codex: "high",
-  antigravity: "high",
-  claudeAgent: "high",
-  opencode: "high",
-  copilotAgent: "high",
-} as const satisfies Record<ProviderKind, ProviderReasoningEffort>;
+export const CodexModelOptions = Schema.Struct({
+  reasoningEffort: Schema.optional(Schema.Literals(CODEX_REASONING_EFFORT_OPTIONS)),
+  fastMode: Schema.optional(Schema.Boolean),
+});
+export type CodexModelOptions = typeof CodexModelOptions.Type;
+
+export const ANTIGRAVITY_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
+export type AntigravityEffort = (typeof ANTIGRAVITY_EFFORT_OPTIONS)[number];
+
+export const AntigravityModelOptions = Schema.Struct({
+  reasoningEffort: Schema.optional(Schema.Literals(ANTIGRAVITY_EFFORT_OPTIONS)),
+});
+export type AntigravityModelOptions = typeof AntigravityModelOptions.Type;
+
+export const ClaudeModelOptions = Schema.Struct({
+  thinking: Schema.optional(Schema.Boolean),
+  effort: Schema.optional(Schema.Literals(CLAUDE_CODE_EFFORT_OPTIONS)),
+  fastMode: Schema.optional(Schema.Boolean),
+  contextWindow: Schema.optional(Schema.String),
+});
+export type ClaudeModelOptions = typeof ClaudeModelOptions.Type;
+
+export const OpencodeModelOptions = Schema.Struct({
+  reasoningEffort: Schema.optional(Schema.Literals(CODEX_REASONING_EFFORT_OPTIONS)),
+});
+export type OpencodeModelOptions = typeof OpencodeModelOptions.Type;
+
+export const CopilotModelOptions = Schema.Struct({
+  reasoningEffort: Schema.optional(Schema.Literals(CODEX_REASONING_EFFORT_OPTIONS)),
+});
+export type CopilotModelOptions = typeof CopilotModelOptions.Type;
+
+export const ProviderModelOptions = Schema.Struct({
+  codex: Schema.optional(CodexModelOptions),
+  antigravity: Schema.optional(AntigravityModelOptions),
+  claudeAgent: Schema.optional(ClaudeModelOptions),
+  opencode: Schema.optional(OpencodeModelOptions),
+  copilotAgent: Schema.optional(CopilotModelOptions),
+});
+export type ProviderModelOptions = typeof ProviderModelOptions.Type;
+
+function tolerantProviderOptions<S extends Schema.Schema<any, any, never>>(
+  schema: S,
+): Schema.Schema<Schema.Schema.Type<S> | undefined> {
+  return Schema.optional(schema).pipe(Schema.withDecodingDefault(Effect.succeed(undefined)));
+}
+
+export const TolerantCodexModelOptions = tolerantProviderOptions(CodexModelOptions);
+export const TolerantAntigravityModelOptions = tolerantProviderOptions(AntigravityModelOptions);
+export const TolerantClaudeModelOptions = tolerantProviderOptions(ClaudeModelOptions);
+export const TolerantOpencodeModelOptions = tolerantProviderOptions(OpencodeModelOptions);
+export const TolerantCopilotModelOptions = tolerantProviderOptions(CopilotModelOptions);

@@ -537,11 +537,6 @@ export interface EnvironmentApi {
         onResubscribe?: () => void;
       },
     ) => () => void;
-    runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
-    suggestCommitMessage: (
-      input: GitSuggestCommitMessageInput,
-    ) => Promise<GitSuggestCommitMessageResult>;
-    onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
   };
   git: {
     resolvePullRequest: (input: GitPullRequestRefInput) => Promise<GitResolvePullRequestResult>;

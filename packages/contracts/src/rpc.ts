@@ -127,7 +127,6 @@ export const WS_METHODS = {
   gitRunStackedAction: "git.runStackedAction",
   gitResolvePullRequest: "git.resolvePullRequest",
   gitPreparePullRequestThread: "git.preparePullRequestThread",
-  gitSuggestCommitMessage: "git.suggestCommitMessage",
 
   // Terminal methods
   terminalOpen: "terminal.open",

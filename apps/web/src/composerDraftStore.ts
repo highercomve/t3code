@@ -818,7 +818,6 @@ function normalizeProviderModelOptions(
     }
     return entries.length > 0 ? entries : undefined;
   };
-  const result: Partial<Record<ProviderKind, ReadonlyArray<ProviderOptionSelection>>> = {};
   if (codex) {
     const arr = structToArray(codex);
     if (arr) result.codex = arr;
