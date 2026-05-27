@@ -24,7 +24,9 @@ const LOGIN_SHELL_ENV_NAMES = [
   "HOMEBREW_REPOSITORY",
   "XDG_CONFIG_HOME",
   "XDG_DATA_HOME",
-  // Provider API keys used by spawned CLI processes (codex, opencode, etc.)
+  // Provider API keys used by spawned CLI processes (codex, opencode, agy, etc.)
+  // GEMINI_API_KEY / GOOGLE_API_KEY remain — agy (Antigravity CLI) reuses
+  // gemini's auth surface via ~/.gemini/.
   "OPENCODE_API_KEY",
   "OPENAI_API_KEY",
   "ANTHROPIC_API_KEY",
