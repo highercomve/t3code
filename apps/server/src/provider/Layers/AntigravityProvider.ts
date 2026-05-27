@@ -44,20 +44,50 @@ const ANTIGRAVITY_PRESENTATION = {
 
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
   {
-    slug: "gemini-3.1-pro",
-    name: "Gemini 3.1 Pro",
+    slug: "gemini-3.1-pro-high",
+    name: "Gemini 3.1 Pro (High)",
     isCustom: false,
     capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
   },
   {
-    slug: "gemini-3.1-pro-preview",
-    name: "Gemini 3.1 Pro Preview",
+    slug: "gemini-3.1-pro-low",
+    name: "Gemini 3.1 Pro (Low)",
     isCustom: false,
     capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
   },
   {
-    slug: "gemini-3-flash-preview",
-    name: "Gemini 3 Flash Preview",
+    slug: "gemini-3.5-flash-high",
+    name: "Gemini 3.5 Flash (High)",
+    isCustom: false,
+    capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
+  },
+  {
+    slug: "gemini-3.5-flash-medium",
+    name: "Gemini 3.5 Flash (Medium)",
+    isCustom: false,
+    capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
+  },
+  {
+    slug: "gemini-3.5-flash-low",
+    name: "Gemini 3.5 Flash (Low)",
+    isCustom: false,
+    capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
+  },
+  {
+    slug: "claude-sonnet-4-6-thinking",
+    name: "Claude Sonnet 4.6 (Thinking)",
+    isCustom: false,
+    capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
+  },
+  {
+    slug: "claude-opus-4-6-thinking",
+    name: "Claude Opus 4.6 (Thinking)",
+    isCustom: false,
+    capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
+  },
+  {
+    slug: "gpt-oss-120b-medium",
+    name: "GPT-OSS 120B (Medium)",
     isCustom: false,
     capabilities: ANTIGRAVITY_EFFORT_CAPABILITIES,
   },

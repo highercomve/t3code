@@ -318,7 +318,7 @@ const makeAntigravityAdapter = Effect.gen(function* () {
         ),
       );
 
-      const fiber = yield* Effect.forkChild(driverEffect);
+      const fiber = yield* Effect.forkDetach(driverEffect);
       ctx.activeTurn = { turnId, fiber };
       ctx.session = {
         ...ctx.session,
@@ -328,7 +328,7 @@ const makeAntigravityAdapter = Effect.gen(function* () {
       };
 
       // When the fiber resolves, clear the active turn reference.
-      yield* Effect.forkChild(
+      yield* Effect.forkDetach(
         Fiber.await(fiber).pipe(
           Effect.flatMap(() =>
             Effect.sync(() => {
