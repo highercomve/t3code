@@ -50,16 +50,17 @@ const COPILOT_PRESENTATION = {
   showInteractionModeToggle: false,
 } as const;
 
+// Models the GitHub Copilot CLI ACP server accepts as session config
+// option "model". Verified empirically against `copilot --acp` v1.0.54 —
+// trying any other slug returns
+// `Invalid value "X" for session config option "model"`. The CLI exposes
+// the slug list dynamically via session capabilities; we mirror the current
+// stable set here so the picker only ever offers something the agent will
+// actually accept. Refresh on a `copilot update`.
 const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
   {
-    slug: "claude-sonnet-4.6",
-    name: "Claude Sonnet 4.6",
-    isCustom: false,
-    capabilities: EMPTY_CAPABILITIES,
-  },
-  {
-    slug: "claude-sonnet-4.5",
-    name: "Claude Sonnet 4.5",
+    slug: "auto",
+    name: "Auto",
     isCustom: false,
     capabilities: EMPTY_CAPABILITIES,
   },
@@ -70,14 +71,14 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
     capabilities: EMPTY_CAPABILITIES,
   },
   {
-    slug: "claude-opus-4.6",
-    name: "Claude Opus 4.6",
+    slug: "gpt-5-mini",
+    name: "GPT-5 Mini",
     isCustom: false,
     capabilities: EMPTY_CAPABILITIES,
   },
   {
-    slug: "gpt-5.4",
-    name: "GPT-5.4",
+    slug: "gpt-4.1",
+    name: "GPT-4.1",
     isCustom: false,
     capabilities: EMPTY_CAPABILITIES,
   },
@@ -96,15 +97,19 @@ const runCopilotCommand = (
     return yield* spawnAndCollect(copilotSettings.binaryPath, command);
   });
 
-// GitHub Copilot CLI persists its device-flow auth token under
-// `~/.config/github-copilot/hosts.json` (Linux/macOS) or
-// `%APPDATA%\GitHub Copilot\hosts.json` (Windows). Checking for the file's
-// presence is a cheap proxy for "user has logged in at least once".
+// GitHub Copilot CLI (the new `copilot` binary, not the older `gh copilot`
+// extension) persists its OAuth credentials under `~/.copilot/config.json`.
+// We check for the directory's existence as a cheap auth-presence proxy —
+// the file itself is mode 0600 so reading it would need elevated perms we
+// don't want to demand for a status probe.
 function copilotAuthFileCandidates(environment: NodeJS.ProcessEnv, path: Path.Path): string[] {
   const home = environment["HOME"] ?? environment["USERPROFILE"] ?? "~";
   const xdgConfig = environment["XDG_CONFIG_HOME"];
   const appData = environment["APPDATA"];
-  const candidates: string[] = [];
+  const candidates: string[] = [
+    path.join(home, ".copilot", "config.json"),
+    path.join(home, ".copilot"),
+  ];
   if (xdgConfig) {
     candidates.push(path.join(xdgConfig, "github-copilot", "hosts.json"));
   }

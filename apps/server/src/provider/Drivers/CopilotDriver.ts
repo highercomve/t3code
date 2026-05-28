@@ -21,6 +21,7 @@ import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import { ChildProcessSpawner } from "effect/unstable/process";
 
+import { ServerConfig } from "../../config.ts";
 import { makeCopilotTextGeneration } from "../../textGeneration/CopilotTextGeneration.ts";
 import { ProviderDriverError } from "../Errors.ts";
 import { makeCopilotAdapter } from "../Layers/CopilotAdapter.ts";
@@ -28,6 +29,7 @@ import {
   checkCopilotProviderStatus,
   makePendingCopilotProvider,
 } from "../Layers/CopilotProvider.ts";
+import { ProviderEventLoggers } from "../Layers/ProviderEventLoggers.ts";
 import { makeManagedServerProvider } from "../makeManagedServerProvider.ts";
 import {
   defaultProviderContinuationIdentity,
@@ -46,7 +48,9 @@ const SNAPSHOT_REFRESH_INTERVAL = Duration.minutes(5);
 export type CopilotDriverEnv =
   | ChildProcessSpawner.ChildProcessSpawner
   | FileSystem.FileSystem
-  | Path.Path;
+  | Path.Path
+  | ProviderEventLoggers
+  | ServerConfig;
 
 const withInstanceIdentity =
   (input: {
@@ -80,6 +84,7 @@ export const CopilotDriver: ProviderDriver<CopilotSettings, CopilotDriverEnv> = 
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
+      const eventLoggers = yield* ProviderEventLoggers;
       const processEnv = mergeProviderInstanceEnvironment(environment);
       const continuationIdentity = defaultProviderContinuationIdentity({
         driverKind: DRIVER_KIND,
@@ -96,6 +101,7 @@ export const CopilotDriver: ProviderDriver<CopilotSettings, CopilotDriverEnv> = 
       const adapter = yield* makeCopilotAdapter(effectiveConfig, {
         instanceId,
         environment: processEnv,
+        ...(eventLoggers.native ? { nativeEventLogger: eventLoggers.native } : {}),
       });
       const textGeneration = yield* makeCopilotTextGeneration(effectiveConfig, processEnv);
 

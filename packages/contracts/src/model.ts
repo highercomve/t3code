@@ -175,7 +175,7 @@ export const DEFAULT_MODEL_BY_PROVIDER: Partial<Record<ProviderDriverKind, strin
   [CURSOR_DRIVER_KIND]: "auto",
   [OPENCODE_DRIVER_KIND]: "openai/gpt-5",
   [ANTIGRAVITY_DRIVER_KIND]: "gemini-3.1-pro-high",
-  [COPILOT_DRIVER_KIND]: "claude-sonnet-4.6",
+  [COPILOT_DRIVER_KIND]: "auto",
 };
 
 /** Per-provider text generation model defaults. */
@@ -187,7 +187,7 @@ export const DEFAULT_GIT_TEXT_GENERATION_MODEL_BY_PROVIDER: Partial<
   [CURSOR_DRIVER_KIND]: "composer-2",
   [OPENCODE_DRIVER_KIND]: "openai/gpt-5",
   [ANTIGRAVITY_DRIVER_KIND]: "gemini-3.5-flash-medium",
-  [COPILOT_DRIVER_KIND]: "claude-haiku-4-5",
+  [COPILOT_DRIVER_KIND]: "claude-haiku-4.5",
 };
 
 export const MODEL_SLUG_ALIASES_BY_PROVIDER: Partial<
