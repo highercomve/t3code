@@ -140,9 +140,20 @@ const DiffPanelInlineSidebar = (props: {
 
 function ChatThreadRouteView() {
   const navigate = useNavigate();
-  const threadRef = Route.useParams({
-    select: (params) => resolveThreadRouteRef(params),
-  });
+  // Read the raw params and derive the branded `threadRef` with useMemo so
+  // the resulting object reference is stable across router state changes that
+  // leave the path params unchanged. Without this stabilization every router
+  // commit (including the redirect-back-to-/ effect below) reschedules the
+  // effect, which navigates again, looping until React aborts with error #185.
+  // `useParams({ select })` does NOT memoize by default — it returns a fresh
+  // object on every router state change — and we can't enable
+  // `defaultStructuralSharing: true` globally because the brand types fail
+  // the JSON-serializable constraint that structural sharing requires.
+  const rawParams = Route.useParams();
+  const threadRef = useMemo(
+    () => resolveThreadRouteRef(rawParams),
+    [rawParams.environmentId, rawParams.threadId],
+  );
   const search = Route.useSearch();
   const bootstrapComplete = useStore(
     (store) => selectEnvironmentState(store, threadRef?.environmentId ?? null).bootstrapComplete,

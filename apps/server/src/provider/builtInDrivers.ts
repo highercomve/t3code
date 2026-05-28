@@ -23,6 +23,7 @@
 import { AntigravityDriver, type AntigravityDriverEnv } from "./Drivers/AntigravityDriver.ts";
 import { ClaudeDriver, type ClaudeDriverEnv } from "./Drivers/ClaudeDriver.ts";
 import { CodexDriver, type CodexDriverEnv } from "./Drivers/CodexDriver.ts";
+import { CopilotDriver, type CopilotDriverEnv } from "./Drivers/CopilotDriver.ts";
 import { CursorDriver, type CursorDriverEnv } from "./Drivers/CursorDriver.ts";
 import { OpenCodeDriver, type OpenCodeDriverEnv } from "./Drivers/OpenCodeDriver.ts";
 import type { AnyProviderDriver } from "./ProviderDriver.ts";
@@ -36,6 +37,7 @@ export type BuiltInDriversEnv =
   | AntigravityDriverEnv
   | ClaudeDriverEnv
   | CodexDriverEnv
+  | CopilotDriverEnv
   | CursorDriverEnv
   | OpenCodeDriverEnv;
 
@@ -50,4 +52,5 @@ export const BUILT_IN_DRIVERS: ReadonlyArray<AnyProviderDriver<BuiltInDriversEnv
   AntigravityDriver,
   CursorDriver,
   OpenCodeDriver,
+  CopilotDriver,
 ];

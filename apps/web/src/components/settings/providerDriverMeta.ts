@@ -2,6 +2,7 @@ import {
   AntigravitySettings,
   ClaudeSettings,
   CodexSettings,
+  CopilotSettings,
   CursorSettings,
   OpenCodeSettings,
   ProviderDriverKind,
@@ -10,6 +11,7 @@ import type * as Schema from "effect/Schema";
 import {
   AntigravityIcon,
   ClaudeAI,
+  CopilotIcon,
   CursorIcon,
   type Icon,
   OpenAI,
@@ -72,6 +74,13 @@ export const PROVIDER_CLIENT_DEFINITIONS: readonly ProviderClientDefinition[] = 
     label: "OpenCode",
     icon: OpenCodeIcon,
     settingsSchema: OpenCodeSettings,
+  },
+  {
+    value: ProviderDriverKind.make("copilotAgent"),
+    label: "Copilot",
+    icon: CopilotIcon,
+    badgeLabel: "Preview",
+    settingsSchema: CopilotSettings,
   },
 ];
 
