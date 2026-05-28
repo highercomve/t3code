@@ -135,15 +135,36 @@ function canonicalSelectionsToLegacyObject(
 
 export const ModelCapabilities = Schema.Struct({
   optionDescriptors: Schema.optional(Schema.Array(ProviderOptionDescriptor)),
+  reasoningEffortLevels: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        value: Schema.String,
+        label: Schema.String,
+        isDefault: Schema.optional(Schema.Boolean),
+      }),
+    ),
+  ),
+  supportsFastMode: Schema.optional(Schema.Boolean),
+  supportsThinkingToggle: Schema.optional(Schema.Boolean),
+  contextWindowOptions: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        value: Schema.String,
+        label: Schema.String,
+        isDefault: Schema.optional(Schema.Boolean),
+      }),
+    ),
+  ),
+  promptInjectedEffortLevels: Schema.optional(Schema.Array(Schema.String)),
 });
 export type ModelCapabilities = typeof ModelCapabilities.Type;
 
-const CODEX_DRIVER_KIND = ProviderDriverKind.make("codex");
-const CLAUDE_DRIVER_KIND = ProviderDriverKind.make("claudeAgent");
-const CURSOR_DRIVER_KIND = ProviderDriverKind.make("cursor");
-const OPENCODE_DRIVER_KIND = ProviderDriverKind.make("opencode");
-const ANTIGRAVITY_DRIVER_KIND = ProviderDriverKind.make("antigravity");
-const COPILOT_DRIVER_KIND = ProviderDriverKind.make("copilotAgent");
+export const CODEX_DRIVER_KIND = ProviderDriverKind.make("codex");
+export const CLAUDE_DRIVER_KIND = ProviderDriverKind.make("claudeAgent");
+export const CURSOR_DRIVER_KIND = ProviderDriverKind.make("cursor");
+export const OPENCODE_DRIVER_KIND = ProviderDriverKind.make("opencode");
+export const ANTIGRAVITY_DRIVER_KIND = ProviderDriverKind.make("antigravity");
+export const COPILOT_DRIVER_KIND = ProviderDriverKind.make("copilotAgent");
 
 export const DEFAULT_MODEL = "gpt-5.4";
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.4-mini";
@@ -288,14 +309,18 @@ export const ProviderModelOptions = Schema.Struct({
 });
 export type ProviderModelOptions = typeof ProviderModelOptions.Type;
 
-function tolerantProviderOptions<S extends Schema.Schema<any, any, never>>(
-  schema: S,
-): Schema.Schema<Schema.Schema.Type<S> | undefined> {
-  return Schema.optional(schema).pipe(Schema.withDecodingDefault(Effect.succeed(undefined)));
-}
-
-export const TolerantCodexModelOptions = tolerantProviderOptions(CodexModelOptions);
-export const TolerantAntigravityModelOptions = tolerantProviderOptions(AntigravityModelOptions);
-export const TolerantClaudeModelOptions = tolerantProviderOptions(ClaudeModelOptions);
-export const TolerantOpencodeModelOptions = tolerantProviderOptions(OpencodeModelOptions);
-export const TolerantCopilotModelOptions = tolerantProviderOptions(CopilotModelOptions);
+export const TolerantCodexModelOptions = Schema.optional(CodexModelOptions).pipe(
+  Schema.withDecodingDefault(Effect.succeed(undefined)),
+);
+export const TolerantAntigravityModelOptions = Schema.optional(AntigravityModelOptions).pipe(
+  Schema.withDecodingDefault(Effect.succeed(undefined)),
+);
+export const TolerantClaudeModelOptions = Schema.optional(ClaudeModelOptions).pipe(
+  Schema.withDecodingDefault(Effect.succeed(undefined)),
+);
+export const TolerantOpencodeModelOptions = Schema.optional(OpencodeModelOptions).pipe(
+  Schema.withDecodingDefault(Effect.succeed(undefined)),
+);
+export const TolerantCopilotModelOptions = Schema.optional(CopilotModelOptions).pipe(
+  Schema.withDecodingDefault(Effect.succeed(undefined)),
+);

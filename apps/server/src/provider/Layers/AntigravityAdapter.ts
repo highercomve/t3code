@@ -1,11 +1,17 @@
 /**
- * AntigravityAdapterLive - scoped live implementation of the Antigravity
- * provider adapter. Wraps the one-shot `agy --print` driver (no ACP).
+ * AntigravityAdapter - factory for the Antigravity (`agy`) provider adapter.
+ * Uses a one-shot CLI driver instead of ACP.
+ *
+ * @module provider/Layers/AntigravityAdapter
  */
+// @effect-diagnostics nodeBuiltinImport:off cryptoRandomUUID:off
 import { randomUUID } from "node:crypto";
 
 import {
+  type AntigravitySettings,
   EventId,
+  ProviderDriverKind,
+  ProviderInstanceId,
   ProviderItemId,
   RuntimeItemId,
   ThreadId,
@@ -13,8 +19,14 @@ import {
   type ProviderRuntimeEvent,
   type ProviderSession,
 } from "@t3tools/contracts";
-import { Effect, Fiber, Layer, Queue, Ref, Stream } from "effect";
+import * as DateTime from "effect/DateTime";
+import * as Effect from "effect/Effect";
+import * as Fiber from "effect/Fiber";
+import * as Queue from "effect/Queue";
+import * as Ref from "effect/Ref";
+import * as Stream from "effect/Stream";
 
+import type { ProviderAdapterShape } from "../Services/ProviderAdapter.ts";
 import {
   ProviderAdapterProcessError,
   ProviderAdapterRequestError,
@@ -23,19 +35,19 @@ import {
   type ProviderAdapterError,
 } from "../Errors.ts";
 import {
-  AntigravityAdapter,
-  type AntigravityAdapterShape,
-} from "../Services/AntigravityAdapter.ts";
-import {
   runAntigravityTurn,
   type AntigravityTurnInput,
   AntigravityDriverError,
 } from "../../antigravityDriver.ts";
-import { ServerSettingsService } from "../../serverSettings.ts";
 import { AntigravityConversationStore } from "../../persistence/Services/AntigravityConversationStore.ts";
 
-const PROVIDER = "antigravity" as const;
+const DRIVER_KIND = ProviderDriverKind.make("antigravity");
 const DEFAULT_TURN_TIMEOUT_MS = 300_000;
+
+export interface AntigravityAdapterLiveOptions {
+  readonly instanceId?: ProviderInstanceId;
+  readonly environment?: NodeJS.ProcessEnv;
+}
 
 interface ActiveTurn {
   readonly turnId: TurnId;
@@ -47,35 +59,48 @@ interface SessionContext {
   activeTurn: ActiveTurn | null;
 }
 
-function nowIso(): string {
-  return new Date().toISOString();
-}
+const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 
-function eventBase(
+const makeEventBase = (
   threadId: ThreadId,
   turnId: TurnId | undefined,
   itemId: RuntimeItemId | undefined,
-): {
-  eventId: EventId;
-  provider: typeof PROVIDER;
-  threadId: ThreadId;
-  createdAt: string;
-  turnId?: TurnId;
-  itemId?: RuntimeItemId;
-} {
-  return {
-    eventId: EventId.make(randomUUID()),
-    provider: PROVIDER,
-    threadId,
-    createdAt: nowIso(),
-    ...(turnId ? { turnId } : {}),
-    ...(itemId ? { itemId } : {}),
-  };
-}
+) =>
+  Effect.gen(function* () {
+    const createdAt = yield* nowIso;
+    return {
+      eventId: EventId.make(randomUUID()),
+      provider: DRIVER_KIND,
+      threadId,
+      createdAt,
+      ...(turnId ? { turnId } : {}),
+      ...(itemId ? { itemId } : {}),
+    } as const;
+  });
 
-const makeAntigravityAdapter = Effect.gen(function* () {
+const driverErrorToAdapter = (
+  threadId: ThreadId,
+  cause: AntigravityDriverError,
+): ProviderAdapterError =>
+  cause.reason === "binary-not-found" || cause.reason === "spawn-failed"
+    ? new ProviderAdapterProcessError({
+        provider: DRIVER_KIND,
+        threadId,
+        detail: cause.message,
+        cause,
+      })
+    : new ProviderAdapterRequestError({
+        provider: DRIVER_KIND,
+        method: "turn/start",
+        detail: cause.message,
+        cause,
+      });
+
+export const makeAntigravityAdapter = Effect.fn("makeAntigravityAdapter")(function* (
+  antigravitySettings: AntigravitySettings,
+  _options?: AntigravityAdapterLiveOptions,
+) {
   const sessions = new Map<ThreadId, SessionContext>();
-  const settingsService = yield* ServerSettingsService;
   const conversationStore = yield* AntigravityConversationStore;
   const runtimeEventQueue = yield* Queue.unbounded<ProviderRuntimeEvent>();
 
@@ -93,22 +118,22 @@ const makeAntigravityAdapter = Effect.gen(function* () {
   const offerEvent = (event: ProviderRuntimeEvent) =>
     Queue.offer(runtimeEventQueue, event).pipe(Effect.ignore);
 
-  const startSession: AntigravityAdapterShape["startSession"] = (input) => {
-    if (input.provider !== undefined && input.provider !== PROVIDER) {
-      return Effect.fail(
-        new ProviderAdapterValidationError({
-          provider: PROVIDER,
-          operation: "startSession",
-          issue: `Expected provider '${PROVIDER}' but received '${input.provider}'.`,
-        }),
-      );
-    }
-    return Effect.sync(() => {
+  const startSession: ProviderAdapterShape<ProviderAdapterError>["startSession"] = (input) =>
+    Effect.gen(function* () {
+      if (input.provider !== undefined && input.provider !== DRIVER_KIND) {
+        return yield* Effect.fail(
+          new ProviderAdapterValidationError({
+            provider: DRIVER_KIND,
+            operation: "startSession",
+            issue: `Expected provider '${DRIVER_KIND}' but received '${input.provider}'.`,
+          }),
+        );
+      }
       const cwd = input.cwd ?? process.cwd();
       const model = input.modelSelection?.model;
-      const now = nowIso();
+      const now = yield* nowIso;
       const session: ProviderSession = {
-        provider: PROVIDER,
+        provider: DRIVER_KIND,
         status: "ready",
         runtimeMode: input.runtimeMode,
         ...(model ? { model } : {}),
@@ -120,14 +145,13 @@ const makeAntigravityAdapter = Effect.gen(function* () {
       sessions.set(input.threadId, { session, activeTurn: null });
       return { ...session };
     });
-  };
 
   const requireSession = (threadId: ThreadId) => {
     const ctx = sessions.get(threadId);
     if (!ctx) {
       return Effect.fail(
         new ProviderAdapterSessionNotFoundError({
-          provider: PROVIDER,
+          provider: DRIVER_KIND,
           threadId,
         }),
       );
@@ -135,31 +159,14 @@ const makeAntigravityAdapter = Effect.gen(function* () {
     return Effect.succeed(ctx);
   };
 
-  const driverErrorToAdapter = (
-    threadId: ThreadId,
-    cause: AntigravityDriverError,
-  ): ProviderAdapterError =>
-    cause.reason === "binary-not-found" || cause.reason === "spawn-failed"
-      ? new ProviderAdapterProcessError({
-          provider: PROVIDER,
-          threadId,
-          detail: cause.message,
-          cause,
-        })
-      : new ProviderAdapterRequestError({
-          provider: PROVIDER,
-          method: "turn/start",
-          detail: cause.message,
-          cause,
-        });
-
-  const sendTurn: AntigravityAdapterShape["sendTurn"] = (input) =>
+  const sendTurn: ProviderAdapterShape<ProviderAdapterError>["sendTurn"] = (input) =>
     Effect.gen(function* () {
       const ctx = yield* requireSession(input.threadId);
 
       if (input.interactionMode === "plan") {
+        const base = yield* makeEventBase(input.threadId, undefined, undefined);
         yield* offerEvent({
-          ...eventBase(input.threadId, undefined, undefined),
+          ...base,
           type: "runtime.warning",
           payload: {
             message:
@@ -172,25 +179,12 @@ const makeAntigravityAdapter = Effect.gen(function* () {
       if (!prompt) {
         return yield* Effect.fail(
           new ProviderAdapterValidationError({
-            provider: PROVIDER,
+            provider: DRIVER_KIND,
             operation: "sendTurn",
             issue: "Antigravity requires a non-empty text prompt; attachments are not supported.",
           }),
         );
       }
-
-      const settings = yield* settingsService.getSettings.pipe(
-        Effect.map((s) => s.providers.antigravity),
-        Effect.mapError(
-          (cause) =>
-            new ProviderAdapterRequestError({
-              provider: PROVIDER,
-              method: "turn/start",
-              detail: "Failed to read antigravity settings.",
-              cause,
-            }),
-        ),
-      );
 
       const model = input.modelSelection?.model ?? ctx.session.model ?? "";
       const turnId = TurnId.make(randomUUID());
@@ -201,7 +195,7 @@ const makeAntigravityAdapter = Effect.gen(function* () {
         Effect.mapError(
           (cause) =>
             new ProviderAdapterRequestError({
-              provider: PROVIDER,
+              provider: DRIVER_KIND,
               method: "turn/start",
               detail: "Failed to load antigravity conversation id.",
               cause,
@@ -210,22 +204,25 @@ const makeAntigravityAdapter = Effect.gen(function* () {
       );
 
       const driverInput: AntigravityTurnInput = {
-        binaryPath: settings.binaryPath,
+        binaryPath: antigravitySettings.binaryPath,
         cwd: ctx.session.cwd ?? process.cwd(),
         model,
         prompt,
         conversationId,
-        dangerouslySkipPermissions: settings.dangerouslySkipPermissions,
+        dangerouslySkipPermissions: antigravitySettings.dangerouslySkipPermissions,
         timeoutMs: DEFAULT_TURN_TIMEOUT_MS,
       };
 
-      yield* offerEvent({
-        ...eventBase(input.threadId, turnId, undefined),
-        type: "turn.started",
-        payload: {
-          ...(model ? { model } : {}),
-        },
-      });
+      {
+        const base = yield* makeEventBase(input.threadId, turnId, undefined);
+        yield* offerEvent({
+          ...base,
+          type: "turn.started",
+          payload: {
+            ...(model ? { model } : {}),
+          },
+        });
+      }
 
       const itemStartedRef = yield* Ref.make(false);
 
@@ -233,8 +230,9 @@ const makeAntigravityAdapter = Effect.gen(function* () {
         Effect.gen(function* () {
           const started = yield* Ref.getAndSet(itemStartedRef, true);
           if (!started) {
+            const base = yield* makeEventBase(input.threadId, turnId, runtimeItemId);
             yield* offerEvent({
-              ...eventBase(input.threadId, turnId, runtimeItemId),
+              ...base,
               type: "item.started",
               payload: {
                 itemType: "assistant_message",
@@ -243,8 +241,9 @@ const makeAntigravityAdapter = Effect.gen(function* () {
               },
             });
           }
+          const base = yield* makeEventBase(input.threadId, turnId, runtimeItemId);
           yield* offerEvent({
-            ...eventBase(input.threadId, turnId, runtimeItemId),
+            ...base,
             type: "content.delta",
             payload: {
               streamKind: "assistant_text",
@@ -259,8 +258,9 @@ const makeAntigravityAdapter = Effect.gen(function* () {
         );
         const started = yield* Ref.get(itemStartedRef);
         if (started) {
+          const base = yield* makeEventBase(input.threadId, turnId, runtimeItemId);
           yield* offerEvent({
-            ...eventBase(input.threadId, turnId, runtimeItemId),
+            ...base,
             type: "item.completed",
             payload: {
               itemType: "assistant_message",
@@ -280,8 +280,9 @@ const makeAntigravityAdapter = Effect.gen(function* () {
               ),
             );
         }
+        const base = yield* makeEventBase(input.threadId, turnId, undefined);
         yield* offerEvent({
-          ...eventBase(input.threadId, turnId, undefined),
+          ...base,
           type: "turn.completed",
           payload: {
             state:
@@ -297,16 +298,18 @@ const makeAntigravityAdapter = Effect.gen(function* () {
       }).pipe(
         Effect.catch((error: ProviderAdapterError) =>
           Effect.gen(function* () {
+            const baseCompleted = yield* makeEventBase(input.threadId, turnId, undefined);
             yield* offerEvent({
-              ...eventBase(input.threadId, turnId, undefined),
+              ...baseCompleted,
               type: "turn.completed",
               payload: {
                 state: "failed",
                 errorMessage: error.message,
               },
             });
+            const baseError = yield* makeEventBase(input.threadId, turnId, undefined);
             yield* offerEvent({
-              ...eventBase(input.threadId, turnId, undefined),
+              ...baseError,
               type: "runtime.error",
               payload: {
                 message: error.message,
@@ -320,24 +323,26 @@ const makeAntigravityAdapter = Effect.gen(function* () {
 
       const fiber = yield* Effect.forkDetach(driverEffect);
       ctx.activeTurn = { turnId, fiber };
+      const updatedAt = yield* nowIso;
       ctx.session = {
         ...ctx.session,
         status: "running",
         activeTurnId: turnId,
-        updatedAt: nowIso(),
+        updatedAt,
       };
 
       // When the fiber resolves, clear the active turn reference.
       yield* Effect.forkDetach(
         Fiber.await(fiber).pipe(
           Effect.flatMap(() =>
-            Effect.sync(() => {
+            Effect.gen(function* () {
               if (ctx.activeTurn?.turnId === turnId) {
                 ctx.activeTurn = null;
+                const nextUpdatedAt = yield* nowIso;
                 ctx.session = {
                   ...ctx.session,
                   status: "ready",
-                  updatedAt: nowIso(),
+                  updatedAt: nextUpdatedAt,
                 };
               }
             }),
@@ -351,32 +356,43 @@ const makeAntigravityAdapter = Effect.gen(function* () {
       };
     });
 
-  const interruptTurn: AntigravityAdapterShape["interruptTurn"] = (threadId, _turnId) =>
+  const interruptTurn: ProviderAdapterShape<ProviderAdapterError>["interruptTurn"] = (
+    threadId,
+    _turnId,
+  ) =>
     Effect.gen(function* () {
       const ctx = yield* requireSession(threadId);
       if (!ctx.activeTurn) return;
       yield* Fiber.interrupt(ctx.activeTurn.fiber).pipe(Effect.ignore);
     });
 
-  const respondToRequest: AntigravityAdapterShape["respondToRequest"] = (_threadId, _r, _d) =>
+  const respondToRequest: ProviderAdapterShape<ProviderAdapterError>["respondToRequest"] = (
+    _threadId,
+    _r,
+    _d,
+  ) =>
     Effect.fail(
       new ProviderAdapterRequestError({
-        provider: PROVIDER,
+        provider: DRIVER_KIND,
         method: "respondToRequest",
         detail: "Antigravity does not surface per-call approval requests.",
       }),
     );
 
-  const respondToUserInput: AntigravityAdapterShape["respondToUserInput"] = (_threadId, _r, _a) =>
+  const respondToUserInput: ProviderAdapterShape<ProviderAdapterError>["respondToUserInput"] = (
+    _threadId,
+    _r,
+    _a,
+  ) =>
     Effect.fail(
       new ProviderAdapterRequestError({
-        provider: PROVIDER,
+        provider: DRIVER_KIND,
         method: "respondToUserInput",
         detail: "Antigravity does not surface user-input requests.",
       }),
     );
 
-  const stopSession: AntigravityAdapterShape["stopSession"] = (threadId) =>
+  const stopSession: ProviderAdapterShape<ProviderAdapterError>["stopSession"] = (threadId) =>
     Effect.gen(function* () {
       const ctx = sessions.get(threadId);
       if (!ctx) return;
@@ -386,31 +402,34 @@ const makeAntigravityAdapter = Effect.gen(function* () {
       sessions.delete(threadId);
     });
 
-  const listSessions: AntigravityAdapterShape["listSessions"] = () =>
+  const listSessions: ProviderAdapterShape<ProviderAdapterError>["listSessions"] = () =>
     Effect.sync(() => Array.from(sessions.values(), ({ session }) => ({ ...session })));
 
-  const hasSession: AntigravityAdapterShape["hasSession"] = (threadId) =>
+  const hasSession: ProviderAdapterShape<ProviderAdapterError>["hasSession"] = (threadId) =>
     Effect.sync(() => sessions.has(threadId));
 
-  const readThread: AntigravityAdapterShape["readThread"] = (threadId) =>
+  const readThread: ProviderAdapterShape<ProviderAdapterError>["readThread"] = (threadId) =>
     Effect.fail(
       new ProviderAdapterRequestError({
-        provider: PROVIDER,
+        provider: DRIVER_KIND,
         method: "readThread",
         detail: `readThread is not supported by the Antigravity provider (thread ${threadId}).`,
       }),
     );
 
-  const rollbackThread: AntigravityAdapterShape["rollbackThread"] = (threadId, _n) =>
+  const rollbackThread: ProviderAdapterShape<ProviderAdapterError>["rollbackThread"] = (
+    threadId,
+    _n,
+  ) =>
     Effect.fail(
       new ProviderAdapterRequestError({
-        provider: PROVIDER,
+        provider: DRIVER_KIND,
         method: "rollbackThread",
         detail: `rollbackThread is not supported by the Antigravity provider (thread ${threadId}).`,
       }),
     );
 
-  const stopAll: AntigravityAdapterShape["stopAll"] = () =>
+  const stopAll: ProviderAdapterShape<ProviderAdapterError>["stopAll"] = () =>
     Effect.gen(function* () {
       for (const ctx of sessions.values()) {
         if (ctx.activeTurn) {
@@ -421,7 +440,7 @@ const makeAntigravityAdapter = Effect.gen(function* () {
     });
 
   return {
-    provider: PROVIDER,
+    provider: DRIVER_KIND,
     capabilities: {
       sessionModelSwitch: "in-session",
     },
@@ -437,10 +456,5 @@ const makeAntigravityAdapter = Effect.gen(function* () {
     hasSession,
     stopAll,
     streamEvents: Stream.fromQueue(runtimeEventQueue),
-  } satisfies AntigravityAdapterShape;
+  } satisfies ProviderAdapterShape<ProviderAdapterError>;
 });
-
-export const AntigravityAdapterLive = Layer.effect(AntigravityAdapter, makeAntigravityAdapter);
-
-export const makeAntigravityAdapterLive = () =>
-  Layer.effect(AntigravityAdapter, makeAntigravityAdapter);

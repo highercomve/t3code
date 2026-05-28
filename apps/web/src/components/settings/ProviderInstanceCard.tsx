@@ -415,10 +415,10 @@ interface ProviderInstanceCardProps {
   readonly headerAction?: ReactNode | undefined;
   readonly hiddenModels: ReadonlyArray<string>;
   readonly favoriteModels: ReadonlyArray<string>;
-  readonly modelOrder: ReadonlyArray<string>;
+  readonly modelOrder?: ReadonlyArray<string> | undefined;
   readonly onHiddenModelsChange: (next: ReadonlyArray<string>) => void;
   readonly onFavoriteModelsChange: (next: ReadonlyArray<string>) => void;
-  readonly onModelOrderChange: (next: ReadonlyArray<string>) => void;
+  readonly onModelOrderChange?: ((next: ReadonlyArray<string>) => void) | undefined;
   readonly onRunUpdate?: (() => void) | undefined;
   readonly isUpdating?: boolean | undefined;
 }
@@ -851,11 +851,11 @@ export function ProviderInstanceCard({
                 customModels={customModels}
                 hiddenModels={hiddenModels}
                 favoriteModels={favoriteModels}
-                modelOrder={modelOrder}
+                modelOrder={modelOrder ?? []}
                 onChange={updateCustomModels}
                 onHiddenModelsChange={onHiddenModelsChange}
                 onFavoriteModelsChange={onFavoriteModelsChange}
-                onModelOrderChange={onModelOrderChange}
+                onModelOrderChange={onModelOrderChange ?? (() => {})}
               />
             ) : (
               <div className="border-t border-border/60 px-4 py-3 sm:px-5">

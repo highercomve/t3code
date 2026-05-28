@@ -135,7 +135,6 @@ describe("instance-scoped model selection", () => {
       providerModelPreferences: {
         [ProviderInstanceId.make("claudeAgent")]: {
           hiddenModels: ["claude-opus-4-6"],
-          modelOrder: [],
         },
       },
     };
@@ -160,7 +159,6 @@ describe("instance-scoped model selection", () => {
       providerModelPreferences: {
         [ProviderInstanceId.make("claudeAgent")]: {
           hiddenModels: [],
-          modelOrder: ["claude-haiku-4-5", "claude-opus-4-6"],
         },
       },
     };
@@ -187,7 +185,6 @@ describe("instance-scoped model selection", () => {
       providerModelPreferences: {
         [ProviderInstanceId.make("claudeAgent")]: {
           hiddenModels: ["claude-opus-4-6"],
-          modelOrder: [],
         },
       },
     };

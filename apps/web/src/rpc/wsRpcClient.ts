@@ -111,9 +111,6 @@ export interface WsRpcClient {
     readonly preparePullRequestThread: RpcUnaryMethod<
       typeof WS_METHODS.gitPreparePullRequestThread
     >;
-    readonly suggestCommitMessage: (
-      input: GitSuggestCommitMessageInput,
-    ) => Promise<GitSuggestCommitMessageResult>;
     readonly onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
   };
   readonly server: {
@@ -249,8 +246,6 @@ export function createWsRpcClient(transport: WsTransport): WsRpcClient {
         transport.request((client) => client[WS_METHODS.gitResolvePullRequest](input)),
       preparePullRequestThread: (input) =>
         transport.request((client) => client[WS_METHODS.gitPreparePullRequestThread](input)),
-      suggestCommitMessage: (input) =>
-        transport.request((client) => client[WS_METHODS.gitSuggestCommitMessage](input)),
       onActionProgress: () => () => {},
     },
     server: {

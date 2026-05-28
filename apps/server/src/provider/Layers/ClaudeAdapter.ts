@@ -24,6 +24,7 @@ import {
   ApprovalRequestId,
   type CanonicalItemType,
   type CanonicalRequestType,
+  type ClaudeCodeEffort,
   type ClaudeSettings,
   EventId,
   type ProviderApprovalDecision,
@@ -269,7 +270,7 @@ function getEffectiveClaudeAgentEffort(effort: string | null | undefined): Claud
  * audit/remove.
  */
 function toSdkEffort(
-  effort: Exclude<ClaudeCodeEffort, "ultrathink">,
+  effort: ClaudeSdkEffort | Exclude<ClaudeCodeEffort, "ultrathink">,
 ): "low" | "medium" | "high" | "max" {
   return effort as "low" | "medium" | "high" | "max";
 }

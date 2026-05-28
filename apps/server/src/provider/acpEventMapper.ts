@@ -26,7 +26,7 @@ import {
   ThreadId,
   TurnId,
 } from "@t3tools/contracts";
-import { Schema } from "effect";
+import * as Schema from "effect/Schema";
 
 export type { CanonicalItemType, CanonicalRequestType } from "@t3tools/contracts";
 

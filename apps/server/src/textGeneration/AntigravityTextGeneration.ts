@@ -1,5 +1,5 @@
 /**
- * AntigravityTextGeneration – Text generation layer using the Antigravity CLI.
+ * AntigravityTextGeneration – Text generation factory using the Antigravity CLI.
  *
  * Spawns `agy --print "<prompt>"` once per request, accumulates the
  * line-buffered stdout into a single string, and decodes it as JSON against
@@ -8,27 +8,26 @@
  *
  * @module AntigravityTextGeneration
  */
-import { Effect, Layer, Schema } from "effect";
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
 
-import { AntigravityModelSelection, TextGenerationError } from "@t3tools/contracts";
+import { type AntigravitySettings, TextGenerationError, type ModelSelection } from "@t3tools/contracts";
 import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@t3tools/shared/git";
 
-import { type TextGenerationShape, TextGeneration } from "../Services/TextGeneration.ts";
+import { type TextGenerationShape } from "./TextGeneration.ts";
 import {
   buildBranchNamePrompt,
   buildCommitMessagePrompt,
   buildPrContentPrompt,
   buildThreadTitlePrompt,
-} from "../Prompts.ts";
+} from "./TextGenerationPrompts.ts";
 import {
-  extractJsonFromText,
   normalizeCliError,
   sanitizeCommitSubject,
   sanitizePrTitle,
   sanitizeThreadTitle,
-} from "../Utils.ts";
-import { ServerSettingsService } from "../../serverSettings.ts";
-import { runAntigravityTurn, type AntigravityStreamEvent } from "../../antigravityDriver.ts";
+} from "./TextGenerationUtils.ts";
+import { runAntigravityTurn, type AntigravityStreamEvent } from "../antigravityDriver.ts";
 
 const ANTIGRAVITY_TIMEOUT_MS = 60_000;
 
@@ -39,8 +38,34 @@ const JSON_PREAMBLE = [
   "",
 ].join("\n");
 
-const makeAntigravityTextGeneration = Effect.gen(function* () {
-  const serverSettingsService = yield* Effect.service(ServerSettingsService);
+/**
+ * Extracts JSON object/array text from a model response that may contain
+ * surrounding prose, code fences, or trailing whitespace. Returns the original
+ * string when no JSON can be located.
+ */
+function extractJsonFromText(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return trimmed;
+  // Strip ```json ... ``` fences
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch && typeof fenceMatch[1] === "string") {
+    return fenceMatch[1].trim();
+  }
+  // Find first {…} or […] balanced span
+  const firstBrace = trimmed.search(/[{[]/);
+  if (firstBrace === -1) return trimmed;
+  const lastBrace = Math.max(trimmed.lastIndexOf("}"), trimmed.lastIndexOf("]"));
+  if (lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+  return trimmed;
+}
+
+export const makeAntigravityTextGeneration = Effect.fn("makeAntigravityTextGeneration")(function* (
+  antigravitySettings: AntigravitySettings,
+  _environment: NodeJS.ProcessEnv = process.env,
+) {
+  const binaryPath = antigravitySettings.binaryPath || "agy";
 
   const runAntigravityJson = Effect.fn("runAntigravityJson")(function* <S extends Schema.Top>({
     operation,
@@ -57,15 +82,8 @@ const makeAntigravityTextGeneration = Effect.gen(function* () {
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
-    modelSelection: AntigravityModelSelection;
+    modelSelection: ModelSelection;
   }): Effect.fn.Return<S["Type"], TextGenerationError, S["DecodingServices"]> {
-    const antigravitySettings = yield* Effect.map(
-      serverSettingsService.getSettings,
-      (settings) => settings.providers.antigravity,
-    ).pipe(Effect.catch(() => Effect.undefined));
-
-    const binaryPath = antigravitySettings?.binaryPath || "agy";
-
     const collected: string[] = [];
     const onStreamEvent = (event: AntigravityStreamEvent): Effect.Effect<void> =>
       Effect.sync(() => {
@@ -76,6 +94,8 @@ const makeAntigravityTextGeneration = Effect.gen(function* () {
       {
         binaryPath,
         cwd,
+        // agy has no --model flag; this value is informational only and the
+        // driver does NOT forward it.
         model: modelSelection.model,
         prompt: JSON_PREAMBLE + prompt,
         // Text generation is single-shot per request — must NOT share the user's chat thread conversation.
@@ -118,13 +138,6 @@ const makeAntigravityTextGeneration = Effect.gen(function* () {
   const generateCommitMessage: TextGenerationShape["generateCommitMessage"] = Effect.fn(
     "AntigravityTextGeneration.generateCommitMessage",
   )(function* (input) {
-    if (input.modelSelection.provider !== "antigravity") {
-      return yield* new TextGenerationError({
-        operation: "generateCommitMessage",
-        detail: "Invalid model selection.",
-      });
-    }
-
     const { prompt, outputSchema } = buildCommitMessagePrompt({
       branch: input.branch,
       stagedSummary: input.stagedSummary,
@@ -152,13 +165,6 @@ const makeAntigravityTextGeneration = Effect.gen(function* () {
   const generatePrContent: TextGenerationShape["generatePrContent"] = Effect.fn(
     "AntigravityTextGeneration.generatePrContent",
   )(function* (input) {
-    if (input.modelSelection.provider !== "antigravity") {
-      return yield* new TextGenerationError({
-        operation: "generatePrContent",
-        detail: "Invalid model selection.",
-      });
-    }
-
     const { prompt, outputSchema } = buildPrContentPrompt({
       baseBranch: input.baseBranch,
       headBranch: input.headBranch,
@@ -184,13 +190,6 @@ const makeAntigravityTextGeneration = Effect.gen(function* () {
   const generateBranchName: TextGenerationShape["generateBranchName"] = Effect.fn(
     "AntigravityTextGeneration.generateBranchName",
   )(function* (input) {
-    if (input.modelSelection.provider !== "antigravity") {
-      return yield* new TextGenerationError({
-        operation: "generateBranchName",
-        detail: "Invalid model selection.",
-      });
-    }
-
     const { prompt, outputSchema } = buildBranchNamePrompt({
       message: input.message,
       attachments: input.attachments,
@@ -212,13 +211,6 @@ const makeAntigravityTextGeneration = Effect.gen(function* () {
   const generateThreadTitle: TextGenerationShape["generateThreadTitle"] = Effect.fn(
     "AntigravityTextGeneration.generateThreadTitle",
   )(function* (input) {
-    if (input.modelSelection.provider !== "antigravity") {
-      return yield* new TextGenerationError({
-        operation: "generateThreadTitle",
-        detail: "Invalid model selection.",
-      });
-    }
-
     const { prompt, outputSchema } = buildThreadTitlePrompt({
       message: input.message,
       attachments: input.attachments,
@@ -244,8 +236,3 @@ const makeAntigravityTextGeneration = Effect.gen(function* () {
     generateThreadTitle,
   } satisfies TextGenerationShape;
 });
-
-export const AntigravityTextGenerationLive = Layer.effect(
-  TextGeneration,
-  makeAntigravityTextGeneration,
-);

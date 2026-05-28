@@ -1088,9 +1088,19 @@ export default function GitActionsControl({
   const pullMutation = useMutation(
     gitPullMutationOptions({ environmentId: activeEnvironmentId, cwd: gitCwd, queryClient }),
   );
-  const suggestCommitMessageMutation = useMutation(
-    gitSuggestCommitMessageMutationOptions({ environmentId: activeEnvironmentId, cwd: gitCwd }),
-  );
+  // TODO(fork): re-wire commit message generation onto upstream's
+  // textGeneration.generateCommitMessage RPC. The fork's
+  // gitSuggestCommitMessage RPC was removed during the upstream merge.
+  const suggestCommitMessageMutation = useMutation({
+    mutationFn: async (_vars: { filePaths?: string[] }): Promise<{
+      subject: string;
+      body: string;
+    }> => {
+      throw new Error(
+        "Commit message generation is temporarily unavailable while the fork is reconciled with upstream.",
+      );
+    },
+  });
 
   const isRunStackedActionRunning =
     useIsMutating({
@@ -1923,11 +1933,6 @@ export default function GitActionsControl({
                     });
                   }}
                 >
-                  {suggestCommitMessageMutation.isPending ? (
-                    <LoaderIcon className="size-3 animate-spin" />
-                  ) : (
-                    <SparklesIcon className="size-3" />
-                  )}
                   {suggestCommitMessageMutation.isPending ? "Generating…" : "Generate"}
                 </Button>
               </div>

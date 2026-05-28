@@ -216,14 +216,11 @@ describe("descriptor helpers", () => {
       { id: "fastMode", value: true },
     ]);
 
-    const optionsAsArray = selection.options as ReadonlyArray<ProviderOptionSelection>;
-    expect(getProviderOptionStringSelectionValue(optionsAsArray, "reasoningEffort")).toBe("high");
-    expect(getProviderOptionStringSelectionValue(optionsAsArray, "fastMode")).toBeUndefined();
-    expect(getProviderOptionBooleanSelectionValue(optionsAsArray, "fastMode")).toBe(true);
-    expect(
-      getProviderOptionBooleanSelectionValue(optionsAsArray, "reasoningEffort"),
-    ).toBeUndefined();
     expect(getModelSelectionStringOptionValue(selection, "reasoningEffort")).toBe("high");
+    expect(getModelSelectionStringOptionValue(selection, "fastMode")).toBeUndefined();
     expect(getModelSelectionBooleanOptionValue(selection, "fastMode")).toBe(true);
+    expect(getModelSelectionBooleanOptionValue(selection, "reasoningEffort")).toBeUndefined();
+    expect(getModelSelectionBooleanOptionValue(selection, "fastMode")).toBe(true);
+    expect(getModelSelectionBooleanOptionValue(selection, "reasoningEffort")).toBeUndefined();
   });
 });

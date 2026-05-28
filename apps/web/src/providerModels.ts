@@ -1,7 +1,12 @@
 import {
+  AntigravityModelOptions,
+  ClaudeModelOptions,
+  CodexModelOptions,
+  CopilotModelOptions,
   DEFAULT_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
   defaultInstanceIdForDriver,
+  OpencodeModelOptions,
   ProviderDriverKind,
   type ModelCapabilities,
   type ProviderInstanceId,

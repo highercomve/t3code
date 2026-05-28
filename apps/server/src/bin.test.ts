@@ -25,6 +25,7 @@ import {
   orchestrationSnapshotRouteLayer,
 } from "./orchestration/http.ts";
 import { layerConfig as SqlitePersistenceLayerLive } from "./persistence/Layers/Sqlite.ts";
+import { AntigravityConversationStoreLive } from "./persistence/Layers/AntigravityConversationStore.ts";
 import { RepositoryIdentityResolverLive } from "./project/Layers/RepositoryIdentityResolver.ts";
 import {
   makePersistedServerRuntimeState,
@@ -76,6 +77,8 @@ const makeCliTestServerConfig = (baseDir: string) =>
       desktopBootstrapToken: undefined,
       autoBootstrapProjectFromCwd: false,
       logWebSocketEvents: false,
+      authToken: undefined,
+      geminiApiKey: undefined,
       tailscaleServeEnabled: false,
       tailscaleServePort: 443,
     } satisfies ServerConfigShape;
@@ -87,6 +90,7 @@ const makeProjectPersistenceLayer = (config: ServerConfigShape) =>
       Layer.provideMerge(RepositoryIdentityResolverLive),
       Layer.provideMerge(SqlitePersistenceLayerLive),
     ),
+    AntigravityConversationStoreLive.pipe(Layer.provide(SqlitePersistenceLayerLive)),
     WorkspacePathsLive,
   ).pipe(
     Layer.provideMerge(NodeServices.layer),

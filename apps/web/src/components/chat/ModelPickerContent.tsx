@@ -144,7 +144,11 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
   // (e.g. `"codex:gpt-5"`) still resolve — the default instance id equals
   // the driver slug.
   const favoritesSet = useMemo(() => {
-    return new Set(favorites.map((fav) => providerModelKey(fav.provider, fav.model)));
+    return new Set(
+      favorites.map((fav) =>
+        providerModelKey(fav.provider as unknown as ProviderInstanceId, fav.model),
+      ),
+    );
   }, [favorites]);
 
   /**

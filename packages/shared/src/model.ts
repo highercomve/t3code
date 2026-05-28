@@ -1,7 +1,6 @@
 import {
   DEFAULT_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
-  MODEL_OPTIONS_BY_PROVIDER,
   MODEL_SLUG_ALIASES_BY_PROVIDER,
   type ModelCapabilities,
   type ModelSelection,
@@ -16,40 +15,6 @@ const DEFAULT_PROVIDER_DRIVER_KIND = ProviderDriverKind.make("codex");
 export interface SelectableModelOption {
   slug: string;
   name: string;
-}
-
-export function getModelOptions(provider: ProviderKind): ReadonlyArray<SelectableModelOption> {
-  return MODEL_OPTIONS_BY_PROVIDER[provider];
-}
-
-export function getDefaultModel(provider: ProviderKind): string {
-  return DEFAULT_MODEL_BY_PROVIDER[provider];
-}
-
-// ── Effort helpers ────────────────────────────────────────────────────
-
-export function hasEffortLevel(caps: ModelCapabilities, value: string): boolean {
-  return caps.reasoningEffortLevels.some((l) => l.value === value);
-}
-
-export function getDefaultEffort(caps: ModelCapabilities): string | null {
-  return caps.reasoningEffortLevels.find((l) => l.isDefault)?.value ?? null;
-}
-
-export function resolveEffort(
-  caps: ModelCapabilities,
-  raw: string | null | undefined,
-): string | undefined {
-  const defaultValue = getDefaultEffort(caps);
-  const trimmed = typeof raw === "string" ? raw.trim() : null;
-  if (
-    trimmed &&
-    !caps.promptInjectedEffortLevels.includes(trimmed) &&
-    hasEffortLevel(caps, trimmed)
-  ) {
-    return trimmed;
-  }
-  return defaultValue ?? undefined;
 }
 
 export function createModelCapabilities(input: {
@@ -76,6 +41,58 @@ export function createModelCapabilities(input: {
     contextWindowOptions: input.contextWindowOptions ?? [],
     promptInjectedEffortLevels: input.promptInjectedEffortLevels ?? [],
   };
+}
+
+export function getDefaultModel(provider: ProviderDriverKind): string {
+  return DEFAULT_MODEL_BY_PROVIDER[provider] ?? DEFAULT_MODEL;
+}
+
+// ── Effort helpers ────────────────────────────────────────────────────
+
+export function hasEffortLevel(caps: ModelCapabilities, value: string): boolean {
+  return (caps.reasoningEffortLevels ?? []).some((l) => l.value === value);
+}
+
+export function getDefaultEffort(caps: ModelCapabilities): string | null {
+  return (caps.reasoningEffortLevels ?? []).find((l) => l.isDefault)?.value ?? null;
+}
+
+export function resolveEffort(
+  caps: ModelCapabilities,
+  raw: string | null | undefined,
+): string | undefined {
+  const defaultValue = getDefaultEffort(caps);
+  const trimmed = typeof raw === "string" ? raw.trim() : null;
+  if (
+    trimmed &&
+    !(caps.promptInjectedEffortLevels ?? []).includes(trimmed) &&
+    hasEffortLevel(caps, trimmed)
+  ) {
+    return trimmed;
+  }
+  return defaultValue ?? undefined;
+}
+
+// ── Context window helpers ───────────────────────────────────────────
+
+export function hasContextWindowOption(caps: ModelCapabilities, value: string): boolean {
+  return (caps.contextWindowOptions ?? []).some((o) => o.value === value);
+}
+
+export function getDefaultContextWindow(caps: ModelCapabilities): string | null {
+  return (caps.contextWindowOptions ?? []).find((o) => o.isDefault)?.value ?? null;
+}
+
+export function resolveContextWindow(
+  caps: ModelCapabilities,
+  raw: string | null | undefined,
+): string | undefined {
+  const defaultValue = getDefaultContextWindow(caps);
+  const trimmed = typeof raw === "string" ? raw.trim() : null;
+  if (trimmed && hasContextWindowOption(caps, trimmed)) {
+    return trimmed;
+  }
+  return defaultValue ?? undefined;
 }
 
 function getRawSelectionValueById(
@@ -122,7 +139,7 @@ export function getModelSelectionOptionValue(
     return getProviderOptionSelectionValue(options, id);
   }
   // Legacy object-shaped options
-  const value = (options as Record<string, unknown>)[id];
+  const value = (options as unknown as Record<string, unknown>)[id];
   return typeof value === "string" || typeof value === "boolean" ? value : undefined;
 }
 
@@ -130,16 +147,14 @@ export function getModelSelectionStringOptionValue(
   modelSelection: ModelSelection | null | undefined,
   id: string,
 ): string | undefined {
-  const value = getModelSelectionOptionValue(modelSelection, id);
-  return typeof value === "string" ? value : undefined;
+  return getProviderOptionStringSelectionValue(modelSelection?.options, id);
 }
 
 export function getModelSelectionBooleanOptionValue(
   modelSelection: ModelSelection | null | undefined,
   id: string,
 ): boolean | undefined {
-  const value = getModelSelectionOptionValue(modelSelection, id);
-  return typeof value === "boolean" ? value : undefined;
+  return getProviderOptionBooleanSelectionValue(modelSelection?.options, id);
 }
 
 function resolveDescriptorChoiceValue(
@@ -163,25 +178,6 @@ function resolveDescriptorChoiceValue(
     return trimmed;
   }
   return descriptor.currentValue ?? descriptor.options.find((option) => option.isDefault)?.id;
-}
-
-// ── Context window helpers ───────────────────────────────────────────
-
-export function hasContextWindowOption(caps: ModelCapabilities, value: string): boolean {
-  return caps.contextWindowOptions.some((o) => o.value === value);
-}
-
-export function getDefaultContextWindow(caps: ModelCapabilities): string | null {
-  return caps.contextWindowOptions.find((o) => o.isDefault)?.value ?? null;
-}
-
-export function resolveContextWindow(
-  caps: ModelCapabilities,
-  raw: string | null | undefined,
-): string | undefined {
-  const defaultValue = getDefaultContextWindow(caps);
-  if (!raw) return defaultValue ?? undefined;
-  return hasContextWindowOption(caps, raw) ? raw : (defaultValue ?? undefined);
 }
 
 function cloneDescriptor(descriptor: ProviderOptionDescriptor): ProviderOptionDescriptor {
@@ -296,25 +292,6 @@ export function buildProviderOptionSelectionsFromDescriptors(
   return nextSelections.length > 0 ? nextSelections : undefined;
 }
 
-// The web carries provider options internally as `Array<{id, value}>` to drive
-// trait pickers, but the on-wire `ModelSelection.options` schema canonicalises
-// to a per-provider struct (`{reasoningEffort, fastMode, …}`). Convert at the
-// dispatch boundary so the request body matches the schema's in-memory type.
-export function providerOptionSelectionsToStruct(
-  selections: ReadonlyArray<ProviderOptionSelection> | null | undefined,
-): Record<string, string | boolean> | undefined {
-  if (!selections || selections.length === 0) {
-    return undefined;
-  }
-  const out: Record<string, string | boolean> = {};
-  for (const selection of selections) {
-    if (typeof selection.value === "string" || typeof selection.value === "boolean") {
-      out[selection.id] = selection.value;
-    }
-  }
-  return Object.keys(out).length > 0 ? out : undefined;
-}
-
 export function getModelSelectionOptionDescriptors(
   modelSelection: ModelSelection | null | undefined,
   caps?: ModelCapabilities | null | undefined,
@@ -325,21 +302,10 @@ export function getModelSelectionOptionDescriptors(
   if (!caps) {
     return [];
   }
-  const rawOptions = modelSelection.options;
-  const selections: ReadonlyArray<ProviderOptionSelection> | undefined = Array.isArray(rawOptions)
-    ? (rawOptions as ReadonlyArray<ProviderOptionSelection>)
-    : rawOptions && typeof rawOptions === "object"
-      ? Object.entries(rawOptions)
-          .filter(
-            ([, value]) =>
-              typeof value === "string" || typeof value === "boolean" || typeof value === "number",
-          )
-          .map(([id, value]) => ({
-            id,
-            value: typeof value === "number" ? String(value) : (value as string | boolean),
-          }))
-      : undefined;
-  return getProviderOptionDescriptors({ caps, selections });
+  return getProviderOptionDescriptors({
+    caps,
+    selections: modelSelection.options,
+  });
 }
 
 export function isClaudeUltrathinkPrompt(text: string | null | undefined): boolean {
@@ -414,59 +380,54 @@ export function resolveModelSlugForProvider(
   return resolveModelSlug(model, provider);
 }
 
+/** Trim a string, returning null for empty/missing values. */
 export function trimOrNull<T extends string>(value: T | null | undefined): T | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim() as T;
   return trimmed || null;
 }
 
+function modelSlugExistsForProvider(
+  model: string | null | undefined,
+  provider: ProviderDriverKind,
+): boolean {
+  const aliases = MODEL_SLUG_ALIASES_BY_PROVIDER[provider];
+  if (!aliases) return false;
+  if (!model) return false;
+  return model in aliases || Object.values(aliases).includes(model);
+}
+
 export function inferProviderForModel(
   model: string | null | undefined,
-  fallback: ProviderKind = "codex",
-): ProviderKind {
-  const normalizedClaude = normalizeModelSlug(model, "claudeAgent");
-  if (normalizedClaude && MODEL_SLUG_SET_BY_PROVIDER.claudeAgent.has(normalizedClaude)) {
-    return "claudeAgent";
+  fallback: ProviderDriverKind = DEFAULT_PROVIDER_DRIVER_KIND,
+): ProviderDriverKind {
+  const normalizedClaude = normalizeModelSlug(model, ProviderDriverKind.make("claudeAgent"));
+  if (normalizedClaude && modelSlugExistsForProvider(normalizedClaude, ProviderDriverKind.make("claudeAgent"))) {
+    return ProviderDriverKind.make("claudeAgent");
   }
 
-  const normalizedCodex = normalizeModelSlug(model, "codex");
-  if (normalizedCodex && MODEL_SLUG_SET_BY_PROVIDER.codex.has(normalizedCodex)) {
-    return "codex";
+  const normalizedCodex = normalizeModelSlug(model, ProviderDriverKind.make("codex"));
+  if (normalizedCodex && modelSlugExistsForProvider(normalizedCodex, ProviderDriverKind.make("codex"))) {
+    return ProviderDriverKind.make("codex");
   }
 
-  const normalizedAntigravity = normalizeModelSlug(model, "antigravity");
-  if (normalizedAntigravity && MODEL_SLUG_SET_BY_PROVIDER.antigravity.has(normalizedAntigravity)) {
-    return "antigravity";
+  const normalizedAntigravity = normalizeModelSlug(model, ProviderDriverKind.make("antigravity"));
+  if (normalizedAntigravity && modelSlugExistsForProvider(normalizedAntigravity, ProviderDriverKind.make("antigravity"))) {
+    return ProviderDriverKind.make("antigravity");
   }
 
-  const normalizedOpencode = normalizeModelSlug(model, "opencode");
-  if (normalizedOpencode && MODEL_SLUG_SET_BY_PROVIDER.opencode.has(normalizedOpencode)) {
-    return "opencode";
+  const normalizedOpencode = normalizeModelSlug(model, ProviderDriverKind.make("opencode"));
+  if (normalizedOpencode && modelSlugExistsForProvider(normalizedOpencode, ProviderDriverKind.make("opencode"))) {
+    return ProviderDriverKind.make("opencode");
   }
 
   if (typeof model === "string") {
     const trimmed = model.trim();
-    if (trimmed.startsWith("claude-")) return "claudeAgent";
-    if (trimmed.startsWith("gemini-")) return "antigravity";
-    if (trimmed.startsWith("opencode/") || trimmed.startsWith("anthropic/")) return "opencode";
+    if (trimmed.startsWith("claude-")) return ProviderDriverKind.make("claudeAgent");
+    if (trimmed.startsWith("gemini-")) return ProviderDriverKind.make("antigravity");
+    if (trimmed.startsWith("opencode/") || trimmed.startsWith("anthropic/")) return ProviderDriverKind.make("opencode");
   }
   return fallback;
-}
-
-export function resolveApiModelId(modelSelection: ModelSelection): string {
-  switch (modelSelection.provider) {
-    case "claudeAgent": {
-      switch (modelSelection.options?.contextWindow) {
-        case "1m":
-          return `${modelSelection.model}[1m]`;
-        default:
-          return modelSelection.model;
-      }
-    }
-    default: {
-      return modelSelection.model;
-    }
-  }
 }
 
 function cloneSelections(
@@ -491,6 +452,10 @@ export function createModelSelection(
 /**
  * Returns the effort value if it is a prompt-injected value according to
  * any select descriptor in the given capabilities, or null otherwise.
+ *
+ * Unlike a single `find`, this checks every descriptor so that the
+ * correct descriptor's `promptInjectedValues` list is consulted even when
+ * multiple select descriptors exist.
  */
 export function resolvePromptInjectedEffort(
   caps: ModelCapabilities,

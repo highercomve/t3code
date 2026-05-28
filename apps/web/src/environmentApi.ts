@@ -43,7 +43,6 @@ export function createEnvironmentApi(rpcClient: WsRpcClient): EnvironmentApi {
       resolvePullRequest: rpcClient.git.resolvePullRequest,
       preparePullRequestThread: rpcClient.git.preparePullRequestThread,
       runStackedAction: rpcClient.git.runStackedAction,
-      suggestCommitMessage: rpcClient.git.suggestCommitMessage,
       onActionProgress: (callback) => rpcClient.git.onActionProgress(callback),
     },
     orchestration: {

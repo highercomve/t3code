@@ -111,7 +111,7 @@ function withoutProviderInstanceKey<V>(
 }
 
 function withoutProviderInstanceFavorites(
-  favorites: ReadonlyArray<{ readonly provider: ProviderInstanceId; readonly model: string }>,
+  favorites: ReadonlyArray<{ readonly provider: string; readonly model: string }>,
   instanceId: ProviderInstanceId,
 ) {
   return favorites.filter((favorite) => favorite.provider !== instanceId);
@@ -1118,21 +1118,18 @@ export function ProviderSettingsPanel() {
     instanceId: ProviderInstanceId,
     next: {
       readonly hiddenModels: ReadonlyArray<string>;
-      readonly modelOrder: ReadonlyArray<string>;
     },
   ) => {
     const hiddenModels = [...new Set(next.hiddenModels.filter((slug) => slug.trim().length > 0))];
-    const modelOrder = [...new Set(next.modelOrder.filter((slug) => slug.trim().length > 0))];
     const rest = withoutProviderInstanceKey(settings.providerModelPreferences, instanceId);
     updateSettings({
       providerModelPreferences:
-        hiddenModels.length === 0 && modelOrder.length === 0
+        hiddenModels.length === 0
           ? rest
           : {
               ...rest,
               [instanceId]: {
                 hiddenModels,
-                modelOrder,
               },
             },
     });
@@ -1291,21 +1288,13 @@ export function ProviderSettingsPanel() {
               headerAction={headerAction}
               hiddenModels={modelPreferences.hiddenModels}
               favoriteModels={favoriteModels}
-              modelOrder={modelPreferences.modelOrder}
               onHiddenModelsChange={(hiddenModels) =>
                 updateProviderModelPreferences(row.instanceId, {
-                  ...modelPreferences,
                   hiddenModels,
                 })
               }
               onFavoriteModelsChange={(favoriteModels) =>
                 updateProviderFavoriteModels(row.instanceId, favoriteModels)
-              }
-              onModelOrderChange={(modelOrder) =>
-                updateProviderModelPreferences(row.instanceId, {
-                  ...modelPreferences,
-                  modelOrder,
-                })
               }
               onRunUpdate={
                 showInlineUpdateButton && updateCandidate

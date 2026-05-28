@@ -306,7 +306,7 @@ function makeProviderServiceLayer() {
   return {
     codex,
     claude,
-    opencode,
+    cursor,
     layer,
   };
 }

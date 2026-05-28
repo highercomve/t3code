@@ -48,7 +48,7 @@ const SHELL_ONLY_ENV_NAMES = [
 ] as const;
 
 function logShellEnvironmentWarning(message: string, error?: unknown): void {
-  console.warn(`[desktop] ${message}`, error instanceof Error ? error.message : (error ?? ""));
+  process.stderr.write(`[desktop] ${message} ${error instanceof Error ? error.message : (error ?? "")}\n`);
 }
 
 export function syncShellEnvironment(

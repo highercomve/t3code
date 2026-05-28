@@ -123,6 +123,12 @@ function createBaseServerConfig(): ServerConfig {
           launchArgs: "",
         },
         cursor: { enabled: true, binaryPath: "", apiEndpoint: "", customModels: [] },
+        antigravity: {
+          enabled: true,
+          binaryPath: "agy",
+          dangerouslySkipPermissions: true,
+          customModels: [],
+        },
         opencode: {
           enabled: true,
           binaryPath: "",

@@ -1,4 +1,6 @@
 import {
+  type ClaudeCodeEffort,
+  type CodexReasoningEffort,
   DEFAULT_MODEL,
   DEFAULT_MODEL_BY_PROVIDER,
   defaultInstanceIdForDriver,
@@ -7,6 +9,7 @@ import {
   ModelSelection,
   PROVIDER_KIND_SET,
   ProjectId,
+  type ProviderKind,
   ProviderInstanceId,
   ProviderInteractionMode,
   ProviderDriverKind,
@@ -428,7 +431,7 @@ function modelSelectionOptionsAsArray(
   }
   if (typeof options === "object") {
     const entries: ProviderOptionSelection[] = [];
-    for (const [id, value] of Object.entries(options as Record<string, unknown>)) {
+    for (const [id, value] of Object.entries(options as unknown as Record<string, unknown>)) {
       if (typeof value === "string" || typeof value === "boolean") {
         entries.push({ id, value });
       }
@@ -686,6 +689,14 @@ function normalizeProviderModelOptions(
     }
   }
 
+  const codexCandidate =
+    candidate?.codex && typeof candidate.codex === "object"
+      ? (candidate.codex as Record<string, unknown>)
+      : null;
+  const claudeCandidate =
+    candidate?.claudeAgent && typeof candidate.claudeAgent === "object"
+      ? (candidate.claudeAgent as Record<string, unknown>)
+      : null;
   const codexReasoningEffort: CodexReasoningEffort | undefined =
     codexCandidate?.reasoningEffort === "low" ||
     codexCandidate?.reasoningEffort === "medium" ||
@@ -932,7 +943,7 @@ function legacyMergeModelSelectionIntoProviderModelOptions(
   currentModelOptions: ProviderOptionSelectionsByProvider | null | undefined,
 ): ProviderOptionSelectionsByProvider | null {
   const selectionOptions = modelSelectionOptionsAsArray(modelSelection?.options);
-  if (!selectionOptions || selectionOptions.length === 0) {
+  if (!modelSelection || !selectionOptions || selectionOptions.length === 0) {
     return normalizeProviderModelOptions(currentModelOptions);
   }
   const kind = normalizeProviderDriverKind(modelSelection.instanceId);

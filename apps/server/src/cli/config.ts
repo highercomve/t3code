@@ -136,6 +136,10 @@ const EnvServerConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
+  geminiApiKey: Config.string("GEMINI_API_KEY").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
 });
 
 export interface CliServerFlags {
@@ -372,6 +376,8 @@ export const resolveServerConfig = (
       desktopBootstrapToken,
       autoBootstrapProjectFromCwd,
       logWebSocketEvents,
+      authToken: undefined,
+      geminiApiKey: env.geminiApiKey,
       tailscaleServeEnabled,
       tailscaleServePort,
     };

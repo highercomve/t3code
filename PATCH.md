@@ -9,9 +9,9 @@ shape).
 Last sync references:
 
 - Upstream HEAD at last full audit: `4f0f24f0 fix: maintain reasoning selections for multiple providers (#2760)`
-- Fork HEAD at last full audit: post-gemini→antigravity migration (Phases 0–7)
-- Fork base (closest common ancestor): `ada410bc chore(release): prepare v0.0.21`
-- Audit date: 2026-05-27
+- Fork HEAD at last full audit: post-driver/instance reconciliation (uncommitted; staged for review)
+- Fork base (closest common ancestor): merged through `4f0f24f0` (upstream/main fully integrated)
+- Audit date: 2026-05-27 (mid-flight merge reconciliation)
 
 **Recent structural change:** the Gemini provider was removed in the
 2026-05-27 gemini → agy migration. The fork now ships Antigravity (`agy`)
@@ -85,15 +85,30 @@ entirely — `agy` does NOT speak ACP. The on-disk provider id is
 
 **New files (must exist after every merge):**
 
-- `apps/server/src/antigravityDriver.ts`
+- `apps/server/src/antigravityDriver.ts` (low-level `agy --print` driver)
+- `apps/server/src/provider/Drivers/AntigravityDriver.ts` (per-instance
+  `ProviderDriver` SPI registration; mirrors `ClaudeDriver`/`CodexDriver`)
 - `apps/server/src/provider/Layers/AntigravityAdapter.ts`
-- `apps/server/src/provider/Layers/AntigravityProvider.ts`
-- `apps/server/src/provider/Services/AntigravityAdapter.ts`
-- `apps/server/src/provider/Services/AntigravityProvider.ts`
-- `apps/server/src/git/Layers/AntigravityTextGeneration.ts`
+  (factory `makeAntigravityAdapter(settings, options)` returning
+  `ProviderAdapterShape<ProviderAdapterError>`)
+- `apps/server/src/provider/Layers/AntigravityProvider.ts` (factory
+  `checkAntigravityProviderStatus(settings, env)` +
+  `makePendingAntigravityProvider(settings)` returning
+  `ServerProviderDraft` / `Effect<ServerProviderDraft>` for the new SPI)
+- `apps/server/src/textGeneration/AntigravityTextGeneration.ts` (factory
+  `makeAntigravityTextGeneration(settings, env)` returning
+  `TextGenerationShape`; replaces the old git/Layers Layer file)
 - `apps/server/src/persistence/Layers/AntigravityConversationStore.ts`
 - `apps/server/src/persistence/Services/AntigravityConversationStore.ts`
 - `apps/server/src/persistence/Migrations/028_RenameGeminiToAntigravity.ts`
+
+**Removed (superseded by the new SPI):**
+
+- `apps/server/src/provider/Services/AntigravityAdapter.ts` (Context.Service
+  tag — unused after the driver/instance migration)
+- `apps/server/src/provider/Services/AntigravityProvider.ts` (same)
+- `apps/server/src/git/Layers/AntigravityTextGeneration.ts` (moved to
+  `apps/server/src/textGeneration/`; no longer Layer-based)
 
 **Touches (must keep Antigravity wiring on merge):**
 
@@ -335,6 +350,59 @@ next merge.
 structured output handling`). Plan updates now flow through
   `apps/server/src/provider/acp/AcpRuntimeModel.ts` `case "plan"`. Do NOT
   re-introduce the ad-hoc handler.
+
+- **Layer-based fork `*AppServerManager.ts` files** (2026-05-27 reconciliation):
+  upstream replaced the per-provider AppServerManager pattern with the
+  per-instance `ProviderDriver` SPI under `apps/server/src/provider/Drivers/`.
+  The following fork files were deleted because they no longer had any
+  in-tree consumer after upstream's refactor and would not compile against
+  the new shapes:
+    - `apps/server/src/opencodeAppServerManager.ts` (+ `.test.ts`)
+    - `apps/server/src/copilotAppServerManager.ts`
+    - `apps/server/src/claudeCodeAppServerManager.ts`
+    - `apps/server/src/cli.ts` (orphan after upstream split into `cli/*`)
+    - `apps/server/src/git/Layers/RoutingTextGeneration.ts`
+    - `apps/server/src/git/Services/GitManager.ts`
+    - `apps/server/src/textGeneration/AcpTextGeneration.ts`
+    - `apps/server/src/textGeneration/OpencodeTextGeneration.ts` (lowercase fork)
+    - `apps/server/src/provider/Layers/Opencode{Adapter,Provider}.ts` (lowercase)
+    - `apps/server/src/provider/Services/Opencode{Adapter,Provider}.ts` (lowercase)
+    - `apps/server/src/provider/Layers/Copilot{Adapter,Provider}.ts`
+    - `apps/server/src/provider/Services/Copilot{Adapter,Provider}.ts`
+    - `apps/server/src/provider/Services/Antigravity{Adapter,Provider}.ts`
+      (Context.Service tags — superseded by `AntigravityDriver`'s plain-value
+      factory pattern; the per-instance `ProviderInstance` SPI in
+      `apps/server/src/provider/ProviderDriver.ts` does not use tags)
+    - `apps/web/src/appSettings.ts` (orphan; depended on removed
+      `getModelOptions` helper)
+
+- **`GitManagerShape.suggestCommitMessage`** — fork added a `suggestCommitMessage`
+  method on `GitManagerShape`. Upstream moved commit-message generation onto
+  `TextGenerationShape.generateCommitMessage` (per-instance), so the method was
+  removed from `GitManagerShape` and its consumers in the WS RPC
+  (`gitSuggestCommitMessage`) and the web client (`api.git.suggestCommitMessage`,
+  `wsRpcClient.git.suggestCommitMessage`, `gitSuggestCommitMessageMutationOptions`,
+  `<GitActionsControl />` "Generate commit message" button wiring) were
+  stubbed/removed. **Re-wiring TODO**: hook the `<GitActionsControl />`
+  Generate button onto upstream's `TextGeneration.generateCommitMessage` via
+  a new RPC method (still missing from contracts in this branch). Search
+  for `TODO(fork)` markers in `apps/web/src/components/GitActionsControl.tsx`
+  and `apps/web/src/lib/gitReactQuery.ts`.
+
+- **`providerModelPreferences.modelOrder`** — removed from the
+  `ClientSettings.providerModelPreferences` value shape. The setting was a
+  fork-only enhancement; upstream only persists `hiddenModels`. The
+  associated `<ProviderInstanceCard onModelOrderChange>` prop became optional
+  with a no-op default to keep the editor compiling. If we want to keep
+  per-instance model ordering, restore the schema field and the per-card
+  wiring together.
+
+- **`Copilot*` and `Antigravity*` Layer files (legacy Layer-based pattern)** —
+  Replaced with factory-style files that match upstream's `make<Provider>Adapter`
+  shape. Antigravity is now wired through the new `apps/server/src/provider/Drivers/AntigravityDriver.ts`
+  (registered in `BUILT_IN_DRIVERS`). Copilot was deleted entirely — see the
+  TODO in the Antigravity / Copilot sections below for re-implementation
+  guidance.
 
 ---
 

@@ -416,7 +416,6 @@ describe("ProviderModelPicker", () => {
         providerModelPreferences: {
           [CLAUDE_INSTANCE_ID]: {
             hiddenModels: ["claude-opus-4-6"],
-            modelOrder: ["claude-haiku-4-5", "claude-sonnet-4-6"],
           },
         },
       },

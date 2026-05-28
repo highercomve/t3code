@@ -6,14 +6,10 @@ import {
   ProviderDriverKind,
   ProviderInstanceId,
   type ServerProvider,
-  type ClaudeModelSelection,
-  type CodexModelSelection,
-  type CopilotModelSelection,
 } from "@t3tools/contracts";
 import {
   createModelSelection,
   normalizeModelSlug,
-  providerOptionSelectionsToStruct,
   resolveSelectableModel,
 } from "@t3tools/shared/model";
 import type { ProviderOptionSelection } from "@t3tools/contracts";
@@ -95,12 +91,13 @@ function readInstanceModelPreferences(
   settings: UnifiedSettings,
   instanceId: ProviderInstanceId,
 ): { readonly hiddenModels: ReadonlyArray<string>; readonly modelOrder: ReadonlyArray<string> } {
-  return (
-    settings.providerModelPreferences?.[instanceId] ?? {
-      hiddenModels: [],
-      modelOrder: [],
-    }
-  );
+  const stored = settings.providerModelPreferences?.[instanceId];
+  return {
+    hiddenModels: stored?.hiddenModels ?? [],
+    // modelOrder removed from contracts — kept here as an always-empty
+    // fallback so call-sites compile until the fork drops the feature.
+    modelOrder: [],
+  };
 }
 
 function applyInstanceModelPreferences(

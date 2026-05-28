@@ -1,4 +1,5 @@
-import { Context, Effect } from "effect";
+import * as Context from "effect/Context";
+import type * as Effect from "effect/Effect";
 import type { ThreadId } from "@t3tools/contracts";
 
 import type { PersistenceDecodeError, PersistenceSqlError } from "../Errors.ts";

@@ -98,10 +98,7 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
   };
 
   const safeUnlink = (filePath: string): Effect.Effect<void, never> =>
-    fileSystem.remove(filePath).pipe(
-      Effect.flatMap(() => fileSystem.remove(dirname(filePath))),
-      Effect.catch(() => Effect.void),
-    );
+    fileSystem.remove(filePath).pipe(Effect.catch(() => Effect.void));
 
   const encodeJsonForOperation = (
     operation:

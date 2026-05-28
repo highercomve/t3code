@@ -82,6 +82,7 @@ const makeCursorConfig = (overrides: Partial<CursorSettings>): CursorSettings =>
 const makeOpenCodeConfig = (overrides: Partial<OpenCodeSettings>): OpenCodeSettings => ({
   enabled: false,
   binaryPath: "opencode",
+  apiKey: "",
   serverUrl: "",
   serverPassword: "",
   customModels: [],

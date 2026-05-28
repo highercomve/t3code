@@ -100,7 +100,7 @@ describe("serverSettings helpers", () => {
     expect(
       applyServerSettingsPatch(current, {
         textGenerationModelSelection: {
-          options: [{ id: "fastMode", value: false }] as never,
+          options: [{ id: "fastMode", value: false }],
         },
       }).textGenerationModelSelection,
     ).toEqual({
@@ -148,7 +148,7 @@ describe("serverSettings helpers", () => {
           options: [
             { id: "variant", value: "prod" },
             { id: "agent", value: "build" },
-          ] as never,
+          ],
         },
       }).textGenerationModelSelection,
     ).toEqual({

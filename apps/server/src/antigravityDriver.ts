@@ -1,3 +1,4 @@
+// @effect-diagnostics nodeBuiltinImport:off globalTimers:off
 /**
  * AntigravityDriver - one-shot spawn driver for `agy --print`.
  *
@@ -12,7 +13,8 @@ import { readFile } from "node:fs/promises";
 import * as nodePath from "node:path";
 import type { Readable } from "node:stream";
 
-import { Data, Effect } from "effect";
+import * as Data from "effect/Data";
+import * as Effect from "effect/Effect";
 
 export interface AntigravityTurnInput {
   readonly binaryPath: string;

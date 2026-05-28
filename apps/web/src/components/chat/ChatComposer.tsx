@@ -18,11 +18,7 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
 } from "@t3tools/contracts";
-import {
-  createModelSelection,
-  normalizeModelSlug,
-  providerOptionSelectionsToStruct,
-} from "@t3tools/shared/model";
+import { createModelSelection, normalizeModelSlug } from "@t3tools/shared/model";
 import {
   memo,
   useCallback,

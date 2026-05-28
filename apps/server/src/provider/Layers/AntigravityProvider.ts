@@ -1,10 +1,24 @@
+/**
+ * AntigravityProvider — snapshot helpers for the Antigravity (`agy`) provider.
+ *
+ * Provides `checkAntigravityProviderStatus` (live probe) and
+ * `makePendingAntigravityProvider` (synchronous pending snapshot) for use by
+ * `AntigravityDriver`.
+ *
+ * @module provider/Layers/AntigravityProvider
+ */
 import type {
   AntigravitySettings,
   ModelCapabilities,
-  ServerProvider,
+  ProviderDriverKind,
   ServerProviderModel,
 } from "@t3tools/contracts";
-import { Effect, Equal, FileSystem, Layer, Option, Path, Result, Stream } from "effect";
+import * as DateTime from "effect/DateTime";
+import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
+import * as Option from "effect/Option";
+import * as Path from "effect/Path";
+import * as Result from "effect/Result";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
 import {
@@ -14,12 +28,9 @@ import {
   isCommandMissingCause,
   parseGenericCliVersion,
   providerModelsFromSettings,
+  type ServerProviderDraft,
   spawnAndCollect,
 } from "../providerSnapshot.ts";
-import { makeManagedServerProvider } from "../makeManagedServerProvider.ts";
-import { AntigravityProvider } from "../Services/AntigravityProvider.ts";
-import { ServerSettingsError } from "@t3tools/contracts";
-import { ServerSettingsService } from "../../serverSettings.ts";
 
 const ANTIGRAVITY_EFFORT_CAPABILITIES: ModelCapabilities = {
   reasoningEffortLevels: [
@@ -36,7 +47,7 @@ const ANTIGRAVITY_EFFORT_CAPABILITIES: ModelCapabilities = {
 
 const DEFAULT_ANTIGRAVITY_MODEL_CAPABILITIES: ModelCapabilities = ANTIGRAVITY_EFFORT_CAPABILITIES;
 
-const PROVIDER = "antigravity" as const;
+const PROVIDER: ProviderDriverKind = "antigravity" as ProviderDriverKind;
 const ANTIGRAVITY_PRESENTATION = {
   displayName: "Antigravity",
   showInteractionModeToggle: false,
@@ -93,17 +104,17 @@ const BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
   },
 ];
 
-const runAntigravityCommand = (args: ReadonlyArray<string>) =>
+const runAntigravityCommand = (
+  antigravitySettings: AntigravitySettings,
+  args: ReadonlyArray<string>,
+  environment: NodeJS.ProcessEnv,
+) =>
   Effect.gen(function* () {
-    const settingsService = yield* ServerSettingsService;
-    const settings = yield* settingsService.getSettings.pipe(
-      Effect.map((s) => s.providers.antigravity),
-    );
-    const command = ChildProcess.make(settings.binaryPath, [...args], {
+    const command = ChildProcess.make(antigravitySettings.binaryPath, [...args], {
       shell: process.platform === "win32",
-      env: process.env,
+      env: environment,
     });
-    return yield* spawnAndCollect(settings.binaryPath, command);
+    return yield* spawnAndCollect(antigravitySettings.binaryPath, command);
   });
 
 // agy reuses Gemini's ~/.gemini/ tree, so auth presence is detected via
@@ -119,170 +130,42 @@ function parseGoogleAccountsJson(content: string): boolean {
   }
 }
 
-const checkAntigravityAuth = Effect.gen(function* () {
-  const fileSystem = yield* FileSystem.FileSystem;
-  const pathService = yield* Path.Path;
-  const home = process.env.HOME ?? "~";
-  const accountsFilePath = pathService.join(home, ".gemini", "google_accounts.json");
-  const exists = yield* fileSystem.exists(accountsFilePath).pipe(Effect.orElseSucceed(() => false));
-  if (!exists) return false;
-  const content = yield* fileSystem
-    .readFileString(accountsFilePath)
-    .pipe(Effect.orElseSucceed(() => ""));
-  return parseGoogleAccountsJson(content);
-});
+const checkAntigravityAuth = (environment: NodeJS.ProcessEnv) =>
+  Effect.gen(function* () {
+    const fileSystem = yield* FileSystem.FileSystem;
+    const pathService = yield* Path.Path;
+    const home = environment["HOME"] ?? "~";
+    const accountsFilePath = pathService.join(home, ".gemini", "google_accounts.json");
+    const exists = yield* fileSystem
+      .exists(accountsFilePath)
+      .pipe(Effect.orElseSucceed(() => false));
+    if (!exists) return false;
+    const content = yield* fileSystem
+      .readFileString(accountsFilePath)
+      .pipe(Effect.orElseSucceed(() => ""));
+    return parseGoogleAccountsJson(content);
+  });
 
-export const checkAntigravityProviderStatus = Effect.fn("checkAntigravityProviderStatus")(
-  function* (): Effect.fn.Return<
-    ServerProvider,
-    ServerSettingsError,
-    | ChildProcessSpawner.ChildProcessSpawner
-    | FileSystem.FileSystem
-    | Path.Path
-    | ServerSettingsService
-  > {
-    const settings = yield* Effect.service(ServerSettingsService).pipe(
-      Effect.flatMap((service) => service.getSettings),
-      Effect.map((s) => s.providers.antigravity),
-    );
-    const checkedAt = new Date().toISOString();
-    const models = providerModelsFromSettings(
-      BUILT_IN_MODELS,
-      PROVIDER,
-      settings.customModels,
-      DEFAULT_ANTIGRAVITY_MODEL_CAPABILITIES,
-    );
+const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 
-    if (!settings.enabled) {
-      return buildServerProvider({
-        provider: PROVIDER,
-        presentation: ANTIGRAVITY_PRESENTATION,
-        enabled: false,
-        checkedAt,
-        models,
-        probe: {
-          installed: false,
-          version: null,
-          status: "warning",
-          auth: { status: "unknown" },
-          message: "Antigravity is disabled in T3 Code settings.",
-        },
-      });
-    }
-
-    const versionProbe = yield* runAntigravityCommand(["--version"]).pipe(
-      Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
-      Effect.result,
-    );
-
-    if (Result.isFailure(versionProbe)) {
-      const error = versionProbe.failure;
-      return buildServerProvider({
-        provider: PROVIDER,
-        presentation: ANTIGRAVITY_PRESENTATION,
-        enabled: settings.enabled,
-        checkedAt,
-        models,
-        probe: {
-          installed: !isCommandMissingCause(error),
-          version: null,
-          status: "error",
-          auth: { status: "unknown" },
-          message: isCommandMissingCause(error)
-            ? "Antigravity CLI (`agy`) is not installed or not on PATH."
-            : `Failed to execute Antigravity CLI health check: ${error instanceof Error ? error.message : String(error)}.`,
-        },
-      });
-    }
-
-    if (Option.isNone(versionProbe.success)) {
-      return buildServerProvider({
-        provider: PROVIDER,
-        presentation: ANTIGRAVITY_PRESENTATION,
-        enabled: settings.enabled,
-        checkedAt,
-        models,
-        probe: {
-          installed: true,
-          version: null,
-          status: "error",
-          auth: { status: "unknown" },
-          message:
-            "Antigravity CLI is installed but failed to run. Timed out while running command.",
-        },
-      });
-    }
-
-    const version = versionProbe.success.value;
-    const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
-    if (version.code !== 0) {
-      const detail = detailFromResult(version);
-      return buildServerProvider({
-        provider: PROVIDER,
-        presentation: ANTIGRAVITY_PRESENTATION,
-        enabled: settings.enabled,
-        checkedAt,
-        models,
-        probe: {
-          installed: true,
-          version: parsedVersion,
-          status: "error",
-          auth: { status: "unknown" },
-          message: detail
-            ? `Antigravity CLI is installed but failed to run. ${detail}`
-            : "Antigravity CLI is installed but failed to run.",
-        },
-      });
-    }
-
-    const authenticated = yield* checkAntigravityAuth.pipe(Effect.orElseSucceed(() => false));
-
-    if (authenticated) {
-      return buildServerProvider({
-        provider: PROVIDER,
-        presentation: ANTIGRAVITY_PRESENTATION,
-        enabled: settings.enabled,
-        checkedAt,
-        models,
-        probe: {
-          installed: true,
-          version: parsedVersion,
-          status: "ready",
-          auth: { status: "authenticated", type: "oauth-personal", label: "Google Account" },
-          message: "Antigravity CLI is installed and authenticated.",
-        },
-      });
-    }
-
-    return buildServerProvider({
-      provider: PROVIDER,
-      presentation: ANTIGRAVITY_PRESENTATION,
-      enabled: settings.enabled,
-      checkedAt,
-      models,
-      probe: {
-        installed: true,
-        version: parsedVersion,
-        status: "error",
-        auth: { status: "unauthenticated" },
-        message: "Antigravity CLI is installed but not authenticated. Run `agy` to log in.",
-      },
-    });
-  },
-);
-
-const makePendingAntigravityProvider = (settings: AntigravitySettings): ServerProvider => {
-  const checkedAt = new Date().toISOString();
+export const checkAntigravityProviderStatus = Effect.fn("checkAntigravityProviderStatus")(function* (
+  antigravitySettings: AntigravitySettings,
+  environment: NodeJS.ProcessEnv = process.env,
+): Effect.fn.Return<
+  ServerProviderDraft,
+  never,
+  ChildProcessSpawner.ChildProcessSpawner | FileSystem.FileSystem | Path.Path
+> {
+  const checkedAt = yield* nowIso;
   const models = providerModelsFromSettings(
     BUILT_IN_MODELS,
     PROVIDER,
-    settings.customModels,
+    antigravitySettings.customModels,
     DEFAULT_ANTIGRAVITY_MODEL_CAPABILITIES,
   );
 
-  if (!settings.enabled) {
+  if (!antigravitySettings.enabled) {
     return buildServerProvider({
-      provider: PROVIDER,
       presentation: ANTIGRAVITY_PRESENTATION,
       enabled: false,
       checkedAt,
@@ -297,46 +180,142 @@ const makePendingAntigravityProvider = (settings: AntigravitySettings): ServerPr
     });
   }
 
+  const versionProbe = yield* runAntigravityCommand(antigravitySettings, ["--version"], environment).pipe(
+    Effect.timeoutOption(DEFAULT_TIMEOUT_MS),
+    Effect.result,
+  );
+
+  if (Result.isFailure(versionProbe)) {
+    const error = versionProbe.failure;
+    return buildServerProvider({
+      presentation: ANTIGRAVITY_PRESENTATION,
+      enabled: antigravitySettings.enabled,
+      checkedAt,
+      models,
+      probe: {
+        installed: !isCommandMissingCause(error),
+        version: null,
+        status: "error",
+        auth: { status: "unknown" },
+        message: isCommandMissingCause(error)
+          ? "Antigravity CLI (`agy`) is not installed or not on PATH."
+          : `Failed to execute Antigravity CLI health check: ${error instanceof Error ? error.message : String(error)}.`,
+      },
+    });
+  }
+
+  if (Option.isNone(versionProbe.success)) {
+    return buildServerProvider({
+      presentation: ANTIGRAVITY_PRESENTATION,
+      enabled: antigravitySettings.enabled,
+      checkedAt,
+      models,
+      probe: {
+        installed: true,
+        version: null,
+        status: "error",
+        auth: { status: "unknown" },
+        message:
+          "Antigravity CLI is installed but failed to run. Timed out while running command.",
+      },
+    });
+  }
+
+  const version = versionProbe.success.value;
+  const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
+  if (version.code !== 0) {
+    const detail = detailFromResult(version);
+    return buildServerProvider({
+      presentation: ANTIGRAVITY_PRESENTATION,
+      enabled: antigravitySettings.enabled,
+      checkedAt,
+      models,
+      probe: {
+        installed: true,
+        version: parsedVersion,
+        status: "error",
+        auth: { status: "unknown" },
+        message: detail
+          ? `Antigravity CLI is installed but failed to run. ${detail}`
+          : "Antigravity CLI is installed but failed to run.",
+      },
+    });
+  }
+
+  const authenticated = yield* checkAntigravityAuth(environment).pipe(
+    Effect.orElseSucceed(() => false),
+  );
+
+  if (authenticated) {
+    return buildServerProvider({
+      presentation: ANTIGRAVITY_PRESENTATION,
+      enabled: antigravitySettings.enabled,
+      checkedAt,
+      models,
+      probe: {
+        installed: true,
+        version: parsedVersion,
+        status: "ready",
+        auth: { status: "authenticated", type: "oauth-personal", label: "Google Account" },
+        message: "Antigravity CLI is installed and authenticated.",
+      },
+    });
+  }
+
   return buildServerProvider({
-    provider: PROVIDER,
     presentation: ANTIGRAVITY_PRESENTATION,
-    enabled: true,
+    enabled: antigravitySettings.enabled,
     checkedAt,
     models,
     probe: {
-      installed: false,
-      version: null,
-      status: "warning",
-      auth: { status: "unknown" },
-      message: "Antigravity provider status has not been checked in this session yet.",
+      installed: true,
+      version: parsedVersion,
+      status: "error",
+      auth: { status: "unauthenticated" },
+      message: "Antigravity CLI is installed but not authenticated. Run `agy` to log in.",
     },
   });
-};
+});
 
-export const AntigravityProviderLive = Layer.effect(
-  AntigravityProvider,
+export const makePendingAntigravityProvider = (
+  antigravitySettings: AntigravitySettings,
+): Effect.Effect<ServerProviderDraft> =>
   Effect.gen(function* () {
-    const serverSettings = yield* ServerSettingsService;
-    const fileSystem = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-
-    const checkProvider = checkAntigravityProviderStatus().pipe(
-      Effect.provideService(ServerSettingsService, serverSettings),
-      Effect.provideService(FileSystem.FileSystem, fileSystem),
-      Effect.provideService(Path.Path, path),
-      Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+    const checkedAt = yield* nowIso;
+    const models = providerModelsFromSettings(
+      BUILT_IN_MODELS,
+      PROVIDER,
+      antigravitySettings.customModels,
+      DEFAULT_ANTIGRAVITY_MODEL_CAPABILITIES,
     );
 
-    return yield* makeManagedServerProvider<AntigravitySettings>({
-      getSettings: serverSettings.getSettings.pipe(
-        Effect.map((s) => s.providers.antigravity),
-        Effect.orDie,
-      ),
-      streamSettings: serverSettings.streamChanges.pipe(Stream.map((s) => s.providers.antigravity)),
-      haveSettingsChanged: (previous, next) => !Equal.equals(previous, next),
-      initialSnapshot: makePendingAntigravityProvider,
-      checkProvider,
+    if (!antigravitySettings.enabled) {
+      return buildServerProvider({
+        presentation: ANTIGRAVITY_PRESENTATION,
+        enabled: false,
+        checkedAt,
+        models,
+        probe: {
+          installed: false,
+          version: null,
+          status: "warning",
+          auth: { status: "unknown" },
+          message: "Antigravity is disabled in T3 Code settings.",
+        },
+      });
+    }
+
+    return buildServerProvider({
+      presentation: ANTIGRAVITY_PRESENTATION,
+      enabled: true,
+      checkedAt,
+      models,
+      probe: {
+        installed: false,
+        version: null,
+        status: "warning",
+        auth: { status: "unknown" },
+        message: "Antigravity provider status has not been checked in this session yet.",
+      },
     });
-  }),
-);
+  });

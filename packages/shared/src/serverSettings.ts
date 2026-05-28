@@ -3,6 +3,7 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { deepMerge } from "./Struct.ts";
 import { fromLenientJson } from "./schemaJson.ts";
+import { createModelSelection } from "./model.ts";
 
 const ServerSettingsJson = fromLenientJson(ServerSettings);
 const decodeServerSettingsJson = Schema.decodeUnknownOption(ServerSettingsJson);
@@ -90,13 +91,12 @@ export function applyServerSettingsPatch(
 
   const instanceId = selectionPatch.instanceId ?? current.textGenerationModelSelection.instanceId;
   const model = selectionPatch.model ?? current.textGenerationModelSelection.model;
-  const currentOptions = current.textGenerationModelSelection.options as
-    | ReadonlyArray<ProviderOptionSelection>
-    | undefined;
-  const patchOptions = selectionPatch.options as ReadonlyArray<ProviderOptionSelection> | undefined;
   const options = shouldReplaceTextGenerationModelSelection(selectionPatch)
-    ? patchOptions
-    : mergeModelSelectionOptionsById({ current: currentOptions, patch: patchOptions });
+    ? selectionPatch.options
+    : mergeModelSelectionOptionsById({
+        current: current.textGenerationModelSelection.options,
+        patch: selectionPatch.options,
+      });
 
   return {
     ...nextWithReplacements,

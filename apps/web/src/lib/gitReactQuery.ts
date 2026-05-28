@@ -297,23 +297,9 @@ export function gitRemoveWorktreeMutationOptions(input: {
   });
 }
 
-export function gitSuggestCommitMessageMutationOptions(input: {
-  environmentId: EnvironmentId | null;
-  cwd: string | null;
-}) {
-  return mutationOptions({
-    mutationKey: gitMutationKeys.suggestCommitMessage(input.cwd),
-    mutationFn: async (vars: { filePaths?: string[] }) => {
-      if (!input.environmentId || !input.cwd)
-        throw new Error("Commit message suggestion is unavailable.");
-      const api = ensureEnvironmentApi(input.environmentId);
-      return api.git.suggestCommitMessage({
-        cwd: input.cwd,
-        ...(vars.filePaths ? { filePaths: vars.filePaths } : {}),
-      });
-    },
-  });
-}
+// TODO(fork): re-implement on top of upstream's textGeneration RPC. Fork's
+// suggestCommitMessage RPC + GitManager method were removed during the
+// upstream merge.
 
 export function gitPreparePullRequestThreadMutationOptions(input: {
   environmentId: EnvironmentId | null;
